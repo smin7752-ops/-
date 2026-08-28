@@ -56,7 +56,8 @@ const worker = {
         const ideas = await generateBriefingIdeas(env);
         const enriched: DayReport = { ...report, aiRecommendation: ideas.ok ? ideas.answer : undefined };
         const result = await publishReport(enriched, env);
-        return Response.json(result);
+        // Notion/Discord 연동이 안 되어 있어도, 실제로 만든 콘텐츠는 화면에서 바로 볼 수 있게 함께 내려준다
+        return Response.json({ ...result, aiRecommendation: enriched.aiRecommendation });
       } catch (error) {
         return Response.json({ error: String(error) }, { status: 400 });
       }

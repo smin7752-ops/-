@@ -123,6 +123,9 @@ export default function Home() {
           result.notion.ok && result.discord.ok ? "mint" : "lav",
         );
         engine.pushChat("staff", "김세리", `보고서 발행 결과입니다.\n· ${parts.join("\n· ")}`);
+        if (result.aiRecommendation) {
+          engine.pushChat("staff", "최아름", `🎯 오늘의 AI 추천 콘텐츠\n${result.aiRecommendation}`);
+        }
         if (!auto) showToast(result.notion.ok || result.discord.ok ? "보고서를 발행했어요" : "발행 실패 — 연동 설정 필요");
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);

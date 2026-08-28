@@ -20,6 +20,8 @@ export type PublishResult = {
   notion: { ok: boolean; status: string; detail?: string; url?: string };
   discord: { ok: boolean; status: string; detail?: string };
   publishedAt: string;
+  /** 실제 AI가 만든 콘텐츠 아이디어 — Notion/Discord 연동 여부와 상관없이 항상 내려온다 */
+  aiRecommendation?: string;
 };
 
 export type IntegrationStatus = Record<
