@@ -3,7 +3,7 @@ import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } fr
 import handler from "vinext/server/app-router-entry";
 import { integrationStatus, publishReport, type DayReport, type PublishEnv } from "./report";
 import { askDept, generateBriefingIdeas, generateBlogDraft, type AskEnv } from "./ai";
-import { findChannelVideo, type YoutubeEnv } from "./youtube";
+import { findChannelVideo, findAnyVideo, type YoutubeEnv } from "./youtube";
 
 interface Env extends PublishEnv, AskEnv, YoutubeEnv {
   ASSETS: Fetcher;
@@ -55,9 +55,15 @@ const worker = {
       const result = await generateBlogDraft(env);
       if (!result.ok) return Response.json(result);
 
-      // 원고 제목으로 내 채널에서 관련 영상을 찾아, 자리표시자를 실제 링크로 바꾼다
+      // 유형(A=추천곡 → 유튜브 전체 검색 / B=자작곡 → 내 채널 안에서 검색)에 따라
+      // 원고 제목으로 실제 영상을 찾아, 자리표시자를 실제 링크로 바꾼다
+      const type = result.answer.match(/유형:\s*([AB])/i)?.[1]?.toUpperCase();
       const topic = result.answer.match(/제목:\s*(.+)/)?.[1]?.trim();
-      const video = topic ? await findChannelVideo(topic, env) : { ok: false as const, error: "제목을 찾지 못했어요." };
+      const video = !topic
+        ? { ok: false as const, error: "제목을 찾지 못했어요." }
+        : type === "B"
+          ? await findChannelVideo(topic, env)
+          : await findAnyVideo(topic, env);
       const answer = video.ok
         ? result.answer.replace(/\[?🎥\s*영상:[^\]\n]*\]?/, `🎥 영상: ${video.title} — ${video.url}`)
         : result.answer;
