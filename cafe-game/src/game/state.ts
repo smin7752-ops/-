@@ -11,7 +11,13 @@ import {
   LEDGER_HISTORY_MAX,
   MAX_STOCK,
   OPEN_HOUR,
+  RATING_DOWN_PER_ANGRY,
+  RATING_MAX,
+  RATING_MIN,
+  RATING_START,
+  RATING_UP_PER_SERVE,
   ROLE_ORDER,
+  equipmentCost,
   roleWage,
   OFFLINE_EARNINGS_CAP_MS,
   OFFLINE_EARNINGS_RATE,
@@ -47,7 +53,10 @@ export interface FloorData {
   tables: number;
   barista: number;
   server: number;
+  /** 매니저는 인원이 아니라 등급입니다 (0 = 없음) */
   manager: number;
+  /** 이 층에 들여놓은 설비. 층마다 따로 사야 합니다 */
+  equipment: string[];
 }
 
 /** 하루치 장부 — 매출표에 그대로 보여줍니다 */
@@ -73,8 +82,9 @@ export interface SaveData {
   coins: number;
   menu: Record<string, MenuProgress>;
   sets: Record<string, SetProgress>;
-  equipment: string[];
   floors: FloorData[];
+  /** 가게 평점 (1.0 ~ 5.0). 손님 응대가 좋으면 오르고 소문이 납니다 */
+  rating: number;
   generalManager: boolean;
   lastSavedAt: number;
   totalEarned: number;
@@ -108,6 +118,8 @@ function defaultFloor(index: number): FloorData {
     barista: index === 0 ? 1 : 0,
     server: 0,
     manager: 0,
+    // 어느 층이든 커피머신은 기본으로 깔아드립니다.
+    equipment: [...STARTING_EQUIPMENT],
   };
 }
 
@@ -126,8 +138,8 @@ function defaultSave(): SaveData {
     coins: 100,
     menu,
     sets,
-    equipment: [...STARTING_EQUIPMENT],
     floors: Array.from({ length: MAX_FLOORS }, (_, i) => defaultFloor(i)),
+    rating: RATING_START,
     generalManager: false,
     lastSavedAt: Date.now(),
     totalEarned: 0,
@@ -188,13 +200,22 @@ class GameState {
     for (const [id, progress] of Object.entries(parsed.menu ?? {})) {
       if (merged.menu[id]) merged.menu[id] = { ...merged.menu[id], ...progress };
     }
-    merged.equipment = Array.from(
-      new Set([...STARTING_EQUIPMENT, ...(parsed.equipment ?? [])]),
-    );
-    merged.floors = base.floors.map((floor, i) => ({
-      ...floor,
-      ...(parsed?.floors?.[i] ?? {}),
-    }));
+    // 예전에는 설비가 가게 전체 공용이었습니다. 그때 산 설비는 열려 있던
+    // 층 모두에 그대로 놓아드려, 업데이트로 손해 보는 일이 없게 합니다.
+    const legacyEquipment = (parsed as { equipment?: string[] }).equipment ?? [];
+    merged.floors = base.floors.map((floor, i) => {
+      const saved = parsed?.floors?.[i];
+      const merger: FloorData = { ...floor, ...(saved ?? {}) };
+      merger.equipment = Array.from(
+        new Set([
+          ...STARTING_EQUIPMENT,
+          ...(saved?.equipment ?? []),
+          ...(merger.unlocked ? legacyEquipment : []),
+        ]),
+      );
+      return merger;
+    });
+    merged.rating = typeof parsed.rating === "number" ? parsed.rating : RATING_START;
     // 세트 레벨도 나중에 추가된 기능이라 예전 저장본에는 없습니다.
     merged.sets = { ...base.sets };
     for (const [id, progress] of Object.entries(parsed.sets ?? {})) {
@@ -244,6 +265,18 @@ class GameState {
     this.data.today.served += 1;
   }
 
+  /* ------------------------------ 평점 ------------------------------ */
+
+  /** 손님을 잘 응대했을 때 */
+  raiseRating() {
+    this.data.rating = Math.min(RATING_MAX, this.data.rating + RATING_UP_PER_SERVE);
+  }
+
+  /** 손님이 화나서 그냥 나갔을 때 */
+  dropRating() {
+    this.data.rating = Math.max(RATING_MIN, this.data.rating - RATING_DOWN_PER_ANGRY);
+  }
+
   /** 발주에 쓴 돈을 오늘 재료비에 적습니다 */
   recordSupplyCost(amount: number) {
     this.data.today.supplyCost += amount;
@@ -252,11 +285,21 @@ class GameState {
   /** 지금 고용한 사람들의 하루 인건비 합계 */
   dailyWageTotal(): number {
     let total = 0;
-    for (const floor of this.data.floors) {
-      if (!floor.unlocked) continue;
-      for (const role of ROLE_ORDER) total += floor[role] * roleWage(role);
-    }
+    this.data.floors.forEach((floor, i) => {
+      if (!floor.unlocked) return;
+      for (const role of ROLE_ORDER) total += floor[role] * roleWage(role, i);
+    });
     return total;
+  }
+
+  /** 그 층 하루 인건비 */
+  floorWageTotal(floorIndex: number): number {
+    const floor = this.floor(floorIndex);
+    if (!floor.unlocked) return 0;
+    return ROLE_ORDER.reduce(
+      (sum, role) => sum + floor[role] * roleWage(role, floorIndex),
+      0,
+    );
   }
 
   /** 지금 고용한 사람 수 (직급 상관없이) */
@@ -302,8 +345,13 @@ class GameState {
     return this.data.menu[id];
   }
 
-  hasEquipment(id: string): boolean {
-    return this.data.equipment.includes(id);
+  hasEquipment(floorIndex: number, id: string): boolean {
+    return this.floor(floorIndex).equipment.includes(id);
+  }
+
+  /** 열려 있는 층 중 하나라도 이 설비를 갖고 있는가 */
+  hasEquipmentAnywhere(id: string): boolean {
+    return this.data.floors.some((f) => f.unlocked && f.equipment.includes(id));
   }
 
   /** 앞 메뉴를 충분히 키워서 "레시피"가 열렸는가 (설비는 별개) */
@@ -316,14 +364,31 @@ class GameState {
     return this.progress(prev.id).level >= item.unlockPrevLevel;
   }
 
-  /** 실제로 팔 수 있는 상태인가 (레시피 + 설비) */
-  isSellable(id: string): boolean {
-    return this.isRecipeUnlocked(id) && this.hasEquipment(menuById(id).equipmentId);
+  /** 그 층에서 실제로 팔 수 있는 상태인가 (레시피 + 그 층의 설비) */
+  isSellable(floorIndex: number, id: string): boolean {
+    return (
+      this.isRecipeUnlocked(id) &&
+      this.hasEquipment(floorIndex, menuById(id).equipmentId)
+    );
   }
 
-  sellableItems(category?: Category): MenuDef[] {
+  /** 어느 층에서든 팔 수 있는가 (메뉴판·발주 화면처럼 가게 전체를 볼 때) */
+  isSellableAnywhere(id: string): boolean {
+    return (
+      this.isRecipeUnlocked(id) &&
+      this.hasEquipmentAnywhere(menuById(id).equipmentId)
+    );
+  }
+
+  sellableItems(floorIndex: number, category?: Category): MenuDef[] {
     const list = category ? menuListOf(category) : ALL_MENU;
-    return list.filter((m) => this.isSellable(m.id));
+    return list.filter((m) => this.isSellable(floorIndex, m.id));
+  }
+
+  /** 가게 전체에서 팔 수 있는 메뉴 (발주·재고 경고에 씁니다) */
+  sellableAnywhere(category?: Category): MenuDef[] {
+    const list = category ? menuListOf(category) : ALL_MENU;
+    return list.filter((m) => this.isSellableAnywhere(m.id));
   }
 
   /** 다음에 열릴 메뉴와, 무엇이 필요한지 */
@@ -359,9 +424,17 @@ class GameState {
 
   /* ---------------------------- 세트 메뉴 ---------------------------- */
 
-  sellableSets(): SetDef[] {
+  sellableSets(floorIndex: number): SetDef[] {
     return SETS.filter(
-      (s) => this.isSellable(s.drinkId) && this.isSellable(s.dessertId),
+      (s) =>
+        this.isSellable(floorIndex, s.drinkId) &&
+        this.isSellable(floorIndex, s.dessertId),
+    );
+  }
+
+  sellableSetsAnywhere(): SetDef[] {
+    return SETS.filter(
+      (s) => this.isSellableAnywhere(s.drinkId) && this.isSellableAnywhere(s.dessertId),
     );
   }
 
@@ -416,7 +489,7 @@ class GameState {
   /** 총괄 매니저가 있을 때 부족한 재고를 자동으로 채웁니다. */
   autoRestock() {
     if (!this.data.generalManager) return;
-    for (const item of this.sellableItems()) {
+    for (const item of this.sellableAnywhere()) {
       const p = this.progress(item.id);
       if (p.stock >= AUTO_RESTOCK_THRESHOLD) continue;
       const cost = this.restockCost(item.id, AUTO_RESTOCK_BATCH);
@@ -425,13 +498,20 @@ class GameState {
     }
   }
 
-  /** 지금 팔 수 있고 재고도 남은 메뉴 */
-  inStockItems(category?: Category): MenuDef[] {
-    return this.sellableItems(category).filter((m) => this.stockOf(m.id) > 0);
+  /** 그 층에서 지금 팔 수 있고 재고도 남은 메뉴 */
+  inStockItems(floorIndex: number, category?: Category): MenuDef[] {
+    return this.sellableItems(floorIndex, category).filter(
+      (m) => this.stockOf(m.id) > 0,
+    );
+  }
+
+  /** 가게 어디서든 팔 수 있고 재고도 남은 메뉴 */
+  inStockAnywhere(): MenuDef[] {
+    return this.sellableAnywhere().filter((m) => this.stockOf(m.id) > 0);
   }
 
   isOutOfStock(): boolean {
-    return this.inStockItems().length === 0;
+    return this.inStockAnywhere().length === 0;
   }
 
   /* ------------------------------ 매장 ------------------------------ */
@@ -458,20 +538,19 @@ class GameState {
     return f.unlocked && f.barista > 0 && f.server > 0;
   }
 
-  hasEquipmentFor(id: string): boolean {
-    return this.hasEquipment(menuById(id).equipmentId);
-  }
+
 
   equipmentDefs() {
     return EQUIPMENT;
   }
 
-  buyEquipment(id: string): boolean {
-    if (this.hasEquipment(id)) return false;
+  /** 그 층에 설비를 들여놓습니다. 위층일수록 비쌉니다 */
+  buyEquipment(floorIndex: number, id: string): boolean {
+    if (this.hasEquipment(floorIndex, id)) return false;
     const def = EQUIPMENT.find((e) => e.id === id);
     if (!def) return false;
-    if (!this.spendCoins(def.cost)) return false;
-    this.data.equipment.push(id);
+    if (!this.spendCoins(equipmentCost(def, floorIndex))) return false;
+    this.floor(floorIndex).equipment.push(id);
     return true;
   }
 
@@ -486,26 +565,26 @@ class GameState {
 
   /** 메뉴/디저트 평균 판매가 (자리 비운 동안 계산용) */
   averagePrice(): number {
-    const items = this.inStockItems();
-    const pool = items.length > 0 ? items : this.sellableItems();
+    const items = this.inStockAnywhere();
+    const pool = items.length > 0 ? items : this.sellableAnywhere();
     if (pool.length === 0) return DRINKS[0].basePrice;
     return pool.reduce((sum, m) => sum + this.priceOf(m.id), 0) / pool.length;
   }
 
   averageSupplyCost(): number {
-    const pool = this.sellableItems();
+    const pool = this.sellableAnywhere();
     if (pool.length === 0) return DRINKS[0].supplyCost;
     return pool.reduce((sum, m) => sum + m.supplyCost, 0) / pool.length;
   }
 
   averageMakeTime(): number {
-    const pool = this.sellableItems();
+    const pool = this.sellableAnywhere();
     if (pool.length === 0) return DRINKS[0].makeTimeMs;
     return pool.reduce((sum, m) => sum + m.makeTimeMs, 0) / pool.length;
   }
 
   totalStock(): number {
-    return this.sellableItems().reduce((sum, m) => sum + this.stockOf(m.id), 0);
+    return this.sellableAnywhere().reduce((sum, m) => sum + this.stockOf(m.id), 0);
   }
 
   /**
@@ -526,7 +605,7 @@ class GameState {
       .map((_, i) => i)
       .filter((i) => this.isFloorAutomated(i));
     if (autoFloors.length === 0) return;
-    if (this.sellableItems().length === 0) return;
+    if (this.sellableAnywhere().length === 0) return;
 
     // 층별로 "테이블 회전율"과 "손님 등장 속도" 중 느린 쪽이 실제 처리량입니다.
     let servesPerMs = 0;
@@ -575,7 +654,7 @@ class GameState {
     let guard = 0;
     while (left > 0 && guard < 1000) {
       guard += 1;
-      const pool = this.inStockItems();
+      const pool = this.inStockAnywhere();
       if (pool.length === 0) break;
       const per = Math.max(1, Math.floor(left / pool.length));
       for (const item of pool) {

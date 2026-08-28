@@ -255,9 +255,10 @@ export class CafeScene extends Phaser.Scene {
     this.equipmentImages.forEach((img) => img.destroy());
     this.equipmentImages = [];
 
+    // 설비는 층마다 따로 사므로, 지금 보고 있는 층의 것만 올립니다.
     const owned = gameState
       .equipmentDefs()
-      .filter((e) => gameState.hasEquipment(e.id));
+      .filter((e) => gameState.hasEquipment(this.activeFloor, e.id));
     if (owned.length === 0) return;
 
     const gap = 10;
@@ -598,13 +599,18 @@ export class CafeScene extends Phaser.Scene {
     this.customerViews.forEach((v) => v.root.destroy());
     this.customerViews.clear();
     this.rebuildTables();
+    this.refreshEquipmentRow();
     this.updateFloorLabel();
   }
 
-  private onServed(payload: { customer: SimCustomer; floorIndex: number }) {
+  private onServed(payload: {
+    customer: SimCustomer;
+    floorIndex: number;
+    paid: number;
+  }) {
     if (payload.floorIndex !== this.activeFloor) return;
     const pos = seatPosition(payload.customer.tableIndex);
-    this.coinPopup(pos.x, pos.y - 60, payload.customer.order.price);
+    this.coinPopup(pos.x, pos.y - 60, payload.paid);
   }
 
   private onAngry(c: SimCustomer) {

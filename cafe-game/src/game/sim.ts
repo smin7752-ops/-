@@ -1,6 +1,8 @@
 import Phaser from "phaser";
 import {
   CLOSE_HOUR,
+  managerTipRate,
+  ratingSpawnScale,
   CUSTOMER_PATIENCE_MS,
   EAT_TIME_MS,
   GAME_MINUTES_PER_SECOND,
@@ -166,7 +168,7 @@ class Simulation {
       this.tickTables(i, floor, dt);
     }
 
-    anyStock = gameState.inStockItems().length > 0;
+    anyStock = gameState.inStockAnywhere().length > 0;
     const blocked = !anyStock;
     if (blocked !== this.blockedByStock) {
       this.blockedByStock = blocked;
@@ -182,7 +184,8 @@ class Simulation {
     const data = gameState.floor(floorIndex);
     floor.spawnTimer -= dt;
     if (floor.spawnTimer > 0) return;
-    floor.spawnTimer = spawnIntervalMs(data.manager);
+    floor.spawnTimer =
+      spawnIntervalMs(data.manager) * ratingSpawnScale(gameState.data.rating);
 
     // 마감한 뒤에는 새 손님을 받지 않습니다 (앉아 있던 손님은 마저 처리해요)
     if (this.closed) return;
@@ -190,7 +193,7 @@ class Simulation {
     const tableIndex = floor.tables.findIndex((t) => t.state === "clean");
     if (tableIndex === -1) return;
 
-    const order = this.rollOrder();
+    const order = this.rollOrder(floorIndex);
     if (!order) return; // 재고가 없으면 손님이 들어오지 않습니다
 
     // 주문이 정해지는 순간 재고를 잡아둡니다.
@@ -218,9 +221,9 @@ class Simulation {
   }
 
   /** 재고가 있는 메뉴 중에서 주문을 하나 뽑습니다. 없으면 null */
-  private rollOrder(): Order | null {
+  private rollOrder(floorIndex: number): Order | null {
     const sets = gameState
-      .sellableSets()
+      .sellableSets(floorIndex)
       .filter(
         (s) => gameState.stockOf(s.drinkId) > 0 && gameState.stockOf(s.dessertId) > 0,
       );
@@ -238,7 +241,7 @@ class Simulation {
       };
     }
 
-    const singles = gameState.inStockItems();
+    const singles = gameState.inStockItems(floorIndex);
     if (singles.length === 0) return null;
     const item = Phaser.Utils.Array.GetRandom(singles);
     return {
@@ -309,9 +312,13 @@ class Simulation {
     c.serveLeft = serveDelay;
   }
 
-  /** 인내심이 다 떨어져 손님이 화내며 나갑니다. 재고는 이미 썼으니 손해예요. */
+  /**
+   * 인내심이 다 떨어져 손님이 화내며 나갑니다.
+   * 재고는 이미 썼으니 손해이고, 가게 평점도 떨어집니다.
+   */
   private giveUp(floor: SimFloor, index: number) {
     const c = floor.customers[index];
+    gameState.dropRating();
     bus.emit(EVENTS.CUSTOMER_ANGRY, c);
     this.leave(floor, c, "angry");
   }
@@ -331,8 +338,12 @@ class Simulation {
   /** 서빙 완료 — 돈과 경험치가 들어옵니다. */
   private serve(floorIndex: number, c: SimCustomer) {
     const floor = this.floors[floorIndex];
-    gameState.addCoins(c.order.price);
-    gameState.recordSale(c.order.price);
+    // 매니저가 문 앞을 지키면 손님이 팁을 얹어줍니다 (등급이 높을수록 많이).
+    const tipRate = managerTipRate(gameState.floor(floorIndex).manager);
+    const paid = Math.round(c.order.price * (1 + tipRate));
+    gameState.addCoins(paid);
+    gameState.recordSale(paid);
+    gameState.raiseRating();
 
     let leveledUp = false;
     for (const id of c.order.itemIds) {
@@ -345,7 +356,7 @@ class Simulation {
     c.phaseTimer = EAT_TIME_MS;
     c.serveLeft = Infinity;
 
-    bus.emit(EVENTS.SERVED, { customer: c, floorIndex, floor });
+    bus.emit(EVENTS.SERVED, { customer: c, floorIndex, floor, paid });
     bus.emit(EVENTS.COINS_CHANGED);
     if (leveledUp) bus.emit(EVENTS.MENU_LEVELED);
   }

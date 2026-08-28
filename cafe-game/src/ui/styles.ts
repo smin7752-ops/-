@@ -45,6 +45,46 @@ export function injectStyles() {
   #ui-root .clock-pill #day-label { font-size: 11px; opacity: 0.75; }
   #ui-root .clock-pill #clock-label { font-size: 17px; font-variant-numeric: tabular-nums; }
   #ui-root .coin-pill.debt { background: #8a3b3b; }
+  /* 가게 평점. 누르면 매출표가 열립니다. */
+  #ui-root .rating-pill {
+    background: rgba(0,0,0,0.6);
+    color: #fff;
+    border: none;
+    padding: 6px 13px;
+    border-radius: 999px;
+    font-weight: 800;
+    font-family: inherit;
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-variant-numeric: tabular-nums;
+  }
+  #ui-root .rating-pill .star { color: #f5c542; }
+  #ui-root .rating-pill.low { background: #8a3b3b; }
+  #ui-root .rating-pill.high { background: #3f6b47; }
+
+  #ui-root .rating-box {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: #fdf6e7;
+    border: 1px solid #e6d5b4;
+    border-radius: 12px;
+    padding: 12px;
+    margin: 8px 0 4px;
+  }
+  #ui-root .rating-big {
+    font-size: 30px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex: 0 0 auto;
+    font-variant-numeric: tabular-nums;
+  }
+  #ui-root .rating-big .star { color: #f5c542; }
+  #ui-root .rating-note { font-size: 11.5px; color: #8a7a63; line-height: 1.5; }
   #ui-root .clock-pill.closed { background: #8a3b3b; }
   #ui-root .clock-pill.closed #day-label::after { content: " · 마감"; }
 

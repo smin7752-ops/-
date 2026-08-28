@@ -82,6 +82,11 @@ export const EQUIPMENT: EquipmentDef[] = [
 
 export const STARTING_EQUIPMENT = ["coffee_machine"];
 
+/** 설비는 층마다 따로 사야 하고, 위층일수록 비쌉니다 */
+export function equipmentCost(def: EquipmentDef, floorIndex: number): number {
+  return Math.round(def.cost * floorPriceScale(floorIndex));
+}
+
 /* ----------------------------- 메뉴 ----------------------------- */
 /* 배열 순서 = 해금 순서입니다. 앞 메뉴를 일정 레벨까지 키우면 다음이 열려요. */
 
@@ -151,6 +156,14 @@ export const TABLES_PER_FLOOR = 6;
 export const SEATS_PER_TABLE = 2;
 export const STARTING_TABLES = 3;
 
+/**
+ * 위층일수록 모든 값이 비싸집니다 (설비값·고용비·인건비 공통).
+ * 1층 = 1배, 2층 = 1.7배, 3층 = 2.4배, 4층 = 3.1배.
+ */
+export function floorPriceScale(floorIndex: number): number {
+  return 1 + floorIndex * 0.7;
+}
+
 /** floorIndex 층(0부터)을 여는 데 드는 비용 */
 export function floorUnlockCost(floorIndex: number): number {
   return Math.round(5000 * Math.pow(4, floorIndex - 1));
@@ -180,8 +193,13 @@ export const ROLE_INFO: Record<
     desc: string;
     baseCost: number;
     wage: number;
-    /** 한 층에 이 직급을 몇 명까지 둘 수 있는지 */
+    /** 한 층에 이 직급을 몇 명까지 둘 수 있는지 (매니저는 등급 상한) */
     maxCount: number;
+    /**
+     * true 면 사람 수가 아니라 한 명을 강화하는 직급입니다.
+     * 매니저가 여기 해당해서, 화면에도 "3명" 대신 "Lv.3" 으로 나옵니다.
+     */
+    upgradable?: boolean;
   }
 > = {
   barista: {
@@ -203,22 +221,25 @@ export const ROLE_INFO: Record<
   manager: {
     name: "매니저",
     emoji: "🕴️",
-    desc: "문 앞에서 손님을 맞아요. 손님이 더 자주 들어옵니다 (한 층에 1명)",
+    desc: "문 앞에서 손님을 맞아요. 강화할수록 손님이 더 자주 오고 팁도 더 받습니다",
     baseCost: 1200,
     wage: 300,
-    maxCount: 1,
+    maxCount: 5,
+    upgradable: true,
   },
 };
 
-/** 다음 한 명을 더 뽑는 데 드는 비용 (이미 있는 인원이 많을수록 비쌉니다) */
+/** 다음 한 명을 더 뽑는 데 드는 비용 (인원이 많을수록, 위층일수록 비쌉니다) */
 export function roleCost(role: Role, currentCount: number, floorIndex: number): number {
   const base = ROLE_INFO[role].baseCost;
-  return Math.round(base * Math.pow(2.2, currentCount) * (1 + floorIndex * 0.8));
+  return Math.round(
+    base * Math.pow(2.2, currentCount) * floorPriceScale(floorIndex),
+  );
 }
 
-/** 그 직급 한 명의 하루 인건비 */
-export function roleWage(role: Role): number {
-  return ROLE_INFO[role].wage;
+/** 그 직급 한 명의 하루 인건비 (위층 직원이 더 비쌉니다) */
+export function roleWage(role: Role, floorIndex: number): number {
+  return Math.round(ROLE_INFO[role].wage * floorPriceScale(floorIndex));
 }
 
 /** 그 직급을 한 층에 몇 명까지 둘 수 있는지 */
@@ -245,9 +266,31 @@ export function cleanDelayMs(serverCount: number): number {
    손님도 그만큼 자주 들어와야 자리가 채워집니다. */
 export const BASE_SPAWN_INTERVAL_MS = 2600;
 
-/** 매니저가 문 앞에 있으면 손님이 더 자주 들어옵니다 */
-export function spawnIntervalMs(managerCount: number): number {
-  return BASE_SPAWN_INTERVAL_MS / (1 + managerCount * 0.8);
+/** 매니저가 문 앞에 있으면 손님이 더 자주 들어옵니다 (등급이 높을수록 더) */
+export function spawnIntervalMs(managerLevel: number): number {
+  return BASE_SPAWN_INTERVAL_MS / (1 + managerLevel * 0.45);
+}
+
+/** 매니저 등급만큼 붙는 팁 (판매가에 얹어 받습니다) */
+export function managerTipRate(managerLevel: number): number {
+  return managerLevel * 0.06;
+}
+
+/* ------------------------------ 평점 ------------------------------ */
+/* 손님을 제때 응대하면 오르고, 화나서 나가면 떨어집니다.
+   평점이 높으면 소문이 나서 손님이 더 자주 옵니다. */
+
+export const RATING_MIN = 1;
+export const RATING_MAX = 5;
+export const RATING_START = 3;
+/** 한 명 잘 응대했을 때 오르는 폭 */
+export const RATING_UP_PER_SERVE = 0.02;
+/** 한 명 화나서 나갔을 때 떨어지는 폭 */
+export const RATING_DOWN_PER_ANGRY = 0.15;
+
+/** 평점에 따른 손님 등장 간격 배수 (별 5 = 0.8배로 더 자주) */
+export function ratingSpawnScale(rating: number): number {
+  return 1.3 - rating * 0.1;
 }
 
 /* ------------------------- 영업시간 / 하루 ------------------------- */

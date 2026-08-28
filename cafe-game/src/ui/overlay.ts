@@ -4,6 +4,8 @@ import {
   CLOSE_HOUR,
   DAY_CLOSE_AUTO_MS,
   EQUIPMENT,
+  equipmentCost,
+  floorPriceScale,
   GENERAL_MANAGER_COST,
   MAX_FLOORS,
   roleMax,
@@ -15,6 +17,8 @@ import {
   TABLES_PER_FLOOR,
   floorUnlockCost,
   menuById,
+  managerTipRate,
+  ratingSpawnScale,
   roleCost,
   roleWage,
   tableCost,
@@ -89,6 +93,9 @@ export function mountUI(root: HTMLElement) {
           <span id="day-label">1일차</span>
           <span id="clock-label">10:00</span>
         </button>
+        <button class="rating-pill" id="rating-pill">
+          <span class="star">★</span><span id="rating-value">3.0</span>
+        </button>
       </div>
       <div class="floor-tabs" id="floor-tabs"></div>
       <div class="warn-banner hidden" id="stock-warn">재고가 없어요! 발주를 넣어주세요</div>
@@ -130,6 +137,8 @@ export function mountUI(root: HTMLElement) {
   const dayLabel = root.querySelector("#day-label") as HTMLElement;
   const clockLabel = root.querySelector("#clock-label") as HTMLElement;
   const clockPill = root.querySelector("#clock-pill") as HTMLElement;
+  const ratingPill = root.querySelector("#rating-pill") as HTMLElement;
+  const ratingValue = root.querySelector("#rating-value") as HTMLElement;
   const closeModal = root.querySelector("#close-modal") as HTMLElement;
   const closeBody = root.querySelector("#close-body") as HTMLElement;
   const tabsEl = root.querySelector("#floor-tabs") as HTMLElement;
@@ -177,6 +186,14 @@ export function mountUI(root: HTMLElement) {
     refreshWarnings();
   }
 
+  /** 가게 평점 — 응대가 좋으면 오르고, 화내며 나간 손님이 있으면 떨어집니다 */
+  function refreshRating() {
+    const r = gameState.data.rating;
+    ratingValue.textContent = r.toFixed(1);
+    ratingPill.classList.toggle("low", r < 2.5);
+    ratingPill.classList.toggle("high", r >= 4.5);
+  }
+
   /** 게임 속 시계와 며칠째인지 */
   function refreshClock() {
     dayLabel.textContent = `${gameState.data.day}일차`;
@@ -187,7 +204,7 @@ export function mountUI(root: HTMLElement) {
   function refreshWarnings() {
     warnEl.classList.toggle("hidden", !gameState.isOutOfStock());
     const low = gameState
-      .sellableItems()
+      .sellableAnywhere()
       .some((m) => gameState.stockOf(m.id) < AUTO_RESTOCK_THRESHOLD);
     // 메뉴바는 다시 그려질 때마다 새로 만들어지므로 그때그때 찾습니다.
     const badge = root.querySelector("#supply-badge");
@@ -229,6 +246,7 @@ export function mountUI(root: HTMLElement) {
   function refreshAll() {
     refreshCoins();
     refreshClock();
+    refreshRating();
     refreshWarnings();
     refreshTabs();
     if (openPanel) renderPanel();
@@ -286,7 +304,7 @@ export function mountUI(root: HTMLElement) {
     for (const item of category === "drink" ? DRINKS : DESSERTS) {
       const p = gameState.progress(item.id);
       const recipe = gameState.isRecipeUnlocked(item.id);
-      const equipped = gameState.hasEquipment(item.equipmentId);
+      const equipped = gameState.hasEquipmentAnywhere(item.equipmentId);
       const equipName = EQUIPMENT.find((e) => e.id === item.equipmentId)?.name ?? "";
 
       if (!recipe) {
@@ -304,7 +322,7 @@ export function mountUI(root: HTMLElement) {
 
       const sub = equipped
         ? `판매가 ${num(gameState.priceOf(item.id))}코인 · 원가 ${item.supplyCost}`
-        : `⚠️ ${equipName} 설비가 필요해요`;
+        : `⚠️ 어느 층에든 ${equipName} 설비가 있어야 해요`;
       rows.push(`
         <div class="row ${equipped ? "" : "locked"}">
           ${ic(itemKey(item.id), 40)}
@@ -324,7 +342,8 @@ export function mountUI(root: HTMLElement) {
   function renderMenuPanel() {
     const sets = SETS.map((set) => {
       const ok =
-        gameState.isSellable(set.drinkId) && gameState.isSellable(set.dessertId);
+        gameState.isSellableAnywhere(set.drinkId) &&
+        gameState.isSellableAnywhere(set.dessertId);
       const drink = menuById(set.drinkId);
       const dessert = menuById(set.dessertId);
       if (!ok) {
@@ -369,7 +388,7 @@ export function mountUI(root: HTMLElement) {
 
   function renderSupplyPanel() {
     const gm = gameState.data.generalManager;
-    const items = gameState.sellableItems();
+    const items = gameState.sellableAnywhere();
 
     const rows = items
       .map((item) => {
@@ -494,6 +513,17 @@ export function mountUI(root: HTMLElement) {
         인건비는 <b>마감할 때 하루치가 한 번에</b> 나갑니다.
       </div>
 
+      <h3>가게 평점</h3>
+      <div class="rating-box">
+        <div class="rating-big"><span class="star">★</span>${gameState.data.rating.toFixed(1)}</div>
+        <div class="rating-note">
+          손님을 제때 응대하면 조금씩 오르고, 못 참고 나간 손님이 있으면 떨어져요.
+          평점이 높을수록 소문이 나서 손님이 <b>더 자주</b> 옵니다.
+          지금은 손님 오는 속도가 별 3.0 기준의
+          <b>${Math.round((1 / ratingSpawnScale(gameState.data.rating)) * 100)}%</b> 예요.
+        </div>
+      </div>
+
       <h3>오늘 (${gameState.data.day}일차 · ${clockText(gameState.data.clock)})</h3>
       <div class="row-plain"><span class="muted">받은 손님</span><b>${today.served}명</b></div>
       ${ledgerTable(today, wageNow)}
@@ -547,7 +577,8 @@ export function mountUI(root: HTMLElement) {
     const debt = gameState.data.coins < 0;
     closeBody.innerHTML = `
       <p class="close-lead">${ledger.day}일차 영업을 마쳤어요.
-        오늘 ${ledger.served}명의 손님을 받았습니다.</p>
+        오늘 ${ledger.served}명의 손님을 받았고,
+        가게 평점은 <b>★ ${gameState.data.rating.toFixed(1)}</b> 입니다.</p>
       ${ledgerTable(ledger)}
       ${
         profit < 0
@@ -574,24 +605,45 @@ export function mountUI(root: HTMLElement) {
     const max = roleMax(role);
     const full = count >= max;
     const cost = roleCost(role, count, floorIndex);
-    // 한 명 한 명이 사람이라, 몇 명 있는지를 점으로도 보여줍니다.
+    const wage = roleWage(role, floorIndex);
+    // 사람 수(바리스타·홀 직원)는 점으로, 등급(매니저)은 Lv. 로 보여줍니다.
+    const upgradable = info.upgradable === true;
     const pips = Array.from({ length: max }, (_, i) =>
       `<i class="pip ${i < count ? "on" : ""}"></i>`,
     ).join("");
+    const badge = upgradable
+      ? count === 0
+        ? `<span class="pill zero">없음</span>`
+        : `<span class="pill">Lv.${count} / ${max}</span>`
+      : `<span class="pill ${count === 0 ? "zero" : ""}">${count} / ${max}명</span>`;
+    const buttonLabel = full
+      ? upgradable
+        ? "MAX"
+        : "가득"
+      : count === 0
+        ? coin(cost)
+        : upgradable
+          ? `강화 ${coin(cost)}`
+          : coin(cost);
+    const wageLabel = upgradable
+      ? `Lv.1당 하루 ${num(wage)}`
+      : `1명당 하루 ${num(wage)}`;
 
     return `
       <div class="row">
         ${ic(staffKey(role), 40)}
         <div class="row-main">
-          <div class="row-label">${info.name}
-            <span class="pill ${count === 0 ? "zero" : ""}">${count} / ${max}명</span>
-          </div>
-          <div class="row-sub">${info.desc}</div>
-          <div class="pips">${pips}<span class="wage">1명당 하루 ${num(info.wage)}</span></div>
+          <div class="row-label">${info.name} ${badge}</div>
+          <div class="row-sub">${info.desc}${
+            upgradable && count > 0
+              ? ` · 지금 팁 <b>+${Math.round(managerTipRate(count) * 100)}%</b>`
+              : ""
+          }</div>
+          <div class="pips">${pips}<span class="wage">${wageLabel}</span></div>
         </div>
         <button class="buy-btn" data-hire="${role}"
           ${full || gameState.data.coins < cost ? "disabled" : ""}>
-          ${full ? "가득" : coin(cost)}
+          ${buttonLabel}
         </button>
       </div>`;
   }
@@ -604,16 +656,14 @@ export function mountUI(root: HTMLElement) {
       return;
     }
 
-    const floorWage = ROLE_ORDER.reduce(
-      (sum, role) => sum + gameState.roleCount(floorIndex, role) * roleWage(role),
-      0,
-    );
+    const floorWage = gameState.floorWageTotal(floorIndex);
 
     bodyEl.innerHTML = `
       <div class="note">직원은 <b>층마다 따로</b> 고용해요. 바리스타와 홀 직원은
       <b>${roleMax("barista")}명</b>까지 뽑을 수 있고 사람이 많을수록 그만큼 빨라집니다.
-      매니저는 문 앞을 지키는 <b>한 명</b>이면 충분해요.
-      지금 보고 있는 층은 <b>${floorIndex + 1}층</b> 입니다.</div>
+      매니저는 한 명이지만 <b>Lv.${roleMax("manager")}</b> 까지 강화할 수 있어요.
+      위층 직원일수록 고용비도 인건비도 비쌉니다
+      (${floorIndex + 1}층은 1층의 <b>${floorPriceScale(floorIndex).toFixed(1)}배</b>).</div>
 
       <h3>${floorIndex + 1}층 직원</h3>
       ${ROLE_ORDER.map((role) => roleRow(role, floorIndex)).join("")}
@@ -721,8 +771,16 @@ export function mountUI(root: HTMLElement) {
   /* ---------------------------- 설비 패널 ---------------------------- */
 
   function renderEquipmentPanel() {
+    const floorIndex = activeFloor;
+    if (!gameState.floor(floorIndex).unlocked) {
+      bodyEl.innerHTML = `<p class="muted">아직 열지 않은 층이에요. 매장 탭에서 먼저 증축해주세요.</p>`;
+      return;
+    }
+
     const rows = EQUIPMENT.map((eq) => {
-      const owned = gameState.hasEquipment(eq.id);
+      const owned = gameState.hasEquipment(floorIndex, eq.id);
+      const cost = equipmentCost(eq, floorIndex);
+      const elsewhere = !owned && gameState.hasEquipmentAnywhere(eq.id);
       const uses = [...DRINKS, ...DESSERTS]
         .filter((m) => m.equipmentId === eq.id)
         .map((m) => ic(itemKey(m.id), 26))
@@ -734,25 +792,29 @@ export function mountUI(root: HTMLElement) {
             <div class="row-label">${eq.name} ${
               owned ? `<span class="pill">보유</span>` : ""
             }</div>
-            <div class="row-sub">${eq.desc}<br>${uses}</div>
+            <div class="row-sub">${
+              elsewhere ? "다른 층에는 있지만, 이 층에는 따로 사야 해요" : eq.desc
+            }<br>${uses}</div>
           </div>
           ${
             owned
               ? `<div class="buy-btn" style="background:#f0e3ca;color:#7a5a33">✓</div>`
               : `<button class="buy-btn" data-equip="${eq.id}"
-                   ${gameState.data.coins < eq.cost ? "disabled" : ""}>${coin(eq.cost)}</button>`
+                   ${gameState.data.coins < cost ? "disabled" : ""}>${coin(cost)}</button>`
           }
         </div>`;
     }).join("");
 
     bodyEl.innerHTML = `
-      <div class="note">설비를 사야 그 설비로 만드는 메뉴를 팔 수 있어요.
-      커피머신은 기본으로 드립니다.</div>
+      <div class="note">설비는 <b>층마다 따로</b> 사야 해요. 지금 보고 있는 층은
+      <b>${floorIndex + 1}층</b> 이고, 위층일수록 설비값이 비쌉니다
+      (${floorIndex + 1}층은 1층의 <b>${floorPriceScale(floorIndex).toFixed(1)}배</b>).
+      커피머신은 어느 층이든 기본으로 드려요.</div>
       ${rows}
     `;
 
     wire("[data-equip]", (el) => {
-      if (gameState.buyEquipment(el.dataset.equip!)) {
+      if (gameState.buyEquipment(floorIndex, el.dataset.equip!)) {
         gameState.save();
         bus.emit(EVENTS.LAYOUT_CHANGED);
         refreshAll();
@@ -795,6 +857,7 @@ export function mountUI(root: HTMLElement) {
     if (e.target === modal) closePanel();
   });
   clockPill.addEventListener("click", () => showPanel("sales"));
+  ratingPill.addEventListener("click", () => showPanel("sales"));
   root.querySelector("#close-confirm")?.addEventListener("click", confirmDayClose);
 
   bus.on(EVENTS.OPEN_PANEL, (id: PanelId) => showPanel(id));
@@ -825,6 +888,7 @@ export function mountUI(root: HTMLElement) {
   setInterval(refreshTabs, 700);
   // 게임 속 시계는 계속 흐르므로 짧은 간격으로 표시만 갱신합니다
   setInterval(refreshClock, 250);
+  setInterval(refreshRating, 700);
 
   refreshNav();
   refreshAll();
