@@ -22,3 +22,10 @@ DISCORD_WEBHOOK_URL=
 # https://console.anthropic.com/settings/keys 에서 발급 (sk-ant- 로 시작)
 # 이 값이 없으면 지시창에서 자유 질문 시 "미설정" 안내만 뜨고, 나머지는 정상 작동합니다.
 ANTHROPIC_API_KEY=
+
+# ── 유튜브 링크 자동 검색 (승인된 원고에 내 채널 영상 링크 넣기) ──
+# 1) https://console.cloud.google.com 에서 프로젝트 생성 → "YouTube Data API v3" 사용 설정
+# 2) 사용자 인증 정보 → API 키 만들기 → 복사
+YOUTUBE_API_KEY=
+# 내 채널 ID (UC로 시작, 유튜브 스튜디오 → 설정 → 채널 → 고급 설정에서 확인)
+YOUTUBE_CHANNEL_ID=
