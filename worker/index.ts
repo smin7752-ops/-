@@ -55,13 +55,13 @@ const worker = {
       const result = await generateBlogDraft(env);
       if (!result.ok) return Response.json(result);
 
-      // 유형(A=추천곡 → 유튜브 전체 검색 / B=자작곡 → 내 채널 안에서 검색)에 따라
+      // 자작곡(내 채널 안에서 검색)인지, 다른 아티스트 곡(유튜브 전체 검색)인지에 따라
       // 원고 제목으로 실제 영상을 찾아, 자리표시자를 실제 링크로 바꾼다
-      const type = result.answer.match(/유형:\s*([ABC])/i)?.[1]?.toUpperCase();
+      const isOwnSong = /자작곡:\s*예/.test(result.answer);
       const topic = result.answer.match(/제목:\s*(.+)/)?.[1]?.trim();
       const video = !topic
         ? { ok: false as const, error: "제목을 찾지 못했어요." }
-        : type === "B"
+        : isOwnSong
           ? await findChannelVideo(topic, env)
           : await findAnyVideo(topic, env);
       const answer = video.ok
