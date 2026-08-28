@@ -17,3 +17,8 @@ NOTION_BRIEFING_DB=
 # ── Discord ────────────────────────────────────────────
 # 보고를 받을 채널 → 채널 편집 → 연동 → 웹후크 → 새 웹후크 → URL 복사
 DISCORD_WEBHOOK_URL=
+
+# ── AI 상담(대표 지시창 자유 질문) ──────────────────────
+# https://console.anthropic.com/settings/keys 에서 발급 (sk-ant- 로 시작)
+# 이 값이 없으면 지시창에서 자유 질문 시 "미설정" 안내만 뜨고, 나머지는 정상 작동합니다.
+ANTHROPIC_API_KEY=

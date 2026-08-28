@@ -2,8 +2,9 @@
 import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } from "vinext/server/image-optimization";
 import handler from "vinext/server/app-router-entry";
 import { integrationStatus, publishReport, type DayReport, type PublishEnv } from "./report";
+import { askDept, type AskEnv } from "./ai";
 
-interface Env extends PublishEnv {
+interface Env extends PublishEnv, AskEnv {
   ASSETS: Fetcher;
   DB: D1Database;
   IMAGES: {
@@ -33,6 +34,18 @@ const worker = {
     // 연동 설정 여부만 알려준다 (값은 절대 내보내지 않는다)
     if (url.pathname === "/api/integrations") {
       return Response.json(integrationStatus(env));
+    }
+
+    // 대표 지시창의 자유 질문을 실제 AI에게 물어본다
+    if (url.pathname === "/api/ask-ai") {
+      if (request.method !== "POST") return new Response("POST only", { status: 405 });
+      try {
+        const { deptId, question } = (await request.json()) as { deptId?: string; question?: string };
+        const result = await askDept(deptId ?? "secretary", question ?? "", env);
+        return Response.json(result);
+      } catch (error) {
+        return Response.json({ ok: false, error: String(error) }, { status: 400 });
+      }
     }
 
     // 완료 보고를 Notion + Discord로 동시 발행

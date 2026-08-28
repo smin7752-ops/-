@@ -677,9 +677,10 @@ export class Company {
     this.pushChat("ceo", CEO.name, text);
     const q = text.toLowerCase();
 
-    // ① 특정 부서·직원 지목
+    // ① 특정 부서 지목 + 상태를 물어보는 말투일 때만 정형 보고
     const deptId = this.matchDept(text);
-    if (deptId && !/전체|모두|다들/.test(text)) {
+    const looksLikeStatusQuestion = /왜|늦|지연|막힘|블로(?!그)|안 되|안돼|문제|뭐|현황|상황|진행|보고|어디까지|status/.test(q);
+    if (deptId && !/전체|모두|다들/.test(text) && looksLikeStatusQuestion) {
       this.deptReport(deptId, text);
       return;
     }
@@ -698,15 +699,38 @@ export class Company {
     }
     if (/수고|칭찬|잘했|좋아요|고마/.test(text)) return this.cheer();
 
-    // ③ 질문(보고)
-    if (/왜|늦|지연|막힘|블로|안 되|안돼|문제/.test(text)) return this.reportDelay();
+    // ③ 질문(보고) — 부서 지목 없이 전체를 물어볼 때
+    if (/왜|늦|지연|막힘|블로(?!그)|안 되|안돼|문제/.test(text)) return this.reportDelay();
     if (/뭐|현황|상황|진행|보고|어디까지|status/.test(q)) return this.reportStatus();
 
-    this.pushChat(
-      "staff",
-      "김세리",
-      "이렇게 물어보시면 제일 빨라요 — “현황 보고” / “왜 늦어져?” / “시장조사팀 뭐해?” / “회의 소집” / “집중 모드” / “지금 브리핑”.",
-    );
+    // ④ 그 외 자유 질문 — 실제 AI에게 물어본다 (부서를 지목했으면 그 팀 관점으로 답함)
+    this.askAI(deptId, text);
+  }
+
+  /** 지시창의 자유 질문을 서버의 실제 AI에게 넘긴다 */
+  private askAI(deptId: string | null, question: string) {
+    const speakerName = deptId ? DEPT_LEAD[deptId].name : "김세리";
+    this.pushChat("staff", speakerName, "생각 중이에요…");
+    fetch("/api/ask-ai", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ deptId: deptId ?? "secretary", question }),
+    })
+      .then((res) => res.json())
+      .then((data: { ok?: boolean; answer?: string; error?: string }) => {
+        if (data.ok && data.answer) {
+          this.pushChat("staff", speakerName, data.answer);
+        } else {
+          this.pushChat(
+            "staff",
+            "김세리",
+            `AI 연동이 아직 준비 안 됐어요. ANTHROPIC_API_KEY를 등록해주시면 바로 답해드릴 수 있어요. (${data.error ?? "설정 필요"})`,
+          );
+        }
+      })
+      .catch(() => {
+        this.pushChat("staff", "김세리", "잠깐 통신 오류가 났어요. 다시 한 번 물어봐 주세요.");
+      });
   }
 
   // ── 보고 ────────────────────────────────────────────────
