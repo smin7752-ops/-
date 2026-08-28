@@ -44,6 +44,7 @@ export function injectStyles() {
   }
   #ui-root .clock-pill #day-label { font-size: 11px; opacity: 0.75; }
   #ui-root .clock-pill #clock-label { font-size: 17px; font-variant-numeric: tabular-nums; }
+  #ui-root .coin-pill.debt { background: #8a3b3b; }
   #ui-root .clock-pill.closed { background: #8a3b3b; }
   #ui-root .clock-pill.closed #day-label::after { content: " · 마감"; }
 

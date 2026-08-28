@@ -63,9 +63,16 @@ export interface DayLedger {
   served: number;
 }
 
+/** 세트 메뉴의 레벨 (재고는 단품 쪽에서 빠지므로 따로 없습니다) */
+export interface SetProgress {
+  level: number;
+  exp: number;
+}
+
 export interface SaveData {
   coins: number;
   menu: Record<string, MenuProgress>;
+  sets: Record<string, SetProgress>;
   equipment: string[];
   floors: FloorData[];
   generalManager: boolean;
@@ -84,6 +91,8 @@ export interface SaveData {
 /** 손님 한 명의 주문 (단품 또는 세트) */
 export interface Order {
   kind: "single" | "set";
+  /** 세트 주문일 때만. 세트 경험치를 어디에 줄지 정합니다 */
+  setId?: string;
   /** 단품이면 1개, 세트면 [음료, 디저트] */
   itemIds: string[];
   name: string;
@@ -110,9 +119,13 @@ function defaultSave(): SaveData {
   // 첫 메뉴는 재고를 조금 채워서 시작합니다.
   menu[DRINKS[0].id].stock = STARTING_STOCK;
 
+  const sets: Record<string, SetProgress> = {};
+  for (const set of SETS) sets[set.id] = { level: 1, exp: 0 };
+
   return {
     coins: 100,
     menu,
+    sets,
     equipment: [...STARTING_EQUIPMENT],
     floors: Array.from({ length: MAX_FLOORS }, (_, i) => defaultFloor(i)),
     generalManager: false,
@@ -182,6 +195,11 @@ class GameState {
       ...floor,
       ...(parsed?.floors?.[i] ?? {}),
     }));
+    // 세트 레벨도 나중에 추가된 기능이라 예전 저장본에는 없습니다.
+    merged.sets = { ...base.sets };
+    for (const [id, progress] of Object.entries(parsed.sets ?? {})) {
+      if (merged.sets[id]) merged.sets[id] = { ...merged.sets[id], ...progress };
+    }
     // 매출표는 나중에 추가된 기능이라, 예전 저장본에는 없습니다.
     merged.today = { ...emptyLedger(merged.day), ...(parsed.today ?? {}) };
     merged.history = Array.isArray(parsed.history) ? parsed.history : [];
@@ -258,8 +276,9 @@ class GameState {
   closeDay(): DayLedger {
     const wages = this.dailyWageTotal();
     this.data.today.wageCost = wages;
-    // 돈이 모자라도 빚을 지지는 않게, 가진 만큼만 빠집니다.
-    this.data.coins = Math.max(0, this.data.coins - wages);
+    // 인건비는 가진 돈이 모자라도 그대로 나갑니다. 잔고가 마이너스로
+    // 내려가면 다음 날은 빚을 지고 시작해요.
+    this.data.coins -= wages;
 
     const closed = { ...this.data.today };
     this.data.history.unshift(closed);
@@ -346,10 +365,29 @@ class GameState {
     );
   }
 
+  setProgress(setId: string): SetProgress {
+    return this.data.sets[setId];
+  }
+
   setPrice(set: SetDef): number {
-    return Math.round(
-      (this.priceOf(set.drinkId) + this.priceOf(set.dessertId)) * set.bonusRate,
-    );
+    const parts = this.priceOf(set.drinkId) + this.priceOf(set.dessertId);
+    const level = this.setProgress(set.id).level;
+    return Math.round(parts * set.bonusRate * priceMultiplier(level));
+  }
+
+  /** 세트를 한 번 팔았을 때. 레벨이 올랐으면 true */
+  addSetExp(setId: string, amount = 1): boolean {
+    const p = this.setProgress(setId);
+    if (!p || p.level >= MAX_MENU_LEVEL) return false;
+    p.exp += amount;
+    let leveled = false;
+    while (p.level < MAX_MENU_LEVEL && p.exp >= expToNext(p.level)) {
+      p.exp -= expToNext(p.level);
+      p.level += 1;
+      leveled = true;
+    }
+    if (p.level >= MAX_MENU_LEVEL) p.exp = 0;
+    return leveled;
   }
 
   /* ------------------------------ 재고 ------------------------------ */
@@ -552,13 +590,14 @@ class GameState {
   }
 }
 
-/** 개별 메뉴가 다음 레벨까지 얼마나 남았는지 (UI 표시용) */
-export function levelProgressText(p: MenuProgress): string {
+/** 개별 메뉴가 다음 레벨까지 얼마나 남았는지 (UI 표시용).
+    단품과 세트가 같은 레벨 규칙을 쓰므로 둘 다 받습니다. */
+export function levelProgressText(p: SetProgress): string {
   if (p.level >= MAX_MENU_LEVEL) return "MAX";
   return `${p.exp}/${expToNext(p.level)}`;
 }
 
-export function levelProgressRatio(p: MenuProgress): number {
+export function levelProgressRatio(p: SetProgress): number {
   if (p.level >= MAX_MENU_LEVEL) return 1;
   return Math.min(1, p.exp / expToNext(p.level));
 }

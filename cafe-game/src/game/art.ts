@@ -536,16 +536,14 @@ function buildEquipment(scene: Phaser.Scene) {
 function buildFurniture(scene: Phaser.Scene) {
   const S = ART_COLORS;
 
-  // 의자 등받이 — 손님 뒤에 깔립니다. 180x96
-  // 양옆 기둥이 있어야 "덩어리"가 아니라 의자로 보입니다.
-  tex(scene, "chair", 180, 96, (g) => {
-    blob(g, 24, 14, 17, 76, 8, S.woodDark, 5); // 왼쪽 기둥
-    blob(g, 139, 14, 17, 76, 8, S.woodDark, 5); // 오른쪽 기둥
-    blob(g, 16, 58, 148, 30, 12, S.woodDark, 5); // 앉는 면
-    blob(g, 34, 8, 112, 52, 20, S.wood, 5); // 등받이
+  // 의자 — 손님 한 명이 앉는 크기입니다. 손님 뒤에 깔려요. 120x96
+  tex(scene, "chair", 120, 96, (g) => {
+    blob(g, 16, 16, 14, 74, 7, S.woodDark, 5); // 왼쪽 기둥
+    blob(g, 90, 16, 14, 74, 7, S.woodDark, 5); // 오른쪽 기둥
+    blob(g, 10, 60, 100, 28, 11, S.woodDark, 5); // 앉는 면
+    blob(g, 24, 10, 72, 52, 18, S.wood, 5); // 등받이
     g.lineStyle(5, S.woodDark, 0.8);
-    g.lineBetween(76, 20, 76, 48);
-    g.lineBetween(104, 20, 104, 48);
+    g.lineBetween(60, 20, 60, 50);
   });
 
   // 테이블 상판 — 손님 앞에 덮여서, 손님이 테이블에 앉은 것처럼 보이게 합니다.
@@ -565,6 +563,23 @@ function buildFurniture(scene: Phaser.Scene) {
     g.strokePath();
   });
 
+  // 가게 문 — 손님이 여기로 들어오고, 매니저가 옆에 섭니다.
+  // 가로보다 세로가 길어야 "창문"이 아니라 문으로 보입니다. 160x200
+  tex(scene, "door", 160, 200, (g) => {
+    blob(g, 8, 24, 144, 172, 12, S.woodDark, 6); // 문틀
+    blob(g, 22, 38, 116, 146, 8, 0xdff0f5, 5); // 유리문
+    g.lineStyle(6, S.woodDark, 1);
+    g.lineBetween(80, 38, 80, 184); // 가운데 기둥
+    g.fillStyle(0xffffff, 0.5); // 유리 반사
+    g.fillRect(34, 50, 14, 118);
+    g.fillRect(96, 50, 14, 118);
+    disc(g, 68, 112, 7, S.steelDark, 4); // 손잡이
+    disc(g, 92, 112, 7, S.steelDark, 4);
+    blob(g, 26, 2, 108, 26, 10, 0x86caa5, 5); // 문 위 간판
+    g.fillStyle(S.paper, 1);
+    g.fillRoundedRect(40, 9, 80, 12, 6);
+  });
+
   // 아직 안 산 자리 — 200x200
   tex(scene, "table-empty", 200, 200, (g) => {
     g.fillStyle(0x5a3b22, 0.07);
@@ -575,7 +590,51 @@ function buildFurniture(scene: Phaser.Scene) {
     g.lineBetween(68, 100, 132, 100);
   });
 
-  // 바리스타 — 130x180. 카운터 뒤에 서 있습니다.
+  // 직원 전신 그림 — 130x180. 카운터 뒤나 홀에 서 있습니다.
+  // 옷 색과 소품만 달리해서 세 직급을 만듭니다.
+  const person = (
+    key: string,
+    shirt: number,
+    extra: (g: Phaser.GameObjects.Graphics) => void,
+  ) =>
+    tex(scene, key, 130, 180, (g) => {
+      blob(g, 20, 96, 90, 78, 24, shirt, 5); // 몸
+      extra(g);
+      disc(g, 18, 122, 15, shirt, 5); // 팔
+      disc(g, 112, 122, 15, shirt, 5);
+      disc(g, 65, 56, 38, SKINS[1], 5); // 머리
+      disc(g, 46, 60, 6, INK, 0); // 눈
+      disc(g, 84, 60, 6, INK, 0);
+      g.lineStyle(5, INK, 1);
+      g.beginPath();
+      g.arc(65, 68, 13, Phaser.Math.DegToRad(20), Phaser.Math.DegToRad(160));
+      g.strokePath();
+      g.fillStyle(0x3f3a44, 1); // 앞머리
+      g.slice(65, 54, 40, Phaser.Math.DegToRad(184), Phaser.Math.DegToRad(356));
+      g.fillPath();
+      g.lineStyle(5, INK, 1);
+      g.strokePath();
+    });
+
+  person("person-barista", 0x6f9ec4, (g) => {
+    blob(g, 36, 112, 58, 62, 12, S.paper, 5); // 앞치마
+    g.lineStyle(5, INK, 1);
+    g.lineBetween(48, 112, 58, 96);
+    g.lineBetween(82, 112, 72, 96);
+  });
+
+  person("person-server", 0x86caa5, (g) => {
+    blob(g, 40, 118, 50, 56, 12, S.paper, 5); // 짧은 앞치마
+  });
+
+  person("person-manager", 0x4a4756, (g) => {
+    g.fillStyle(S.paper, 1); // 셔츠 깃
+    g.fillTriangle(48, 96, 82, 96, 65, 132);
+    g.fillStyle(0xe4595f, 1); // 넥타이
+    g.fillTriangle(58, 104, 72, 104, 65, 142);
+  });
+
+  // 바리스타 모자는 person 위에 따로 얹습니다 (머리보다 앞에 와야 해서)
   tex(scene, "barista", 130, 180, (g) => {
     blob(g, 20, 96, 90, 78, 24, 0x6f9ec4, 5); // 몸
     blob(g, 36, 112, 58, 62, 12, S.paper, 5); // 앞치마

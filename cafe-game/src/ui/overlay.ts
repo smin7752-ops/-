@@ -2,10 +2,11 @@ import { bus, EVENTS } from "../game/bus";
 import {
   AUTO_RESTOCK_THRESHOLD,
   CLOSE_HOUR,
+  DAY_CLOSE_AUTO_MS,
   EQUIPMENT,
   GENERAL_MANAGER_COST,
   MAX_FLOORS,
-  MAX_ROLE_COUNT,
+  roleMax,
   OPEN_HOUR,
   ROLE_INFO,
   ROLE_ORDER,
@@ -83,7 +84,7 @@ export function mountUI(root: HTMLElement) {
   root.innerHTML = `
     <div class="top-bar ui-interactive">
       <div class="pill-row">
-        <div class="coin-pill"><span id="coin-icon"></span><span id="coin-count">0</span></div>
+        <div class="coin-pill" id="coin-pill"><span id="coin-icon"></span><span id="coin-count">0</span></div>
         <button class="clock-pill" id="clock-pill">
           <span id="day-label">1일차</span>
           <span id="clock-label">10:00</span>
@@ -124,6 +125,7 @@ export function mountUI(root: HTMLElement) {
 
   const coinEl = root.querySelector("#coin-count") as HTMLElement;
   const coinIcon = root.querySelector("#coin-icon") as HTMLElement;
+  const coinPill = root.querySelector("#coin-pill") as HTMLElement;
   const navBar = root.querySelector("#nav-bar") as HTMLElement;
   const dayLabel = root.querySelector("#day-label") as HTMLElement;
   const clockLabel = root.querySelector("#clock-label") as HTMLElement;
@@ -142,8 +144,11 @@ export function mountUI(root: HTMLElement) {
   /* --------------------------- 공통 갱신 --------------------------- */
 
   function refreshCoins() {
-    coinEl.textContent = num(gameState.data.coins);
+    const coins = gameState.data.coins;
+    coinEl.textContent = num(coins);
     coinIcon.innerHTML = ic("icon-coin", 24);
+    // 빚을 지면 한눈에 보이게 빨갛게 표시합니다.
+    coinPill.classList.toggle("debt", coins < 0);
   }
 
   /** 아래 메뉴바. 그림이 준비되면 다시 그려서 이모지 대신 그림이 들어갑니다. */
@@ -331,13 +336,18 @@ export function mountUI(root: HTMLElement) {
             </div>
           </div>`;
       }
+      const p = gameState.setProgress(set.id);
       return `
         <div class="row">
           <span class="set-pair">${ic(itemKey(drink.id), 34)}${ic(itemKey(dessert.id), 34)}</span>
           <div class="row-main">
-            <div class="row-label">${set.name}</div>
+            <div class="row-label">${set.name}
+              <span class="pill">Lv.${p.level}</span>
+              <span class="muted" style="font-size:11px">${levelProgressText(p)}</span>
+            </div>
             <div class="row-sub">${drink.name} + ${dessert.name}
               · 보너스 +${Math.round((set.bonusRate - 1) * 100)}%</div>
+            <div class="lv-bar"><i style="width:${levelProgressRatio(p) * 100}%"></i></div>
           </div>
           <div class="buy-btn" style="background:#f0e3ca;color:#7a5a33">${coin(gameState.setPrice(set))}</div>
         </div>`;
@@ -350,7 +360,8 @@ export function mountUI(root: HTMLElement) {
       ${menuSection("디저트", "dessert")}
       <h3>세트 메뉴</h3>
       ${sets}
-      <div class="note">세트가 열리면 손님이 가끔 세트로 주문해요. 단품보다 비싸게 팔립니다.</div>
+      <div class="note">세트가 열리면 손님이 가끔 세트로 주문해요. 단품보다 비싸고,
+      세트도 팔수록 레벨이 올라 값이 더 올라갑니다.</div>
     `;
   }
 
@@ -495,9 +506,45 @@ export function mountUI(root: HTMLElement) {
 
   /* ---------------------------- 마감 정산 ---------------------------- */
 
+  /* 마감 정산은 사장님이 자리를 비웠을 수도 있으니, 몇 초 뒤에는 알아서
+     다음 날로 넘어갑니다. 남은 시간을 버튼에 같이 보여줘요. */
+  let autoOpenTimer: ReturnType<typeof setInterval> | null = null;
+
+  function stopAutoOpen() {
+    if (autoOpenTimer === null) return;
+    clearInterval(autoOpenTimer);
+    autoOpenTimer = null;
+  }
+
+  function confirmDayClose() {
+    stopAutoOpen();
+    closeModal.classList.add("hidden");
+    sim.openNextDay();
+    refreshAll();
+  }
+
+  function startAutoOpen() {
+    stopAutoOpen();
+    const confirmBtn = root.querySelector("#close-confirm") as HTMLElement;
+    let left = Math.ceil(DAY_CLOSE_AUTO_MS / 1000);
+    const paint = () => {
+      confirmBtn.textContent = `내일 열기 (${left})`;
+    };
+    paint();
+    autoOpenTimer = setInterval(() => {
+      left -= 1;
+      if (left <= 0) {
+        confirmBtn.textContent = "내일 열기";
+        confirmDayClose();
+        return;
+      }
+      paint();
+    }, 1000);
+  }
+
   function showDayClosed(ledger: DayLedger) {
     const profit = ledgerProfit(ledger);
-    const short = gameState.data.coins <= 0 && ledger.wageCost > 0;
+    const debt = gameState.data.coins < 0;
     closeBody.innerHTML = `
       <p class="close-lead">${ledger.day}일차 영업을 마쳤어요.
         오늘 ${ledger.served}명의 손님을 받았습니다.</p>
@@ -507,9 +554,15 @@ export function mountUI(root: HTMLElement) {
           ? `<p class="warn-text">오늘은 적자예요. 인건비를 줄이거나, 비싼 메뉴를 키워보세요.</p>`
           : ""
       }
-      ${short ? `<p class="warn-text">돈이 모자라 인건비를 다 드리지 못했어요.</p>` : ""}
+      ${
+        debt
+          ? `<p class="warn-text">인건비를 내고 나니 잔고가 <b>${num(gameState.data.coins)}</b> 이에요.
+             빚을 갚을 때까지는 아무것도 살 수 없으니, 우선 손님부터 받아 메꿔주세요.</p>`
+          : ""
+      }
     `;
     closeModal.classList.remove("hidden");
+    startAutoOpen();
     refreshAll();
   }
 
@@ -518,10 +571,11 @@ export function mountUI(root: HTMLElement) {
   function roleRow(role: Role, floorIndex: number): string {
     const info = ROLE_INFO[role];
     const count = gameState.roleCount(floorIndex, role);
-    const full = count >= MAX_ROLE_COUNT;
+    const max = roleMax(role);
+    const full = count >= max;
     const cost = roleCost(role, count, floorIndex);
     // 한 명 한 명이 사람이라, 몇 명 있는지를 점으로도 보여줍니다.
-    const pips = Array.from({ length: MAX_ROLE_COUNT }, (_, i) =>
+    const pips = Array.from({ length: max }, (_, i) =>
       `<i class="pip ${i < count ? "on" : ""}"></i>`,
     ).join("");
 
@@ -530,7 +584,7 @@ export function mountUI(root: HTMLElement) {
         ${ic(staffKey(role), 40)}
         <div class="row-main">
           <div class="row-label">${info.name}
-            <span class="pill ${count === 0 ? "zero" : ""}">${count} / ${MAX_ROLE_COUNT}명</span>
+            <span class="pill ${count === 0 ? "zero" : ""}">${count} / ${max}명</span>
           </div>
           <div class="row-sub">${info.desc}</div>
           <div class="pips">${pips}<span class="wage">1명당 하루 ${num(info.wage)}</span></div>
@@ -556,8 +610,10 @@ export function mountUI(root: HTMLElement) {
     );
 
     bodyEl.innerHTML = `
-      <div class="note">직원은 <b>층마다 따로</b> 고용해요. 직급마다 <b>${MAX_ROLE_COUNT}명</b>까지 뽑을 수 있고,
-      사람이 많을수록 그만큼 빨라집니다. 지금 보고 있는 층은 <b>${floorIndex + 1}층</b> 입니다.</div>
+      <div class="note">직원은 <b>층마다 따로</b> 고용해요. 바리스타와 홀 직원은
+      <b>${roleMax("barista")}명</b>까지 뽑을 수 있고 사람이 많을수록 그만큼 빨라집니다.
+      매니저는 문 앞을 지키는 <b>한 명</b>이면 충분해요.
+      지금 보고 있는 층은 <b>${floorIndex + 1}층</b> 입니다.</div>
 
       <h3>${floorIndex + 1}층 직원</h3>
       ${ROLE_ORDER.map((role) => roleRow(role, floorIndex)).join("")}
@@ -580,7 +636,7 @@ export function mountUI(root: HTMLElement) {
     wire("[data-hire]", (el) => {
       const role = el.dataset.hire as Role;
       const count = gameState.roleCount(floorIndex, role);
-      if (count >= MAX_ROLE_COUNT) return;
+      if (count >= roleMax(role)) return;
       const cost = roleCost(role, count, floorIndex);
       if (!gameState.spendCoins(cost)) return;
       gameState.setRoleCount(floorIndex, role, count + 1);
@@ -739,11 +795,7 @@ export function mountUI(root: HTMLElement) {
     if (e.target === modal) closePanel();
   });
   clockPill.addEventListener("click", () => showPanel("sales"));
-  root.querySelector("#close-confirm")?.addEventListener("click", () => {
-    closeModal.classList.add("hidden");
-    sim.openNextDay();
-    refreshAll();
-  });
+  root.querySelector("#close-confirm")?.addEventListener("click", confirmDayClose);
 
   bus.on(EVENTS.OPEN_PANEL, (id: PanelId) => showPanel(id));
   bus.on(EVENTS.DAY_CLOSED, (ledger: DayLedger) => showDayClosed(ledger));

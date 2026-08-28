@@ -5,6 +5,7 @@ import {
   EAT_TIME_MS,
   GAME_MINUTES_PER_SECOND,
   MAX_FLOORS,
+  SEATS_PER_TABLE,
   SET_ORDER_CHANCE,
   WALK_TIME_MS,
   baristaSpeed,
@@ -44,11 +45,12 @@ export interface SimCustomer {
 
 export interface SimTable {
   state: TableState;
-  /** 더러운 테이블을 직원이 치우기까지 남은 시간 */
+  /** 더러운 자리를 직원이 치우기까지 남은 시간 */
   cleanLeft: number;
 }
 
 interface SimFloor {
+  /** 자리 목록. 테이블 하나당 SEATS_PER_TABLE 개씩 이어서 들어갑니다. */
   tables: SimTable[];
   customers: SimCustomer[];
   spawnTimer: number;
@@ -83,7 +85,8 @@ class Simulation {
     this.floors = Array.from({ length: MAX_FLOORS }, (_, i) => {
       const data = gameState.floor(i);
       const old = previous[i];
-      const tables: SimTable[] = Array.from({ length: data.tables }, (_, t) => {
+      const seatCount = data.tables * SEATS_PER_TABLE;
+      const tables: SimTable[] = Array.from({ length: seatCount }, (_, t) => {
         return old?.tables[t] ?? { state: "clean", cleanLeft: 0 };
       });
       return {
@@ -227,6 +230,7 @@ class Simulation {
       const dessert = menuById(set.dessertId);
       return {
         kind: "set",
+        setId: set.id,
         itemIds: [set.drinkId, set.dessertId],
         name: set.name,
         price: gameState.setPrice(set),
@@ -334,6 +338,8 @@ class Simulation {
     for (const id of c.order.itemIds) {
       if (gameState.addExp(id)) leveledUp = true;
     }
+    // 세트로 팔았으면 세트 자체도 레벨이 오릅니다
+    if (c.order.setId && gameState.addSetExp(c.order.setId)) leveledUp = true;
 
     c.phase = "eating";
     c.phaseTimer = EAT_TIME_MS;

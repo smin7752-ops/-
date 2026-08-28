@@ -147,6 +147,8 @@ export function priceMultiplier(level: number): number {
 
 export const MAX_FLOORS = 4;
 export const TABLES_PER_FLOOR = 6;
+/** 테이블 하나에 앉을 수 있는 손님 수 (양옆 의자 두 개) */
+export const SEATS_PER_TABLE = 2;
 export const STARTING_TABLES = 3;
 
 /** floorIndex 층(0부터)을 여는 데 드는 비용 */
@@ -165,14 +167,22 @@ export function tableCost(tablesOnFloor: number, floorIndex: number): number {
 
 export type Role = "barista" | "server" | "manager";
 
-/** 한 층에 직급별로 몇 명까지 고용할 수 있는지 */
-export const MAX_ROLE_COUNT = 4;
-
 export const ROLE_ORDER: Role[] = ["barista", "server", "manager"];
+
+/** 화면에 세워둘 자리를 잡을 때 쓰는, 직급을 통틀어 가장 많은 인원 */
+export const MAX_ROLE_COUNT = 4;
 
 export const ROLE_INFO: Record<
   Role,
-  { name: string; emoji: string; desc: string; baseCost: number; wage: number }
+  {
+    name: string;
+    emoji: string;
+    desc: string;
+    baseCost: number;
+    wage: number;
+    /** 한 층에 이 직급을 몇 명까지 둘 수 있는지 */
+    maxCount: number;
+  }
 > = {
   barista: {
     name: "바리스타",
@@ -180,6 +190,7 @@ export const ROLE_INFO: Record<
     desc: "주문을 자동으로 만들어줘요 (없으면 손님을 눌러 직접 만들어야 해요)",
     baseCost: 400,
     wage: 150,
+    maxCount: 4,
   },
   server: {
     name: "홀 직원",
@@ -187,13 +198,15 @@ export const ROLE_INFO: Record<
     desc: "자동으로 서빙하고 테이블을 치워요 (없으면 직접 눌러야 해요)",
     baseCost: 300,
     wage: 110,
+    maxCount: 4,
   },
   manager: {
     name: "매니저",
     emoji: "🕴️",
-    desc: "손님이 더 빨리 들어와요",
+    desc: "문 앞에서 손님을 맞아요. 손님이 더 자주 들어옵니다 (한 층에 1명)",
     baseCost: 1200,
     wage: 300,
+    maxCount: 1,
   },
 };
 
@@ -206,6 +219,11 @@ export function roleCost(role: Role, currentCount: number, floorIndex: number): 
 /** 그 직급 한 명의 하루 인건비 */
 export function roleWage(role: Role): number {
   return ROLE_INFO[role].wage;
+}
+
+/** 그 직급을 한 층에 몇 명까지 둘 수 있는지 */
+export function roleMax(role: Role): number {
+  return ROLE_INFO[role].maxCount;
 }
 
 /** 바리스타 제조 속도 배수 (사람 수만큼 빨라집니다). 0 = 미고용(수동) */
@@ -223,11 +241,13 @@ export function cleanDelayMs(serverCount: number): number {
   return serverCount <= 0 ? Infinity : 3200 / serverCount;
 }
 
-export const BASE_SPAWN_INTERVAL_MS = 4200;
+/* 테이블 하나에 두 명이 앉게 되어 자리가 두 배로 늘었으므로,
+   손님도 그만큼 자주 들어와야 자리가 채워집니다. */
+export const BASE_SPAWN_INTERVAL_MS = 2600;
 
-/** 매니저 수에 따른 손님 등장 간격(ms) */
+/** 매니저가 문 앞에 있으면 손님이 더 자주 들어옵니다 */
 export function spawnIntervalMs(managerCount: number): number {
-  return BASE_SPAWN_INTERVAL_MS / (1 + managerCount * 0.35);
+  return BASE_SPAWN_INTERVAL_MS / (1 + managerCount * 0.8);
 }
 
 /* ------------------------- 영업시간 / 하루 ------------------------- */
@@ -241,6 +261,9 @@ export const GAME_MINUTES_PER_SECOND = 3;
 
 /** 매출표에 남겨두는 지난 날 기록 수 */
 export const LEDGER_HISTORY_MAX = 14;
+
+/** 마감 정산을 안 눌러도 이 시간이 지나면 다음 날로 넘어갑니다 */
+export const DAY_CLOSE_AUTO_MS = 5000;
 
 /* --------------------------- 총괄 매니저 --------------------------- */
 
