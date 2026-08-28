@@ -1006,6 +1006,29 @@ export class Company {
   approve() {
     if (!this.approvalPending) return;
     this.approved = true;
+    this.requestBlogDraft();
+  }
+
+  /** 승인 즉시, 네이버 블로그에 바로 올릴 완성된 원고를 실제 AI에게 요청한다 */
+  private requestBlogDraft() {
+    const writerName = DEPT_LEAD["strategy2"]?.name ?? "한도빈";
+    this.pushChat("staff", writerName, "원고 작성 들어갈게요. 완성되면 바로 올려드릴게요…");
+    fetch("/api/blog-draft", { method: "POST" })
+      .then((res) => res.json())
+      .then((data: { ok?: boolean; answer?: string; error?: string }) => {
+        if (data.ok && data.answer) {
+          this.pushChat("staff", writerName, `📝 완성된 원고예요. 네이버 블로그에 바로 붙여넣으시면 돼요.\n\n${data.answer}`);
+        } else {
+          this.pushChat(
+            "staff",
+            "김세리",
+            `AI 연동이 아직 준비 안 됐어요. ANTHROPIC_API_KEY를 등록해주시면 완성된 원고를 바로 드릴 수 있어요. (${data.error ?? "설정 필요"})`,
+          );
+        }
+      })
+      .catch(() => {
+        this.pushChat("staff", "김세리", "잠깐 통신 오류가 났어요. 승인을 다시 한 번 눌러주세요.");
+      });
   }
 
   setBriefingHandler(handler: (() => void) | null) {

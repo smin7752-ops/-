@@ -13,7 +13,7 @@ export type AskResult = { ok: true; answer: string } | { ok: false; error: strin
 
 const MODEL = "claude-haiku-4-5";
 
-async function callClaude(system: string, userText: string, env: AskEnv): Promise<AskResult> {
+async function callClaude(system: string, userText: string, env: AskEnv, maxTokens = 1024): Promise<AskResult> {
   if (!env.ANTHROPIC_API_KEY) {
     return { ok: false, error: "ANTHROPIC_API_KEY 미설정" };
   }
@@ -21,7 +21,7 @@ async function callClaude(system: string, userText: string, env: AskEnv): Promis
   try {
     const response = await client.messages.create({
       model: MODEL,
-      max_tokens: 1024,
+      max_tokens: maxTokens,
       system,
       messages: [{ role: "user", content: userText }],
     });
@@ -63,4 +63,24 @@ export async function generateBriefingIdeas(env: AskEnv): Promise<AskResult> {
   ].join("\n");
 
   return callClaude(system, "오늘 브리핑에 넣을 블로그 콘텐츠 아이디어 3개를 만들어줘.", env);
+}
+
+/** 대표 승인 시, 네이버 블로그에 바로 붙여넣을 수 있는 완성된 원고 한 편을 만든다 */
+export async function generateBlogDraft(env: AskEnv): Promise<AskResult> {
+  const system = [
+    `당신은 "${COMPANY.name}"의 원고 작성팀입니다.`,
+    `회사 소개: ${COMPANY.description}`,
+    "대표의 승인을 받아, 네이버 블로그에 그대로 복사해서 올릴 수 있는 완성된 글 한 편을 씁니다.",
+    "형식은 정확히 아래처럼 맞추세요.",
+    "",
+    "제목: (클릭하고 싶어지는 구체적인 제목)",
+    "",
+    "(본문 — 소제목 2~4개로 나누어 800~1200자 분량, 존댓말 블로그 톤, 실제로 도움 되는 정보 위주)",
+    "",
+    "태그: #태그1 #태그2 ... (8개 내외)",
+    "",
+    "과장 광고 문구나 없는 사실을 지어내지 말고, 바로 발행해도 될 정도로 완성도 있게 쓰세요.",
+  ].join("\n");
+
+  return callClaude(system, "오늘 승인된 주제로 블로그 원고를 완성해줘.", env, 3000);
 }

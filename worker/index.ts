@@ -2,7 +2,7 @@
 import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } from "vinext/server/image-optimization";
 import handler from "vinext/server/app-router-entry";
 import { integrationStatus, publishReport, type DayReport, type PublishEnv } from "./report";
-import { askDept, generateBriefingIdeas, type AskEnv } from "./ai";
+import { askDept, generateBriefingIdeas, generateBlogDraft, type AskEnv } from "./ai";
 
 interface Env extends PublishEnv, AskEnv {
   ASSETS: Fetcher;
@@ -46,6 +46,13 @@ const worker = {
       } catch (error) {
         return Response.json({ ok: false, error: String(error) }, { status: 400 });
       }
+    }
+
+    // 대표 승인 시, 네이버 블로그에 바로 올릴 완성된 원고를 만든다
+    if (url.pathname === "/api/blog-draft") {
+      if (request.method !== "POST") return new Response("POST only", { status: 405 });
+      const result = await generateBlogDraft(env);
+      return Response.json(result);
     }
 
     // 완료 보고를 Notion + Discord로 동시 발행
