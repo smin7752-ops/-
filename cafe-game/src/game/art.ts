@@ -10,7 +10,7 @@
  * ------------------------------------------------------------------ */
 
 import Phaser from "phaser";
-import { ALL_MENU, EQUIPMENT } from "./config";
+import { ALL_MENU, EQUIPMENT, UNIFORMS, type UniformSlot } from "./config";
 
 /** 2배로 그린 그림을 화면에 올릴 때 줄이는 비율 */
 export const ART_SCALE = 0.5;
@@ -58,6 +58,8 @@ export const hairKey = (look: CustomerLook) => `hair-${look.hairStyle}-${look.ha
 export const bodyKey = (look: CustomerLook) => `body-${look.shirt}`;
 export const itemKey = (menuId: string) => `item-${menuId}`;
 export const equipKey = (equipmentId: string) => `equip-${equipmentId}`;
+/** 유니폼별 전신 그림 */
+export const personKey = (uniformId: string) => `person-${uniformId}`;
 
 /* ------------------------------------------------------------------ *
  * 그리기 도우미
@@ -616,23 +618,41 @@ function buildFurniture(scene: Phaser.Scene) {
       g.strokePath();
     });
 
-  person("person-barista", 0x6f9ec4, (g) => {
-    blob(g, 36, 112, 58, 62, 12, S.paper, 5); // 앞치마
-    g.lineStyle(5, INK, 1);
-    g.lineBetween(48, 112, 58, 96);
-    g.lineBetween(82, 112, 72, 96);
-  });
+  /* 자리마다 옷 모양이 다릅니다. 색은 유니폼마다 바뀌어요. */
+  const outfit: Record<UniformSlot, (g: Phaser.GameObjects.Graphics, accent: number) => void> = {
+    barista: (g, accent) => {
+      blob(g, 36, 112, 58, 62, 12, accent, 5); // 긴 앞치마
+      g.lineStyle(5, INK, 1);
+      g.lineBetween(48, 112, 58, 96);
+      g.lineBetween(82, 112, 72, 96);
+    },
+    server: (g, accent) => {
+      blob(g, 40, 118, 50, 56, 12, accent, 5); // 짧은 앞치마
+    },
+    manager: (g, accent) => {
+      g.fillStyle(ART_COLORS.paper, 1); // 셔츠 깃
+      g.fillTriangle(48, 96, 82, 96, 65, 132);
+      g.fillStyle(accent, 1); // 넥타이
+      g.fillTriangle(58, 104, 72, 104, 65, 142);
+    },
+    gm: (g, accent) => {
+      // 총괄은 어깨에 걸친 코트로 구분합니다
+      g.fillStyle(accent, 1);
+      g.fillRoundedRect(24, 100, 20, 70, 8);
+      g.fillRoundedRect(86, 100, 20, 70, 8);
+      g.lineStyle(5, INK, 1);
+      g.strokeRoundedRect(24, 100, 20, 70, 8);
+      g.strokeRoundedRect(86, 100, 20, 70, 8);
+      g.fillStyle(ART_COLORS.paper, 1);
+      g.fillTriangle(50, 96, 80, 96, 65, 128);
+      disc(g, 65, 136, 6, accent, 4); // 브로치
+    },
+  };
 
-  person("person-server", 0x86caa5, (g) => {
-    blob(g, 40, 118, 50, 56, 12, S.paper, 5); // 짧은 앞치마
-  });
-
-  person("person-manager", 0x4a4756, (g) => {
-    g.fillStyle(S.paper, 1); // 셔츠 깃
-    g.fillTriangle(48, 96, 82, 96, 65, 132);
-    g.fillStyle(0xe4595f, 1); // 넥타이
-    g.fillTriangle(58, 104, 72, 104, 65, 142);
-  });
+  // 유니폼마다 전신 그림을 한 장씩 구워둡니다.
+  for (const u of UNIFORMS) {
+    person(personKey(u.id), u.shirt, (g) => outfit[u.slot](g, u.accent));
+  }
 
   // 바리스타 모자는 person 위에 따로 얹습니다 (머리보다 앞에 와야 해서)
   tex(scene, "barista", 130, 180, (g) => {
@@ -887,6 +907,19 @@ function buildUiIcons(scene: Phaser.Scene) {
     g.lineBetween(17, 48, 48, 48);
   });
 
+  U("uniform", (g) => {
+    // 옷걸이에 걸린 앞치마
+    g.lineStyle(5, INK, 1); // 옷걸이 고리
+    g.beginPath();
+    g.arc(32, 14, 6, Phaser.Math.DegToRad(150), Phaser.Math.DegToRad(30), true);
+    g.strokePath();
+    g.lineBetween(12, 24, 32, 18);
+    g.lineBetween(52, 24, 32, 18);
+    blob(g, 16, 24, 32, 34, 8, 0x6f9ec4, 5); // 옷
+    g.fillStyle(S.paper, 1);
+    g.fillRoundedRect(23, 32, 18, 22, 5);
+  });
+
   U("equipment", (g) => {
     // 톱니바퀴. 스패너는 이 크기에서 뭉개져서, 톱니가 둥근 톱니바퀴로 그립니다.
     const teeth = (r: number, color: number) => {
@@ -980,7 +1013,8 @@ export function publishIconUrls(scene: Phaser.Scene) {
     ...ALL_MENU.map((m) => itemKey(m.id)),
     ...EQUIPMENT.map((e) => equipKey(e.id)),
     ...["barista", "server", "manager"].map(staffKey),
-    ...["menu", "supply", "staff", "store", "equipment", "sales"].map(uiKey),
+    ...UNIFORMS.map((u) => personKey(u.id)),
+    ...["menu", "supply", "staff", "store", "equipment", "sales", "uniform"].map(uiKey),
   ];
   for (const key of keys) {
     if (iconUrls[key] || !scene.textures.exists(key)) continue;

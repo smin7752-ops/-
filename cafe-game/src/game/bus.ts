@@ -34,4 +34,6 @@ export const EVENTS = {
   ART_READY: "art-ready",
   /** 밤 10시가 되어 하루를 마감했음 (마감 정산 화면을 띄웁니다) */
   DAY_CLOSED: "day-closed",
+  /** 유니폼을 사거나 갈아입었음 (화면의 직원 옷을 바꿉니다) */
+  UNIFORM_CHANGED: "uniform-changed",
 } as const;

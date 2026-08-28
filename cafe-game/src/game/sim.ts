@@ -42,6 +42,8 @@ export interface SimCustomer {
   serveLeft: number;
   /** 인내심 (walking 이후 서빙될 때까지 줄어듭니다) */
   patience: number;
+  /** 이 손님의 인내심 최대치. 유니폼 보유 효과로 손님마다 달라집니다 */
+  patienceTotal: number;
   leaving: boolean;
 }
 
@@ -202,6 +204,10 @@ class Simulation {
     }
     bus.emit(EVENTS.STOCK_CHANGED);
 
+    // 옷장에 쌓인 보유 효과만큼 손님이 더 너그러워집니다.
+    const patienceTotal =
+      CUSTOMER_PATIENCE_MS * (1 + gameState.ownedBonus().patience);
+
     floor.tables[tableIndex].state = "occupied";
     floor.customers.push({
       id: nextCustomerId++,
@@ -215,7 +221,8 @@ class Simulation {
       makeLeft: order.makeTimeMs,
       makeTotal: order.makeTimeMs,
       serveLeft: Infinity,
-      patience: CUSTOMER_PATIENCE_MS,
+      patience: patienceTotal,
+      patienceTotal,
       leaving: false,
     });
   }
@@ -257,8 +264,11 @@ class Simulation {
 
   private tickCustomers(floorIndex: number, floor: SimFloor, dt: number) {
     const data = gameState.floor(floorIndex);
-    const speed = baristaSpeed(data.barista);
-    const serveDelay = serveDelayMs(data.server);
+    // 유니폼을 입으면 그만큼 더 빨라집니다.
+    const speed =
+      baristaSpeed(data.barista) * (1 + (gameState.equipEffect("barista").makeSpeed ?? 0));
+    const serveDelay =
+      serveDelayMs(data.server) / (1 + (gameState.equipEffect("server").serveSpeed ?? 0));
 
     for (let i = floor.customers.length - 1; i >= 0; i--) {
       const c = floor.customers[i];
@@ -338,8 +348,10 @@ class Simulation {
   /** 서빙 완료 — 돈과 경험치가 들어옵니다. */
   private serve(floorIndex: number, c: SimCustomer) {
     const floor = this.floors[floorIndex];
-    // 매니저가 문 앞을 지키면 손님이 팁을 얹어줍니다 (등급이 높을수록 많이).
-    const tipRate = managerTipRate(gameState.floor(floorIndex).manager);
+    // 매니저가 문 앞을 지키면 손님이 팁을 얹어줍니다 (등급과 유니폼만큼).
+    const tipRate =
+      managerTipRate(gameState.floor(floorIndex).manager) +
+      (gameState.equipEffect("manager").tip ?? 0);
     const paid = Math.round(c.order.price * (1 + tipRate));
     gameState.addCoins(paid);
     gameState.recordSale(paid);

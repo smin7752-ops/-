@@ -338,3 +338,121 @@ export const OFFLINE_MIN_AWAY_MS = 2 * 60 * 1000;
 export const OFFLINE_NO_GM_CAP_MS = 60 * 60 * 1000;
 /** 자리를 비운 동안에는 이 비율만큼만 벌어요 */
 export const OFFLINE_EARNINGS_RATE = 0.6;
+
+/* ------------------------------ 유니폼 ------------------------------ */
+/* 직급마다 옷을 갈아입힐 수 있습니다.
+   - 장착 효과: 그 옷을 입은 직급에게 붙는 효과
+   - 보유 효과: 옷장에 있기만 해도 가게 전체에 붙는 효과 (안 입어도 적용)
+   유니폼은 층이 아니라 가게 전체 공용입니다. */
+
+/** 총괄 매니저까지 네 자리에 옷을 입힙니다 */
+export type UniformSlot = Role | "gm";
+
+export const UNIFORM_SLOTS: UniformSlot[] = ["barista", "server", "manager", "gm"];
+
+export const SLOT_NAME: Record<UniformSlot, string> = {
+  barista: "바리스타",
+  server: "홀 직원",
+  manager: "매니저",
+  gm: "총괄 매니저",
+};
+
+/** 입었을 때 붙는 효과 */
+export interface UniformEquipEffect {
+  /** 제조 속도 추가 배수 (0.3 = 30% 빨라짐) */
+  makeSpeed?: number;
+  /** 서빙·정리 속도 추가 배수 */
+  serveSpeed?: number;
+  /** 판매가에 얹히는 팁 비율 */
+  tip?: number;
+  /** 인건비 절감 비율 */
+  wageCut?: number;
+}
+
+/** 옷장에 있기만 해도 붙는 효과 (여러 벌이면 더해집니다) */
+export interface UniformOwnEffect {
+  /** 모든 판매가 추가 비율 */
+  price?: number;
+  /** 손님 인내심 추가 비율 */
+  patience?: number;
+  /** 화난 손님에게 깎이는 평점을 덜어주는 비율 */
+  ratingGuard?: number;
+  /** 발주 원가 절감 비율 */
+  supplyCut?: number;
+}
+
+export interface UniformDef {
+  id: string;
+  name: string;
+  slot: UniformSlot;
+  cost: number;
+  /** 그림에 쓰는 옷 색과 포인트 색 */
+  shirt: number;
+  accent: number;
+  equip: UniformEquipEffect;
+  own: UniformOwnEffect;
+}
+
+export const UNIFORMS: UniformDef[] = [
+  // 바리스타 — 만드는 속도
+  { id: "barista_basic", name: "기본 앞치마", slot: "barista", cost: 0,
+    shirt: 0x6f9ec4, accent: 0xfffaf2, equip: {}, own: {} },
+  { id: "barista_roaster", name: "로스터 앞치마", slot: "barista", cost: 3000,
+    shirt: 0x8a5a34, accent: 0xe0c9a6, equip: { makeSpeed: 0.3 }, own: { price: 0.05 } },
+  { id: "barista_master", name: "마스터 셰프복", slot: "barista", cost: 15000,
+    shirt: 0x3f4a5c, accent: 0xf5c542, equip: { makeSpeed: 0.7 }, own: { price: 0.12 } },
+
+  // 홀 직원 — 서빙 속도
+  { id: "server_basic", name: "기본 유니폼", slot: "server", cost: 0,
+    shirt: 0x86caa5, accent: 0xfffaf2, equip: {}, own: {} },
+  { id: "server_runner", name: "러너 유니폼", slot: "server", cost: 2500,
+    shirt: 0x4fa3d1, accent: 0xfffaf2, equip: { serveSpeed: 0.35 }, own: { patience: 0.05 } },
+  { id: "server_veteran", name: "베테랑 조끼", slot: "server", cost: 12000,
+    shirt: 0x7b4a86, accent: 0xf5c542, equip: { serveSpeed: 0.8 }, own: { patience: 0.1 } },
+
+  // 매니저 — 팁
+  { id: "manager_basic", name: "기본 정장", slot: "manager", cost: 0,
+    shirt: 0x4a4756, accent: 0xe4595f, equip: {}, own: {} },
+  { id: "manager_concierge", name: "컨시어지 정장", slot: "manager", cost: 8000,
+    shirt: 0x2f3a52, accent: 0xf5c542, equip: { tip: 0.08 }, own: { ratingGuard: 0.15 } },
+  { id: "manager_director", name: "디렉터 수트", slot: "manager", cost: 30000,
+    shirt: 0x1f2733, accent: 0xc0a062, equip: { tip: 0.18 }, own: { ratingGuard: 0.3 } },
+
+  // 총괄 매니저 — 인건비
+  { id: "gm_basic", name: "기본 수트", slot: "gm", cost: 0,
+    shirt: 0x5b5f6e, accent: 0xdfe3ea, equip: {}, own: {} },
+  { id: "gm_chief", name: "총괄 수트", slot: "gm", cost: 40000,
+    shirt: 0x37506b, accent: 0xdfe3ea, equip: { wageCut: 0.1 }, own: { supplyCut: 0.05 } },
+  { id: "gm_founder", name: "창업자 코트", slot: "gm", cost: 120000,
+    shirt: 0x5c2f3a, accent: 0xf5c542, equip: { wageCut: 0.22 }, own: { supplyCut: 0.12 } },
+];
+
+/** 처음부터 갖고 있는 기본 옷 (자리마다 하나씩) */
+export const STARTING_UNIFORMS = UNIFORMS.filter((u) => u.cost === 0).map((u) => u.id);
+
+export function uniformById(id: string): UniformDef | undefined {
+  return UNIFORMS.find((u) => u.id === id);
+}
+
+export function uniformsOfSlot(slot: UniformSlot): UniformDef[] {
+  return UNIFORMS.filter((u) => u.slot === slot);
+}
+
+/** 사람이 읽을 수 있는 효과 설명 */
+export function equipEffectText(e: UniformEquipEffect): string {
+  const parts: string[] = [];
+  if (e.makeSpeed) parts.push(`제조 속도 +${Math.round(e.makeSpeed * 100)}%`);
+  if (e.serveSpeed) parts.push(`서빙 속도 +${Math.round(e.serveSpeed * 100)}%`);
+  if (e.tip) parts.push(`팁 +${Math.round(e.tip * 100)}%`);
+  if (e.wageCut) parts.push(`인건비 −${Math.round(e.wageCut * 100)}%`);
+  return parts.length ? parts.join(" · ") : "특별한 효과 없음";
+}
+
+export function ownEffectText(e: UniformOwnEffect): string {
+  const parts: string[] = [];
+  if (e.price) parts.push(`판매가 +${Math.round(e.price * 100)}%`);
+  if (e.patience) parts.push(`손님 인내심 +${Math.round(e.patience * 100)}%`);
+  if (e.ratingGuard) parts.push(`평점 하락 −${Math.round(e.ratingGuard * 100)}%`);
+  if (e.supplyCut) parts.push(`발주 원가 −${Math.round(e.supplyCut * 100)}%`);
+  return parts.length ? parts.join(" · ") : "없음";
+}

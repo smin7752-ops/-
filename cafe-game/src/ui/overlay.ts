@@ -20,6 +20,12 @@ import {
   managerTipRate,
   ratingSpawnScale,
   roleCost,
+  SLOT_NAME,
+  UNIFORMS,
+  UNIFORM_SLOTS,
+  equipEffectText,
+  ownEffectText,
+  uniformsOfSlot,
   roleWage,
   tableCost,
   type Category,
@@ -37,10 +43,10 @@ import {
   type DayLedger,
 } from "../game/state";
 import { sim } from "../game/sim";
-import { equipKey, iconUrl, itemKey, staffKey, uiKey } from "../game/art";
+import { equipKey, iconUrl, itemKey, personKey, staffKey, uiKey } from "../game/art";
 import { injectStyles } from "./styles";
 
-type PanelId = "menu" | "supply" | "staff" | "store" | "equipment" | "sales";
+type PanelId = "menu" | "supply" | "staff" | "store" | "equipment" | "sales" | "uniform";
 
 const PANEL_TITLES: Record<PanelId, string> = {
   menu: "메뉴",
@@ -49,6 +55,7 @@ const PANEL_TITLES: Record<PanelId, string> = {
   store: "매장",
   equipment: "설비",
   sales: "매출표",
+  uniform: "유니폼",
 };
 
 function num(n: number): string {
@@ -168,6 +175,7 @@ export function mountUI(root: HTMLElement) {
     { id: "store", label: "매장", icon: uiKey("store") },
     { id: "equipment", label: "설비", icon: uiKey("equipment") },
     { id: "sales", label: "매출표", icon: uiKey("sales") },
+    { id: "uniform", label: "유니폼", icon: uiKey("uniform") },
   ];
 
   function refreshNav() {
@@ -286,6 +294,9 @@ export function mountUI(root: HTMLElement) {
         break;
       case "sales":
         renderSalesPanel();
+        break;
+      case "uniform":
+        renderUniformPanel();
         break;
     }
   }
@@ -454,6 +465,79 @@ export function mountUI(root: HTMLElement) {
         gameState.save();
         refreshAll();
       }
+    });
+  }
+
+  /* ---------------------------- 유니폼 패널 ---------------------------- */
+
+  function uniformRow(u: (typeof UNIFORMS)[number]): string {
+    const owned = gameState.ownsUniform(u.id);
+    const worn = gameState.equippedUniform(u.slot) === u.id;
+    const affordable = gameState.data.coins >= u.cost;
+    const button = worn
+      ? `<div class="buy-btn" style="background:#f0e3ca;color:#7a5a33">착용중</div>`
+      : owned
+        ? `<button class="buy-btn alt" data-wear="${u.id}">입기</button>`
+        : `<button class="buy-btn" data-buy-uniform="${u.id}"
+             ${affordable ? "" : "disabled"}>${coin(u.cost)}</button>`;
+    return `
+      <div class="row ${owned ? "" : "locked"}">
+        ${ic(personKey(u.id), 46)}
+        <div class="row-main">
+          <div class="row-label">${u.name}
+            ${worn ? `<span class="pill">착용중</span>` : ""}</div>
+          <div class="row-sub">
+            <span class="eff-equip">입으면</span> ${equipEffectText(u.equip)}<br>
+            <span class="eff-own">갖고만 있어도</span> ${ownEffectText(u.own)}
+          </div>
+        </div>
+        ${button}
+      </div>`;
+  }
+
+  function renderUniformPanel() {
+    const bonus = gameState.ownedBonus();
+    const progress = gameState.uniformProgress();
+    const bonusLines = [
+      bonus.price ? `판매가 +${Math.round(bonus.price * 100)}%` : "",
+      bonus.patience ? `손님 인내심 +${Math.round(bonus.patience * 100)}%` : "",
+      bonus.ratingGuard ? `평점 하락 −${Math.round(bonus.ratingGuard * 100)}%` : "",
+      bonus.supplyCut ? `발주 원가 −${Math.round(bonus.supplyCut * 100)}%` : "",
+    ].filter(Boolean);
+
+    bodyEl.innerHTML = `
+      <div class="note">유니폼은 <b>가게 전체</b> 공용이에요. 한 벌은 <b>입은 자리에만</b>
+      효과가 붙고, <b>사두기만 해도</b> 가게 전체에 붙는 효과가 따로 있습니다.
+      그래서 안 입는 옷도 모아둘 값어치가 있어요.</div>
+
+      <div class="rating-box">
+        <div class="rating-big">${progress.owned}<span class="muted" style="font-size:16px">/${progress.total}</span></div>
+        <div class="rating-note">
+          <b>지금 보유 효과</b><br>
+          ${bonusLines.length ? bonusLines.join(" · ") : "아직 없어요. 옷을 사면 여기에 쌓입니다."}
+        </div>
+      </div>
+
+      ${UNIFORM_SLOTS.map(
+        (slot) => `
+        <h3>${SLOT_NAME[slot]}</h3>
+        ${uniformsOfSlot(slot).map(uniformRow).join("")}`,
+      ).join("")}
+    `;
+
+    wire("[data-buy-uniform]", (el) => {
+      if (!gameState.buyUniform(el.dataset.buyUniform!)) return;
+      // 새로 산 옷은 바로 입혀줍니다.
+      gameState.equipUniform(el.dataset.buyUniform!);
+      gameState.save();
+      bus.emit(EVENTS.UNIFORM_CHANGED);
+      refreshAll();
+    });
+    wire("[data-wear]", (el) => {
+      if (!gameState.equipUniform(el.dataset.wear!)) return;
+      gameState.save();
+      bus.emit(EVENTS.UNIFORM_CHANGED);
+      refreshAll();
     });
   }
 

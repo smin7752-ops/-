@@ -1,6 +1,5 @@
 import Phaser from "phaser";
 import {
-  CUSTOMER_PATIENCE_MS,
   MAX_ROLE_COUNT,
   SEATS_PER_TABLE,
   TABLES_PER_FLOOR,
@@ -18,6 +17,7 @@ import {
   hairKey,
   headKey,
   itemKey,
+  personKey,
   publishIconUrls,
 } from "../game/art";
 
@@ -39,6 +39,8 @@ const DOOR = { x: VIRTUAL_WIDTH / 2, y: 1000 };
 const ENTRANCE = { x: DOOR.x, y: DOOR.y - 30 };
 /** 매니저는 문 옆에 서서 손님을 맞습니다 */
 const MANAGER_POS = { x: DOOR.x - 108, y: DOOR.y + 30 };
+/** 총괄 매니저는 홀 전체가 보이는 카운터 앞을 지킵니다 */
+const GM_POS = { x: VIRTUAL_WIDTH - 96, y: 420 };
 
 const COLS = 2;
 const TOP_MARGIN = 480;
@@ -105,6 +107,7 @@ export class CafeScene extends Phaser.Scene {
   private baristas: Phaser.GameObjects.Image[] = [];
   private servers: Phaser.GameObjects.Image[] = [];
   private manager!: Phaser.GameObjects.Image;
+  private generalManager!: Phaser.GameObjects.Image;
   private equipmentImages: Phaser.GameObjects.Image[] = [];
 
   constructor() {
@@ -130,6 +133,7 @@ export class CafeScene extends Phaser.Scene {
     });
 
     bus.on(EVENTS.LAYOUT_CHANGED, this.onLayoutChanged, this);
+    bus.on(EVENTS.UNIFORM_CHANGED, this.applyUniforms, this);
     bus.on(EVENTS.FLOOR_SWITCHED, this.onFloorSwitched, this);
     bus.on(EVENTS.SERVED, this.onServed, this);
     bus.on(EVENTS.CUSTOMER_ANGRY, this.onAngry, this);
@@ -138,6 +142,7 @@ export class CafeScene extends Phaser.Scene {
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       bus.off(EVENTS.LAYOUT_CHANGED, this.onLayoutChanged, this);
+      bus.off(EVENTS.UNIFORM_CHANGED, this.applyUniforms, this);
       bus.off(EVENTS.FLOOR_SWITCHED, this.onFloorSwitched, this);
       bus.off(EVENTS.SERVED, this.onServed, this);
       bus.off(EVENTS.CUSTOMER_ANGRY, this.onAngry, this);
@@ -212,7 +217,7 @@ export class CafeScene extends Phaser.Scene {
     // 바리스타는 카운터 뒤에 어깨를 맞대고 섭니다.
     this.baristas = Array.from({ length: MAX_ROLE_COUNT }, (_, i) =>
       this.add
-        .image(80 + i * 46, STAFF_BASE_Y, "barista")
+        .image(80 + i * 46, STAFF_BASE_Y, personKey(gameState.equippedUniform("barista")))
         .setOrigin(0.5, 1)
         .setScale(ART_SCALE)
         .setDepth(0)
@@ -223,7 +228,7 @@ export class CafeScene extends Phaser.Scene {
     this.servers = Array.from({ length: MAX_ROLE_COUNT }, (_, i) => {
       const home = this.serverHome(i);
       return this.add
-        .image(home.x, home.y, "person-server")
+        .image(home.x, home.y, personKey(gameState.equippedUniform("server")))
         .setOrigin(0.5, 1)
         .setScale(ART_SCALE)
         .setDepth(5)
@@ -232,11 +237,29 @@ export class CafeScene extends Phaser.Scene {
 
     // 매니저는 문 옆에 서서 손님을 맞습니다 (한 층에 한 명).
     this.manager = this.add
-      .image(MANAGER_POS.x, MANAGER_POS.y, "person-manager")
+      .image(MANAGER_POS.x, MANAGER_POS.y, personKey(gameState.equippedUniform("manager")))
       .setOrigin(0.5, 1)
       .setScale(ART_SCALE)
       .setDepth(5)
       .setVisible(false);
+
+    // 총괄 매니저는 가게 전체를 맡으므로 어느 층에서든 홀을 지켜봅니다.
+    this.generalManager = this.add
+      .image(GM_POS.x, GM_POS.y, personKey(gameState.equippedUniform("gm")))
+      .setOrigin(0.5, 1)
+      .setScale(ART_SCALE)
+      .setDepth(5)
+      .setVisible(false);
+  }
+
+  /** 유니폼을 갈아입으면 화면의 직원 그림도 그 옷으로 바꿉니다 */
+  private applyUniforms() {
+    const wear = (img: Phaser.GameObjects.Image, slot: "barista" | "server" | "manager" | "gm") =>
+      img.setTexture(personKey(gameState.equippedUniform(slot)));
+    this.baristas.forEach((img) => wear(img, "barista"));
+    this.servers.forEach((img) => wear(img, "server"));
+    wear(this.manager, "manager");
+    wear(this.generalManager, "gm");
   }
 
   /** 홀 직원이 할 일이 없을 때 서 있는 자리 (가운데 통로) */
@@ -323,6 +346,13 @@ export class CafeScene extends Phaser.Scene {
       img.setX(nextX);
       img.setY(Phaser.Math.Linear(img.y, target.y, 0.06));
     });
+
+    // 총괄 매니저는 층과 상관없이 가게에 한 명입니다.
+    const hasGm = gameState.data.generalManager;
+    if (this.generalManager.visible !== hasGm) this.generalManager.setVisible(hasGm);
+    if (hasGm) {
+      this.generalManager.setY(GM_POS.y + Math.sin(this.time.now / 420) * 3);
+    }
 
     // 매니저: 손님이 들어오는 중이면 반겨줍니다.
     const hasManager = data.manager > 0;
@@ -549,7 +579,7 @@ export class CafeScene extends Phaser.Scene {
     view.patienceBg.setVisible(showPatience);
     view.patienceFill.setVisible(showPatience);
     if (showPatience) {
-      const pct = Phaser.Math.Clamp(c.patience / CUSTOMER_PATIENCE_MS, 0, 1);
+      const pct = Phaser.Math.Clamp(c.patience / c.patienceTotal, 0, 1);
       view.patienceFill.setSize(BAR_W * pct, BAR_H);
       view.patienceFill.fillColor =
         pct < 0.3 ? 0xe74c3c : pct < 0.6 ? 0xf1c40f : 0x7ac74f;

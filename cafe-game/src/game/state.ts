@@ -17,6 +17,14 @@ import {
   RATING_START,
   RATING_UP_PER_SERVE,
   ROLE_ORDER,
+  STARTING_UNIFORMS,
+  UNIFORMS,
+  UNIFORM_SLOTS,
+  uniformById,
+  uniformsOfSlot,
+  type UniformEquipEffect,
+  type UniformOwnEffect,
+  type UniformSlot,
   equipmentCost,
   roleWage,
   OFFLINE_EARNINGS_CAP_MS,
@@ -85,6 +93,10 @@ export interface SaveData {
   floors: FloorData[];
   /** 가게 평점 (1.0 ~ 5.0). 손님 응대가 좋으면 오르고 소문이 납니다 */
   rating: number;
+  /** 사둔 유니폼 (옷장). 안 입어도 보유 효과가 붙습니다 */
+  uniforms: string[];
+  /** 자리별로 지금 입고 있는 유니폼 */
+  equipped: Record<UniformSlot, string>;
   generalManager: boolean;
   lastSavedAt: number;
   totalEarned: number;
@@ -140,6 +152,8 @@ function defaultSave(): SaveData {
     sets,
     floors: Array.from({ length: MAX_FLOORS }, (_, i) => defaultFloor(i)),
     rating: RATING_START,
+    uniforms: [...STARTING_UNIFORMS],
+    equipped: defaultEquipped(),
     generalManager: false,
     lastSavedAt: Date.now(),
     totalEarned: 0,
@@ -148,6 +162,15 @@ function defaultSave(): SaveData {
     today: emptyLedger(1),
     history: [],
   };
+}
+
+/** 자리마다 기본 옷을 입고 시작합니다 */
+function defaultEquipped(): Record<UniformSlot, string> {
+  const out = {} as Record<UniformSlot, string>;
+  for (const slot of UNIFORM_SLOTS) {
+    out[slot] = uniformsOfSlot(slot)[0].id;
+  }
+  return out;
 }
 
 export function emptyLedger(day: number): DayLedger {
@@ -216,6 +239,17 @@ class GameState {
       return merger;
     });
     merged.rating = typeof parsed.rating === "number" ? parsed.rating : RATING_START;
+    // 유니폼도 나중에 추가된 기능이라 예전 저장본에는 없습니다.
+    merged.uniforms = Array.from(
+      new Set([...STARTING_UNIFORMS, ...(parsed.uniforms ?? [])]),
+    );
+    merged.equipped = { ...defaultEquipped(), ...(parsed.equipped ?? {}) };
+    // 안 갖고 있는 옷이 입혀져 있으면 기본 옷으로 되돌립니다.
+    for (const slot of UNIFORM_SLOTS) {
+      if (!merged.uniforms.includes(merged.equipped[slot])) {
+        merged.equipped[slot] = uniformsOfSlot(slot)[0].id;
+      }
+    }
     // 세트 레벨도 나중에 추가된 기능이라 예전 저장본에는 없습니다.
     merged.sets = { ...base.sets };
     for (const [id, progress] of Object.entries(parsed.sets ?? {})) {
@@ -265,6 +299,55 @@ class GameState {
     this.data.today.served += 1;
   }
 
+  /* ----------------------------- 유니폼 ----------------------------- */
+
+  ownsUniform(id: string): boolean {
+    return this.data.uniforms.includes(id);
+  }
+
+  equippedUniform(slot: UniformSlot): string {
+    return this.data.equipped[slot];
+  }
+
+  buyUniform(id: string): boolean {
+    const def = uniformById(id);
+    if (!def || this.ownsUniform(id)) return false;
+    if (!this.spendCoins(def.cost)) return false;
+    this.data.uniforms.push(id);
+    return true;
+  }
+
+  equipUniform(id: string): boolean {
+    const def = uniformById(id);
+    if (!def || !this.ownsUniform(id)) return false;
+    this.data.equipped[def.slot] = id;
+    return true;
+  }
+
+  /** 그 자리가 지금 입고 있는 옷의 장착 효과 */
+  equipEffect(slot: UniformSlot): UniformEquipEffect {
+    return uniformById(this.equippedUniform(slot))?.equip ?? {};
+  }
+
+  /** 옷장에 있는 모든 옷의 보유 효과를 더한 값 */
+  ownedBonus(): Required<UniformOwnEffect> {
+    const total = { price: 0, patience: 0, ratingGuard: 0, supplyCut: 0 };
+    for (const id of this.data.uniforms) {
+      const own = uniformById(id)?.own;
+      if (!own) continue;
+      total.price += own.price ?? 0;
+      total.patience += own.patience ?? 0;
+      total.ratingGuard += own.ratingGuard ?? 0;
+      total.supplyCut += own.supplyCut ?? 0;
+    }
+    return total;
+  }
+
+  /** 옷장을 몇 벌 채웠는지 (화면 표시용) */
+  uniformProgress(): { owned: number; total: number } {
+    return { owned: this.data.uniforms.length, total: UNIFORMS.length };
+  }
+
   /* ------------------------------ 평점 ------------------------------ */
 
   /** 손님을 잘 응대했을 때 */
@@ -274,7 +357,10 @@ class GameState {
 
   /** 손님이 화나서 그냥 나갔을 때 */
   dropRating() {
-    this.data.rating = Math.max(RATING_MIN, this.data.rating - RATING_DOWN_PER_ANGRY);
+    // 옷장을 채워두면 손님이 조금 너그러워져서 평점이 덜 깎입니다.
+    const guard = Math.min(0.8, this.ownedBonus().ratingGuard);
+    const drop = RATING_DOWN_PER_ANGRY * (1 - guard);
+    this.data.rating = Math.max(RATING_MIN, this.data.rating - drop);
   }
 
   /** 발주에 쓴 돈을 오늘 재료비에 적습니다 */
@@ -289,6 +375,11 @@ class GameState {
       if (!floor.unlocked) return;
       for (const role of ROLE_ORDER) total += floor[role] * roleWage(role, i);
     });
+    // 총괄 매니저가 입은 옷만큼 인건비가 깎입니다 (고용했을 때만).
+    if (this.data.generalManager) {
+      const cut = Math.min(0.8, this.equipEffect("gm").wageCut ?? 0);
+      total = Math.round(total * (1 - cut));
+    }
     return total;
   }
 
@@ -404,7 +495,8 @@ class GameState {
 
   priceOf(id: string): number {
     const item = menuById(id);
-    return Math.round(item.basePrice * priceMultiplier(this.progress(id).level));
+    const base = item.basePrice * priceMultiplier(this.progress(id).level);
+    return Math.round(base * (1 + this.ownedBonus().price));
   }
 
   /** 판매 경험치를 주고, 레벨이 올랐으면 true */
@@ -469,9 +561,10 @@ class GameState {
     return this.progress(id).stock;
   }
 
-  /** 발주 1회 비용 */
+  /** 발주 1회 비용 (옷장 보유 효과만큼 원가가 깎입니다) */
   restockCost(id: string, qty: number): number {
-    return menuById(id).supplyCost * qty;
+    const cut = Math.min(0.8, this.ownedBonus().supplyCut);
+    return Math.round(menuById(id).supplyCost * qty * (1 - cut));
   }
 
   restock(id: string, qty: number): boolean {

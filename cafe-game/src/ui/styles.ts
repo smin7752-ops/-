@@ -299,6 +299,20 @@ export function injectStyles() {
     line-height: 1.45;
   }
   #ui-root .small { font-size: 11.5px; }
+  /* 유니폼 효과 두 종류를 구분해서 보여줍니다 */
+  #ui-root .eff-equip,
+  #ui-root .eff-own {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 1px 5px;
+    border-radius: 5px;
+    margin-right: 3px;
+  }
+  #ui-root .eff-equip { background: #e8973a; color: #3b2410; }
+  #ui-root .eff-own { background: #cfe0c4; color: #35502c; }
+  /* 메뉴바가 7칸이 되어 더 좁혀야 합니다 */
+  #ui-root .nav-btn { max-width: 66px; padding: 6px 1px 5px; font-size: 9.5px; }
   /* 세트 메뉴의 음료 + 디저트 그림 두 개 */
   #ui-root .set-pair { display: flex; flex: 0 0 auto; margin-right: -4px; }
   #ui-root .set-pair .ic-box:last-child { margin-left: -8px; }
