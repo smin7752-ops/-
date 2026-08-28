@@ -2,7 +2,7 @@
 import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } from "vinext/server/image-optimization";
 import handler from "vinext/server/app-router-entry";
 import { integrationStatus, publishReport, type DayReport, type PublishEnv } from "./report";
-import { askDept, type AskEnv } from "./ai";
+import { askDept, generateBriefingIdeas, type AskEnv } from "./ai";
 
 interface Env extends PublishEnv, AskEnv {
   ASSETS: Fetcher;
@@ -53,7 +53,9 @@ const worker = {
       if (request.method !== "POST") return new Response("POST only", { status: 405 });
       try {
         const report = (await request.json()) as DayReport;
-        const result = await publishReport(report, env);
+        const ideas = await generateBriefingIdeas(env);
+        const enriched: DayReport = { ...report, aiRecommendation: ideas.ok ? ideas.answer : undefined };
+        const result = await publishReport(enriched, env);
         return Response.json(result);
       } catch (error) {
         return Response.json({ error: String(error) }, { status: 400 });

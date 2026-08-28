@@ -17,6 +17,8 @@ export type DayReport = {
   risks: string[];
   next: string[];
   log: { time: string; text: string }[];
+  /** 실제 AI가 만든, 오늘 브리핑에 넣을 콘텐츠 아이디어 (ANTHROPIC_API_KEY 설정 시에만 존재) */
+  aiRecommendation?: string;
 };
 
 export type PublishEnv = {
@@ -85,6 +87,20 @@ async function sendNotion(report: DayReport, env: PublishEnv): Promise<TargetRes
       {
         object: "block",
         type: "heading_3",
+        heading_3: { rich_text: richText("🎯 오늘의 AI 추천 콘텐츠") },
+      },
+      {
+        object: "block",
+        type: "paragraph",
+        paragraph: {
+          rich_text: richText(
+            report.aiRecommendation ?? "AI 연동(ANTHROPIC_API_KEY) 전이라 아직 준비되지 않았어요.",
+          ),
+        },
+      },
+      {
+        object: "block",
+        type: "heading_3",
         heading_3: { rich_text: richText("오늘 진행 로그") },
       },
       ...report.log.slice(0, 40).map((entry) => ({
@@ -130,6 +146,10 @@ async function sendDiscord(report: DayReport, env: PublishEnv, notionUrl?: strin
       {
         name: "오늘 현황",
         value: `완료 ${report.counts.done} · 진행 ${report.counts.working} · 승인 대기 ${report.counts.approval} · 연동 대기 ${report.counts.blocked}`,
+      },
+      {
+        name: "🎯 오늘의 AI 추천 콘텐츠",
+        value: (report.aiRecommendation ?? "AI 연동 전이라 아직 없어요.").slice(0, 1000),
       },
       { name: "핵심 성과", value: joinLines(report.highlights).slice(0, 1000) },
       { name: "대표 결정사항", value: joinLines(report.decisions).slice(0, 1000) },

@@ -13,16 +13,32 @@ export type AskResult = { ok: true; answer: string } | { ok: false; error: strin
 
 const MODEL = "claude-haiku-4-5";
 
-export async function askDept(deptId: string, question: string, env: AskEnv): Promise<AskResult> {
-  const trimmed = question.trim();
-  if (!trimmed) return { ok: false, error: "빈 질문이에요." };
+async function callClaude(system: string, userText: string, env: AskEnv): Promise<AskResult> {
   if (!env.ANTHROPIC_API_KEY) {
     return { ok: false, error: "ANTHROPIC_API_KEY 미설정" };
   }
+  const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
+  try {
+    const response = await client.messages.create({
+      model: MODEL,
+      max_tokens: 1024,
+      system,
+      messages: [{ role: "user", content: userText }],
+    });
+    const text = response.content.find((block) => block.type === "text")?.text ?? "";
+    if (!text) return { ok: false, error: "빈 응답을 받았어요." };
+    return { ok: true, answer: text };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { ok: false, error: message };
+  }
+}
+
+export async function askDept(deptId: string, question: string, env: AskEnv): Promise<AskResult> {
+  const trimmed = question.trim();
+  if (!trimmed) return { ok: false, error: "빈 질문이에요." };
 
   const dept = DEPARTMENTS.find((d) => d.id === deptId);
-  const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
-
   const system = [
     `당신은 "${COMPANY.name}"이라는 회사의 ${dept ? dept.name : "직원"}입니다.`,
     `회사 소개: ${COMPANY.description}`,
@@ -33,19 +49,18 @@ export async function askDept(deptId: string, question: string, env: AskEnv): Pr
     .filter(Boolean)
     .join("\n");
 
-  try {
-    const response = await client.messages.create({
-      model: MODEL,
-      max_tokens: 1024,
-      system,
-      messages: [{ role: "user", content: trimmed }],
-    });
+  return callClaude(system, trimmed, env);
+}
 
-    const text = response.content.find((block) => block.type === "text")?.text ?? "";
-    if (!text) return { ok: false, error: "빈 응답을 받았어요." };
-    return { ok: true, answer: text };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return { ok: false, error: message };
-  }
+/** 하루 브리핑 발행 시, 실제로 쓸 수 있는 블로그 콘텐츠 아이디어를 만든다 */
+export async function generateBriefingIdeas(env: AskEnv): Promise<AskResult> {
+  const system = [
+    `당신은 "${COMPANY.name}"의 콘텐츠 기획팀입니다.`,
+    `회사 소개: ${COMPANY.description}`,
+    "대표에게 오늘 하루 브리핑에 넣을, 네이버 블로그에 바로 쓸 수 있는 콘텐츠 아이디어를 제안하세요.",
+    "주제 3개를 골라 각각 '제목 후보', '핵심 키워드', '한 줄 개요'를 포함한 목록으로 작성하세요.",
+    "실제로 검색될 법한 소재로, 과장 없이 실용적으로 쓰세요.",
+  ].join("\n");
+
+  return callClaude(system, "오늘 브리핑에 넣을 블로그 콘텐츠 아이디어 3개를 만들어줘.", env);
 }
