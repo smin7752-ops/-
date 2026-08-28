@@ -1,7 +1,9 @@
 import Phaser from "phaser";
 import {
+  CLOSE_HOUR,
   CUSTOMER_PATIENCE_MS,
   EAT_TIME_MS,
+  GAME_MINUTES_PER_SECOND,
   MAX_FLOORS,
   SET_ORDER_CHANCE,
   WALK_TIME_MS,
@@ -13,8 +15,7 @@ import {
 } from "./config";
 import { bus, EVENTS } from "./bus";
 import { gameState, type Order } from "./state";
-
-const FACES = ["😀", "😊", "🙂", "😌", "🤗", "😄", "😎", "🥰"];
+import { randomLook, type CustomerLook } from "./art";
 
 export type CustomerPhase = "walking" | "preparing" | "ready" | "eating";
 export type TableState = "clean" | "occupied" | "dirty";
@@ -24,7 +25,8 @@ export interface SimCustomer {
   floorIndex: number;
   tableIndex: number;
   order: Order;
-  face: string;
+  /** 이 손님의 생김새 (머리·머리카락·옷 색). 그림은 art.ts 가 그립니다 */
+  look: CustomerLook;
   phase: CustomerPhase;
   /** 현재 단계에 남은 시간(ms) */
   phaseTimer: number;
@@ -68,6 +70,8 @@ class Simulation {
   /** 재고가 없어서 손님을 못 받고 있는 상태인지 */
   blockedByStock = false;
   private lastTickAt = -1;
+  /** 마감해서 문을 닫은 상태 (사장님이 정산을 확인하면 풀립니다) */
+  private closed = false;
 
   constructor() {
     this.rebuild();
@@ -112,8 +116,42 @@ class Simulation {
     }
   }
 
+  /** 지금 영업 중인지 (마감 정산을 확인하기 전까지는 닫힌 상태) */
+  isOpen(): boolean {
+    return !this.closed;
+  }
+
+  /**
+   * 게임 속 시계를 흘려보냅니다. 밤 10시가 되면 그날 장부를 닫고
+   * 마감 정산 화면을 띄웁니다. 사장님이 확인해야 다음 날이 시작돼요.
+   */
+  private tickClock(dt: number) {
+    if (this.closed) return;
+    gameState.data.clock += (dt / 1000) * GAME_MINUTES_PER_SECOND;
+
+    if (gameState.data.clock >= CLOSE_HOUR * 60) {
+      gameState.data.clock = CLOSE_HOUR * 60;
+      this.closed = true;
+      const ledger = gameState.closeDay();
+      gameState.save();
+      bus.emit(EVENTS.DAY_CLOSED, ledger);
+    }
+  }
+
+  /** 마감 정산을 확인했을 때 — 다음 날 아침으로 넘어갑니다 */
+  openNextDay() {
+    gameState.startNextDay();
+    this.closed = false;
+    for (const floor of this.floors) {
+      floor.spawnTimer = 0;
+    }
+    bus.emit(EVENTS.COINS_CHANGED);
+  }
+
   private step(dt: number) {
     let anyStock = false;
+
+    this.tickClock(dt);
 
     for (let i = 0; i < this.floors.length; i++) {
       const data = gameState.floor(i);
@@ -143,6 +181,9 @@ class Simulation {
     if (floor.spawnTimer > 0) return;
     floor.spawnTimer = spawnIntervalMs(data.manager);
 
+    // 마감한 뒤에는 새 손님을 받지 않습니다 (앉아 있던 손님은 마저 처리해요)
+    if (this.closed) return;
+
     const tableIndex = floor.tables.findIndex((t) => t.state === "clean");
     if (tableIndex === -1) return;
 
@@ -161,7 +202,7 @@ class Simulation {
       floorIndex,
       tableIndex,
       order,
-      face: Phaser.Utils.Array.GetRandom(FACES),
+      look: randomLook(),
       phase: "walking",
       phaseTimer: WALK_TIME_MS,
       walkTotal: WALK_TIME_MS,
@@ -187,7 +228,6 @@ class Simulation {
       return {
         kind: "set",
         itemIds: [set.drinkId, set.dessertId],
-        label: `${drink.emoji}${dessert.emoji}`,
         name: set.name,
         price: gameState.setPrice(set),
         makeTimeMs: drink.makeTimeMs + dessert.makeTimeMs * 0.5,
@@ -200,7 +240,6 @@ class Simulation {
     return {
       kind: "single",
       itemIds: [item.id],
-      label: item.emoji,
       name: item.name,
       price: gameState.priceOf(item.id),
       makeTimeMs: item.makeTimeMs,
@@ -289,6 +328,7 @@ class Simulation {
   private serve(floorIndex: number, c: SimCustomer) {
     const floor = this.floors[floorIndex];
     gameState.addCoins(c.order.price);
+    gameState.recordSale(c.order.price);
 
     let leveledUp = false;
     for (const id of c.order.itemIds) {

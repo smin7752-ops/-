@@ -12,13 +12,47 @@ export function injectStyles() {
     align-items: center;
     gap: 8px;
   }
+  #ui-root .pill-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
   #ui-root .coin-pill {
     background: rgba(0,0,0,0.6);
-    padding: 8px 20px;
+    padding: 6px 18px 6px 10px;
     border-radius: 999px;
     font-size: 19px;
     font-weight: 800;
     letter-spacing: 0.3px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  /* 게임 속 시각. 누르면 매출표가 열립니다. */
+  #ui-root .clock-pill {
+    background: rgba(0,0,0,0.6);
+    color: #fff;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-weight: 800;
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    line-height: 1.1;
+  }
+  #ui-root .clock-pill #day-label { font-size: 11px; opacity: 0.75; }
+  #ui-root .clock-pill #clock-label { font-size: 17px; font-variant-numeric: tabular-nums; }
+  #ui-root .clock-pill.closed { background: #8a3b3b; }
+  #ui-root .clock-pill.closed #day-label::after { content: " · 마감"; }
+
+  /* 코드로 그린 그림을 HTML 안에 넣을 때 쓰는 상자 */
+  #ui-root .ic-box {
+    display: inline-block;
+    object-fit: contain;
+    vertical-align: middle;
+    flex: 0 0 auto;
   }
   #ui-root .floor-tabs {
     display: flex;
@@ -85,6 +119,8 @@ export function injectStyles() {
     line-height: 1.1;
   }
   #ui-root .nav-btn .ico { font-size: 19px; }
+  /* 버튼이 6개라 좁은 폰에서도 들어가게 조금 줄입니다 */
+  #ui-root .nav-btn { max-width: 76px; padding: 7px 2px 6px; font-size: 10.5px; }
   #ui-root .nav-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #b4701f; }
   #ui-root .nav-btn .badge {
     position: absolute;
@@ -147,6 +183,84 @@ export function injectStyles() {
   #ui-root .row-label { font-weight: 700; font-size: 15px; }
   #ui-root .row-sub { font-size: 11.5px; color: #8a7a63; margin-top: 2px; line-height: 1.35; }
   #ui-root .row.locked { opacity: 0.62; }
+
+  /* 표 한 줄 (합계처럼 값만 보여줄 때) */
+  #ui-root .row-plain {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 7px 0;
+    font-size: 13.5px;
+    border-bottom: 1px solid #ecdcc0;
+  }
+
+  /* 직원 인원수를 점으로 보여주는 표시 */
+  #ui-root .pips {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 5px;
+  }
+  #ui-root .pip {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: #e0d2b8;
+    box-shadow: inset 0 0 0 1px #cbb894;
+  }
+  #ui-root .pip.on { background: #e8973a; box-shadow: inset 0 0 0 1px #b4701f; }
+  #ui-root .wage { font-size: 11px; color: #8a7a63; margin-left: 6px; }
+
+  /* 매출 · 지출 · 순이익 정산표 */
+  #ui-root .ledger {
+    background: #fdf6e7;
+    border: 1px solid #e6d5b4;
+    border-radius: 12px;
+    padding: 10px 12px;
+    margin: 10px 0;
+    font-variant-numeric: tabular-nums;
+  }
+  #ui-root .ledger-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    padding: 5px 0;
+    font-size: 14px;
+  }
+  #ui-root .ledger-row.sub { font-size: 12px; color: #8a7a63; padding: 2px 0 2px 8px; }
+  #ui-root .ledger-row.total {
+    border-top: 2px solid #e6d5b4;
+    margin-top: 6px;
+    padding-top: 9px;
+    font-size: 17px;
+    font-weight: 800;
+  }
+  #ui-root .ledger .plus { color: #3f8f4d; }
+  #ui-root .ledger .minus { color: #b4564c; }
+  #ui-root .ledger-row.total b { color: #3f8f4d; }
+  #ui-root .ledger-row.total.loss b { color: #b4564c; }
+
+  #ui-root .profit {
+    font-weight: 800;
+    font-size: 15px;
+    color: #3f8f4d;
+    font-variant-numeric: tabular-nums;
+  }
+  #ui-root .profit.loss { color: #b4564c; }
+
+  #ui-root .close-lead { font-size: 14px; line-height: 1.5; }
+  #ui-root .warn-text {
+    background: #fbe7e4;
+    color: #a5342a;
+    border-radius: 10px;
+    padding: 9px 11px;
+    font-size: 12.5px;
+    line-height: 1.45;
+  }
+  #ui-root .small { font-size: 11.5px; }
+  /* 세트 메뉴의 음료 + 디저트 그림 두 개 */
+  #ui-root .set-pair { display: flex; flex: 0 0 auto; margin-right: -4px; }
+  #ui-root .set-pair .ic-box:last-child { margin-left: -8px; }
 
   #ui-root .buy-btn {
     flex: 0 0 auto;

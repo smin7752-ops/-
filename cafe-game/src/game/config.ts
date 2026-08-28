@@ -54,7 +54,7 @@ export const EQUIPMENT: EquipmentDef[] = [
     id: "showcase",
     name: "쇼케이스",
     emoji: "🧁",
-    cost: 400,
+    cost: 250,
     desc: "디저트를 진열해서 팔 수 있어요",
   },
   {
@@ -86,21 +86,21 @@ export const STARTING_EQUIPMENT = ["coffee_machine"];
 /* 배열 순서 = 해금 순서입니다. 앞 메뉴를 일정 레벨까지 키우면 다음이 열려요. */
 
 export const DRINKS: MenuDef[] = [
-  { id: "americano", name: "아메리카노", emoji: "☕", category: "drink", equipmentId: "coffee_machine", basePrice: 10, supplyCost: 3, makeTimeMs: 1200, unlockPrevLevel: 0 },
-  { id: "latte", name: "카페라떼", emoji: "🥛", category: "drink", equipmentId: "coffee_machine", basePrice: 18, supplyCost: 5, makeTimeMs: 1600, unlockPrevLevel: 3 },
-  { id: "icetea", name: "아이스티", emoji: "🧊", category: "drink", equipmentId: "tea_station", basePrice: 30, supplyCost: 8, makeTimeMs: 1400, unlockPrevLevel: 5 },
-  { id: "ade", name: "레몬에이드", emoji: "🍋", category: "drink", equipmentId: "blender", basePrice: 48, supplyCost: 13, makeTimeMs: 1800, unlockPrevLevel: 7 },
-  { id: "smoothie", name: "딸기스무디", emoji: "🍓", category: "drink", equipmentId: "blender", basePrice: 76, supplyCost: 20, makeTimeMs: 2200, unlockPrevLevel: 9 },
-  { id: "matcha", name: "말차라떼", emoji: "🍵", category: "drink", equipmentId: "tea_station", basePrice: 120, supplyCost: 32, makeTimeMs: 2000, unlockPrevLevel: 11 },
+  { id: "americano", name: "아메리카노", emoji: "☕", category: "drink", equipmentId: "coffee_machine", basePrice: 22, supplyCost: 4, makeTimeMs: 1200, unlockPrevLevel: 0 },
+  { id: "latte", name: "카페라떼", emoji: "🥛", category: "drink", equipmentId: "coffee_machine", basePrice: 38, supplyCost: 8, makeTimeMs: 1600, unlockPrevLevel: 3 },
+  { id: "icetea", name: "아이스티", emoji: "🧊", category: "drink", equipmentId: "tea_station", basePrice: 58, supplyCost: 13, makeTimeMs: 1400, unlockPrevLevel: 5 },
+  { id: "ade", name: "레몬에이드", emoji: "🍋", category: "drink", equipmentId: "blender", basePrice: 84, supplyCost: 19, makeTimeMs: 1800, unlockPrevLevel: 7 },
+  { id: "smoothie", name: "딸기스무디", emoji: "🍓", category: "drink", equipmentId: "blender", basePrice: 124, supplyCost: 28, makeTimeMs: 2200, unlockPrevLevel: 9 },
+  { id: "matcha", name: "말차라떼", emoji: "🍵", category: "drink", equipmentId: "tea_station", basePrice: 180, supplyCost: 42, makeTimeMs: 2000, unlockPrevLevel: 11 },
 ];
 
 export const DESSERTS: MenuDef[] = [
-  { id: "cookie", name: "쿠키", emoji: "🍪", category: "dessert", equipmentId: "showcase", basePrice: 14, supplyCost: 4, makeTimeMs: 600, unlockPrevLevel: 0 },
-  { id: "croissant", name: "크루아상", emoji: "🥐", category: "dessert", equipmentId: "oven", basePrice: 26, supplyCost: 7, makeTimeMs: 900, unlockPrevLevel: 3 },
-  { id: "cheesecake", name: "치즈케이크", emoji: "🍰", category: "dessert", equipmentId: "showcase", basePrice: 42, supplyCost: 12, makeTimeMs: 800, unlockPrevLevel: 5 },
-  { id: "macaron", name: "마카롱", emoji: "🍬", category: "dessert", equipmentId: "showcase", basePrice: 66, supplyCost: 18, makeTimeMs: 700, unlockPrevLevel: 7 },
-  { id: "tiramisu", name: "티라미수", emoji: "🍮", category: "dessert", equipmentId: "showcase", basePrice: 104, supplyCost: 28, makeTimeMs: 1000, unlockPrevLevel: 9 },
-  { id: "tart", name: "딸기타르트", emoji: "🥧", category: "dessert", equipmentId: "oven", basePrice: 165, supplyCost: 45, makeTimeMs: 1100, unlockPrevLevel: 11 },
+  { id: "cookie", name: "쿠키", emoji: "🍪", category: "dessert", equipmentId: "showcase", basePrice: 28, supplyCost: 6, makeTimeMs: 600, unlockPrevLevel: 0 },
+  { id: "croissant", name: "크루아상", emoji: "🥐", category: "dessert", equipmentId: "oven", basePrice: 48, supplyCost: 11, makeTimeMs: 900, unlockPrevLevel: 3 },
+  { id: "cheesecake", name: "치즈케이크", emoji: "🍰", category: "dessert", equipmentId: "showcase", basePrice: 74, supplyCost: 17, makeTimeMs: 800, unlockPrevLevel: 5 },
+  { id: "macaron", name: "마카롱", emoji: "🍬", category: "dessert", equipmentId: "showcase", basePrice: 110, supplyCost: 25, makeTimeMs: 700, unlockPrevLevel: 7 },
+  { id: "tiramisu", name: "티라미수", emoji: "🍮", category: "dessert", equipmentId: "showcase", basePrice: 160, supplyCost: 37, makeTimeMs: 1000, unlockPrevLevel: 9 },
+  { id: "tart", name: "딸기타르트", emoji: "🥧", category: "dessert", equipmentId: "oven", basePrice: 240, supplyCost: 56, makeTimeMs: 1100, unlockPrevLevel: 11 },
 ];
 
 export const ALL_MENU: MenuDef[] = [...DRINKS, ...DESSERTS];
@@ -165,58 +165,82 @@ export function tableCost(tablesOnFloor: number, floorIndex: number): number {
 
 export type Role = "barista" | "server" | "manager";
 
-export const MAX_ROLE_LEVEL = 3;
+/** 한 층에 직급별로 몇 명까지 고용할 수 있는지 */
+export const MAX_ROLE_COUNT = 4;
+
+export const ROLE_ORDER: Role[] = ["barista", "server", "manager"];
 
 export const ROLE_INFO: Record<
   Role,
-  { name: string; emoji: string; desc: string; baseCost: number }
+  { name: string; emoji: string; desc: string; baseCost: number; wage: number }
 > = {
   barista: {
     name: "바리스타",
     emoji: "👩‍🍳",
     desc: "주문을 자동으로 만들어줘요 (없으면 손님을 눌러 직접 만들어야 해요)",
-    baseCost: 500,
+    baseCost: 400,
+    wage: 150,
   },
   server: {
-    name: "직원",
+    name: "홀 직원",
     emoji: "🧑‍💼",
     desc: "자동으로 서빙하고 테이블을 치워요 (없으면 직접 눌러야 해요)",
-    baseCost: 800,
+    baseCost: 300,
+    wage: 110,
   },
   manager: {
     name: "매니저",
     emoji: "🕴️",
     desc: "손님이 더 빨리 들어와요",
-    baseCost: 2000,
+    baseCost: 1200,
+    wage: 300,
   },
 };
 
-export function roleCost(role: Role, currentLevel: number, floorIndex: number): number {
+/** 다음 한 명을 더 뽑는 데 드는 비용 (이미 있는 인원이 많을수록 비쌉니다) */
+export function roleCost(role: Role, currentCount: number, floorIndex: number): number {
   const base = ROLE_INFO[role].baseCost;
-  return Math.round(base * Math.pow(2.6, currentLevel) * (1 + floorIndex * 0.8));
+  return Math.round(base * Math.pow(2.2, currentCount) * (1 + floorIndex * 0.8));
 }
 
-/** 바리스타 제조 속도 배수. 0 = 미고용(수동) */
-export function baristaSpeed(level: number): number {
-  return level <= 0 ? 0 : 1 + (level - 1) * 0.7;
+/** 그 직급 한 명의 하루 인건비 */
+export function roleWage(role: Role): number {
+  return ROLE_INFO[role].wage;
 }
 
-/** 직원이 서빙까지 걸리는 시간(ms). Infinity = 미고용(수동) */
-export function serveDelayMs(serverLevel: number): number {
-  return serverLevel <= 0 ? Infinity : 2600 - serverLevel * 600;
+/** 바리스타 제조 속도 배수 (사람 수만큼 빨라집니다). 0 = 미고용(수동) */
+export function baristaSpeed(count: number): number {
+  return count <= 0 ? 0 : count;
 }
 
-/** 직원이 테이블을 치우는 데 걸리는 시간(ms). Infinity = 미고용(수동) */
-export function cleanDelayMs(serverLevel: number): number {
-  return serverLevel <= 0 ? Infinity : 3200 - serverLevel * 700;
+/** 홀 직원이 서빙까지 걸리는 시간(ms). Infinity = 미고용(수동) */
+export function serveDelayMs(serverCount: number): number {
+  return serverCount <= 0 ? Infinity : 2600 / serverCount;
+}
+
+/** 홀 직원이 테이블을 치우는 데 걸리는 시간(ms). Infinity = 미고용(수동) */
+export function cleanDelayMs(serverCount: number): number {
+  return serverCount <= 0 ? Infinity : 3200 / serverCount;
 }
 
 export const BASE_SPAWN_INTERVAL_MS = 4200;
 
-/** 매니저 레벨에 따른 손님 등장 간격(ms) */
-export function spawnIntervalMs(managerLevel: number): number {
-  return BASE_SPAWN_INTERVAL_MS / (1 + managerLevel * 0.4);
+/** 매니저 수에 따른 손님 등장 간격(ms) */
+export function spawnIntervalMs(managerCount: number): number {
+  return BASE_SPAWN_INTERVAL_MS / (1 + managerCount * 0.35);
 }
+
+/* ------------------------- 영업시간 / 하루 ------------------------- */
+
+/** 아침 10시에 열고 밤 10시에 닫습니다 */
+export const OPEN_HOUR = 10;
+export const CLOSE_HOUR = 22;
+
+/** 실제 1초가 게임 속 몇 분인지 → 하루(12시간)가 실제 4분입니다 */
+export const GAME_MINUTES_PER_SECOND = 3;
+
+/** 매출표에 남겨두는 지난 날 기록 수 */
+export const LEDGER_HISTORY_MAX = 14;
 
 /* --------------------------- 총괄 매니저 --------------------------- */
 
@@ -228,7 +252,7 @@ export const AUTO_RESTOCK_BATCH = 20;
 /* ------------------------------ 발주 ------------------------------ */
 
 export const SUPPLY_BATCH = 10;
-export const STARTING_STOCK = 20;
+export const STARTING_STOCK = 30;
 export const MAX_STOCK = 999;
 
 /* ------------------------ 손님 / 시간 관련 ------------------------ */

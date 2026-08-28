@@ -30,4 +30,8 @@ export const EVENTS = {
   OPEN_PANEL: "open-panel",
   /** 자리를 비운 동안 번 돈을 보여줄 차례 */
   OFFLINE_REWARD: "offline-reward",
+  /** 코드로 그린 그림이 다 준비됨 — HTML 화면도 그 그림으로 다시 그립니다 */
+  ART_READY: "art-ready",
+  /** 밤 10시가 되어 하루를 마감했음 (마감 정산 화면을 띄웁니다) */
+  DAY_CLOSED: "day-closed",
 } as const;

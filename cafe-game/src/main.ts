@@ -11,10 +11,16 @@ if (import.meta.env.DEV) {
   (window as unknown as Record<string, unknown>).__game = { state: gameState, sim };
 }
 
+/** 개발 중에만: 코드로 그린 그림들을 한눈에 확인할 수 있게 열어둡니다. */
+function exposeGameForDebug(game: Phaser.Game) {
+  if (!import.meta.env.DEV) return;
+  (window as unknown as Record<string, unknown>).__phaser = game;
+}
+
 // 자리를 비운 동안 번 돈은 화면을 그리기 전에 먼저 정산합니다.
 gameState.applyOfflineEarnings();
 
-new Phaser.Game({
+const game = new Phaser.Game({
   type: Phaser.AUTO,
   parent: "game-container",
   backgroundColor: "#1a120b",
@@ -32,6 +38,8 @@ new Phaser.Game({
   },
   scene: [CafeScene],
 });
+
+exposeGameForDebug(game);
 
 const uiRoot = document.getElementById("ui-root");
 if (uiRoot) mountUI(uiRoot);

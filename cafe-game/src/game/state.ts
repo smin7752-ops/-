@@ -8,7 +8,11 @@ import {
   EQUIPMENT,
   MAX_FLOORS,
   MAX_MENU_LEVEL,
+  LEDGER_HISTORY_MAX,
   MAX_STOCK,
+  OPEN_HOUR,
+  ROLE_ORDER,
+  roleWage,
   OFFLINE_EARNINGS_CAP_MS,
   OFFLINE_EARNINGS_RATE,
   OFFLINE_MIN_AWAY_MS,
@@ -46,6 +50,19 @@ export interface FloorData {
   manager: number;
 }
 
+/** 하루치 장부 — 매출표에 그대로 보여줍니다 */
+export interface DayLedger {
+  day: number;
+  /** 손님에게 받은 돈 */
+  revenue: number;
+  /** 재료비 (발주에 쓴 돈) */
+  supplyCost: number;
+  /** 인건비 (마감할 때 한 번에 나갑니다) */
+  wageCost: number;
+  /** 그날 응대한 손님 수 */
+  served: number;
+}
+
 export interface SaveData {
   coins: number;
   menu: Record<string, MenuProgress>;
@@ -54,6 +71,14 @@ export interface SaveData {
   generalManager: boolean;
   lastSavedAt: number;
   totalEarned: number;
+  /** 며칠째 영업 중인지 (1일차부터) */
+  day: number;
+  /** 게임 속 시각 — 자정부터 흐른 분 */
+  clock: number;
+  /** 아직 마감하지 않은 오늘 장부 */
+  today: DayLedger;
+  /** 마감이 끝난 지난 날들 (최근 것이 앞) */
+  history: DayLedger[];
 }
 
 /** 손님 한 명의 주문 (단품 또는 세트) */
@@ -61,7 +86,6 @@ export interface Order {
   kind: "single" | "set";
   /** 단품이면 1개, 세트면 [음료, 디저트] */
   itemIds: string[];
-  label: string;
   name: string;
   price: number;
   makeTimeMs: number;
@@ -94,7 +118,32 @@ function defaultSave(): SaveData {
     generalManager: false,
     lastSavedAt: Date.now(),
     totalEarned: 0,
+    day: 1,
+    clock: OPEN_HOUR * 60,
+    today: emptyLedger(1),
+    history: [],
   };
+}
+
+export function emptyLedger(day: number): DayLedger {
+  return { day, revenue: 0, supplyCost: 0, wageCost: 0, served: 0 };
+}
+
+/** 장부 한 줄의 지출 합계와 순이익 */
+export function ledgerExpense(l: DayLedger): number {
+  return l.supplyCost + l.wageCost;
+}
+
+export function ledgerProfit(l: DayLedger): number {
+  return l.revenue - ledgerExpense(l);
+}
+
+/** 게임 속 시각을 "14:30" 처럼 보여줍니다 */
+export function clockText(minutes: number): string {
+  const total = ((Math.floor(minutes) % 1440) + 1440) % 1440;
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
 class GameState {
@@ -133,6 +182,9 @@ class GameState {
       ...floor,
       ...(parsed?.floors?.[i] ?? {}),
     }));
+    // 매출표는 나중에 추가된 기능이라, 예전 저장본에는 없습니다.
+    merged.today = { ...emptyLedger(merged.day), ...(parsed.today ?? {}) };
+    merged.history = Array.isArray(parsed.history) ? parsed.history : [];
     return merged;
   }
 
@@ -164,6 +216,65 @@ class GameState {
     if (this.data.coins < amount) return false;
     this.data.coins -= amount;
     return true;
+  }
+
+  /* --------------------------- 하루 / 장부 --------------------------- */
+
+  /** 손님에게 받은 돈을 오늘 매출에 적습니다 */
+  recordSale(amount: number) {
+    this.data.today.revenue += amount;
+    this.data.today.served += 1;
+  }
+
+  /** 발주에 쓴 돈을 오늘 재료비에 적습니다 */
+  recordSupplyCost(amount: number) {
+    this.data.today.supplyCost += amount;
+  }
+
+  /** 지금 고용한 사람들의 하루 인건비 합계 */
+  dailyWageTotal(): number {
+    let total = 0;
+    for (const floor of this.data.floors) {
+      if (!floor.unlocked) continue;
+      for (const role of ROLE_ORDER) total += floor[role] * roleWage(role);
+    }
+    return total;
+  }
+
+  /** 지금 고용한 사람 수 (직급 상관없이) */
+  totalStaff(): number {
+    let total = 0;
+    for (const floor of this.data.floors) {
+      if (!floor.unlocked) continue;
+      for (const role of ROLE_ORDER) total += floor[role];
+    }
+    return total;
+  }
+
+  /**
+   * 하루를 마감합니다. 인건비를 지급하고 오늘 장부를 기록으로 넘깁니다.
+   * 돌려주는 값이 마감 정산 화면에 그대로 뜹니다.
+   */
+  closeDay(): DayLedger {
+    const wages = this.dailyWageTotal();
+    this.data.today.wageCost = wages;
+    // 돈이 모자라도 빚을 지지는 않게, 가진 만큼만 빠집니다.
+    this.data.coins = Math.max(0, this.data.coins - wages);
+
+    const closed = { ...this.data.today };
+    this.data.history.unshift(closed);
+    if (this.data.history.length > LEDGER_HISTORY_MAX) {
+      this.data.history.length = LEDGER_HISTORY_MAX;
+    }
+    return closed;
+  }
+
+  /** 마감 정산을 확인하면 다음 날 아침으로 넘어갑니다 */
+  startNextDay() {
+    this.data.day += 1;
+    this.data.clock = OPEN_HOUR * 60;
+    this.data.today = emptyLedger(this.data.day);
+    this.save();
   }
 
   /* --------------------------- 메뉴 / 해금 --------------------------- */
@@ -257,7 +368,9 @@ class GameState {
     const room = MAX_STOCK - p.stock;
     const actual = Math.min(qty, room);
     if (actual <= 0) return false;
-    if (!this.spendCoins(this.restockCost(id, actual))) return false;
+    const cost = this.restockCost(id, actual);
+    if (!this.spendCoins(cost)) return false;
+    this.recordSupplyCost(cost);
     p.stock += actual;
     return true;
   }
@@ -324,12 +437,13 @@ class GameState {
     return true;
   }
 
-  roleLevel(floorIndex: number, role: Role): number {
+  /** 그 층에 있는 그 직급의 사람 수 */
+  roleCount(floorIndex: number, role: Role): number {
     return this.floor(floorIndex)[role];
   }
 
-  setRoleLevel(floorIndex: number, role: Role, level: number) {
-    this.floor(floorIndex)[role] = level;
+  setRoleCount(floorIndex: number, role: Role, count: number) {
+    this.floor(floorIndex)[role] = count;
   }
 
   /** 메뉴/디저트 평균 판매가 (자리 비운 동안 계산용) */

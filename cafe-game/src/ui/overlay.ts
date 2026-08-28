@@ -1,17 +1,21 @@
 import { bus, EVENTS } from "../game/bus";
 import {
   AUTO_RESTOCK_THRESHOLD,
+  CLOSE_HOUR,
   EQUIPMENT,
   GENERAL_MANAGER_COST,
   MAX_FLOORS,
-  MAX_ROLE_LEVEL,
+  MAX_ROLE_COUNT,
+  OPEN_HOUR,
   ROLE_INFO,
+  ROLE_ORDER,
   SETS,
   SUPPLY_BATCH,
   TABLES_PER_FLOOR,
   floorUnlockCost,
   menuById,
   roleCost,
+  roleWage,
   tableCost,
   type Category,
   type Role,
@@ -19,14 +23,19 @@ import {
 import {
   DESSERTS,
   DRINKS,
+  clockText,
   gameState,
+  ledgerExpense,
+  ledgerProfit,
   levelProgressRatio,
   levelProgressText,
+  type DayLedger,
 } from "../game/state";
 import { sim } from "../game/sim";
+import { equipKey, iconUrl, itemKey, staffKey, uiKey } from "../game/art";
 import { injectStyles } from "./styles";
 
-type PanelId = "menu" | "supply" | "staff" | "store" | "equipment";
+type PanelId = "menu" | "supply" | "staff" | "store" | "equipment" | "sales";
 
 const PANEL_TITLES: Record<PanelId, string> = {
   menu: "메뉴",
@@ -34,10 +43,26 @@ const PANEL_TITLES: Record<PanelId, string> = {
   staff: "직원",
   store: "매장",
   equipment: "설비",
+  sales: "매출표",
 };
 
 function num(n: number): string {
   return Math.round(n).toLocaleString("ko-KR");
+}
+
+/**
+ * 코드로 그린 그림을 HTML 안에 넣습니다.
+ * 그림이 아직 준비되기 전이면 빈 자리를 두고, 준비되면 다시 그립니다.
+ */
+function ic(key: string, size = 22): string {
+  const url = iconUrl(key);
+  if (!url) return `<span class="ic-box" style="width:${size}px;height:${size}px"></span>`;
+  return `<img class="ic-box" src="${url}" alt="" style="width:${size}px;height:${size}px">`;
+}
+
+/** 코인 그림 + 금액 */
+function coin(amount: number, size = 20): string {
+  return `${ic("icon-coin", size)} ${num(amount)}`;
 }
 
 /**
@@ -57,18 +82,18 @@ export function mountUI(root: HTMLElement) {
 
   root.innerHTML = `
     <div class="top-bar ui-interactive">
-      <div class="coin-pill">🪙 <span id="coin-count">0</span></div>
+      <div class="pill-row">
+        <div class="coin-pill"><span id="coin-icon"></span><span id="coin-count">0</span></div>
+        <button class="clock-pill" id="clock-pill">
+          <span id="day-label">1일차</span>
+          <span id="clock-label">10:00</span>
+        </button>
+      </div>
       <div class="floor-tabs" id="floor-tabs"></div>
-      <div class="warn-banner hidden" id="stock-warn">📦 재고가 없어요! 발주를 넣어주세요</div>
+      <div class="warn-banner hidden" id="stock-warn">재고가 없어요! 발주를 넣어주세요</div>
     </div>
 
-    <div class="bottom-bar ui-interactive">
-      <button class="nav-btn" data-panel="menu"><span class="ico">📋</span>메뉴</button>
-      <button class="nav-btn" data-panel="supply"><span class="ico">📦</span>발주<span class="badge hidden" id="supply-badge"></span></button>
-      <button class="nav-btn" data-panel="staff"><span class="ico">👥</span>직원</button>
-      <button class="nav-btn" data-panel="store"><span class="ico">🏢</span>매장</button>
-      <button class="nav-btn" data-panel="equipment"><span class="ico">🔧</span>설비</button>
-    </div>
+    <div class="bottom-bar ui-interactive" id="nav-bar"></div>
 
     <div id="panel-modal" class="modal hidden ui-interactive">
       <div class="modal-card">
@@ -82,17 +107,31 @@ export function mountUI(root: HTMLElement) {
 
     <div id="offline-modal" class="modal hidden ui-interactive">
       <div class="modal-card">
-        <div class="modal-header"><h2>다시 오셨네요! ☕</h2></div>
+        <div class="modal-header"><h2>다시 오셨네요!</h2></div>
         <div class="modal-body" id="offline-body"></div>
         <button id="offline-close" class="primary-btn">확인</button>
+      </div>
+    </div>
+
+    <div id="close-modal" class="modal hidden ui-interactive">
+      <div class="modal-card">
+        <div class="modal-header"><h2 id="close-title">오늘 영업 끝!</h2></div>
+        <div class="modal-body" id="close-body"></div>
+        <button id="close-confirm" class="primary-btn">내일 열기</button>
       </div>
     </div>
   `;
 
   const coinEl = root.querySelector("#coin-count") as HTMLElement;
+  const coinIcon = root.querySelector("#coin-icon") as HTMLElement;
+  const navBar = root.querySelector("#nav-bar") as HTMLElement;
+  const dayLabel = root.querySelector("#day-label") as HTMLElement;
+  const clockLabel = root.querySelector("#clock-label") as HTMLElement;
+  const clockPill = root.querySelector("#clock-pill") as HTMLElement;
+  const closeModal = root.querySelector("#close-modal") as HTMLElement;
+  const closeBody = root.querySelector("#close-body") as HTMLElement;
   const tabsEl = root.querySelector("#floor-tabs") as HTMLElement;
   const warnEl = root.querySelector("#stock-warn") as HTMLElement;
-  const supplyBadge = root.querySelector("#supply-badge") as HTMLElement;
   const modal = root.querySelector("#panel-modal") as HTMLElement;
   const titleEl = root.querySelector("#panel-title") as HTMLElement;
   const bodyEl = root.querySelector("#panel-body") as HTMLElement;
@@ -104,6 +143,40 @@ export function mountUI(root: HTMLElement) {
 
   function refreshCoins() {
     coinEl.textContent = num(gameState.data.coins);
+    coinIcon.innerHTML = ic("icon-coin", 24);
+  }
+
+  /** 아래 메뉴바. 그림이 준비되면 다시 그려서 이모지 대신 그림이 들어갑니다. */
+  const NAV: { id: PanelId; label: string; icon: string }[] = [
+    { id: "menu", label: "메뉴", icon: uiKey("menu") },
+    { id: "supply", label: "발주", icon: uiKey("supply") },
+    { id: "staff", label: "직원", icon: uiKey("staff") },
+    { id: "store", label: "매장", icon: uiKey("store") },
+    { id: "equipment", label: "설비", icon: uiKey("equipment") },
+    { id: "sales", label: "매출표", icon: uiKey("sales") },
+  ];
+
+  function refreshNav() {
+    navBar.innerHTML = NAV.map((item) => {
+      const badge =
+        item.id === "supply"
+          ? `<span class="badge hidden" id="supply-badge"></span>`
+          : "";
+      return `<button class="nav-btn" data-panel="${item.id}">
+        ${ic(item.icon, 26)}${item.label}${badge}
+      </button>`;
+    }).join("");
+    navBar.querySelectorAll<HTMLElement>("[data-panel]").forEach((btn) => {
+      btn.addEventListener("click", () => showPanel(btn.dataset.panel as PanelId));
+    });
+    refreshWarnings();
+  }
+
+  /** 게임 속 시계와 며칠째인지 */
+  function refreshClock() {
+    dayLabel.textContent = `${gameState.data.day}일차`;
+    clockLabel.textContent = clockText(gameState.data.clock);
+    clockPill.classList.toggle("closed", !sim.isOpen());
   }
 
   function refreshWarnings() {
@@ -111,7 +184,9 @@ export function mountUI(root: HTMLElement) {
     const low = gameState
       .sellableItems()
       .some((m) => gameState.stockOf(m.id) < AUTO_RESTOCK_THRESHOLD);
-    supplyBadge.classList.toggle("hidden", !low);
+    // 메뉴바는 다시 그려질 때마다 새로 만들어지므로 그때그때 찾습니다.
+    const badge = root.querySelector("#supply-badge");
+    badge?.classList.toggle("hidden", !low);
   }
 
   function refreshTabs() {
@@ -148,6 +223,7 @@ export function mountUI(root: HTMLElement) {
 
   function refreshAll() {
     refreshCoins();
+    refreshClock();
     refreshWarnings();
     refreshTabs();
     if (openPanel) renderPanel();
@@ -184,6 +260,9 @@ export function mountUI(root: HTMLElement) {
         break;
       case "equipment":
         renderEquipmentPanel();
+        break;
+      case "sales":
+        renderSalesPanel();
         break;
     }
   }
@@ -223,8 +302,9 @@ export function mountUI(root: HTMLElement) {
         : `⚠️ ${equipName} 설비가 필요해요`;
       rows.push(`
         <div class="row ${equipped ? "" : "locked"}">
+          ${ic(itemKey(item.id), 40)}
           <div class="row-main">
-            <div class="row-label">${item.emoji} ${item.name}
+            <div class="row-label">${item.name}
               <span class="pill">Lv.${p.level}</span>
               <span class="muted" style="font-size:11px">${levelProgressText(p)}</span>
             </div>
@@ -253,12 +333,13 @@ export function mountUI(root: HTMLElement) {
       }
       return `
         <div class="row">
+          <span class="set-pair">${ic(itemKey(drink.id), 34)}${ic(itemKey(dessert.id), 34)}</span>
           <div class="row-main">
-            <div class="row-label">${set.emoji} ${set.name}</div>
-            <div class="row-sub">${drink.emoji} ${drink.name} + ${dessert.emoji} ${dessert.name}
+            <div class="row-label">${set.name}</div>
+            <div class="row-sub">${drink.name} + ${dessert.name}
               · 보너스 +${Math.round((set.bonusRate - 1) * 100)}%</div>
           </div>
-          <div class="buy-btn" style="background:#f0e3ca;color:#7a5a33">🪙 ${num(gameState.setPrice(set))}</div>
+          <div class="buy-btn" style="background:#f0e3ca;color:#7a5a33">${coin(gameState.setPrice(set))}</div>
         </div>`;
     }).join("");
 
@@ -286,14 +367,15 @@ export function mountUI(root: HTMLElement) {
         const cls = stock === 0 ? "zero" : stock < AUTO_RESTOCK_THRESHOLD ? "low" : "";
         return `
           <div class="row">
+            ${ic(itemKey(item.id), 40)}
             <div class="row-main">
-              <div class="row-label">${item.emoji} ${item.name}
+              <div class="row-label">${item.name}
                 <span class="pill ${cls}">재고 ${stock}</span>
               </div>
               <div class="row-sub">${SUPPLY_BATCH}개 발주 · 개당 원가 ${item.supplyCost}코인</div>
             </div>
             <button class="buy-btn" data-restock="${item.id}"
-              ${gameState.data.coins < cost ? "disabled" : ""}>🪙 ${num(cost)}</button>
+              ${gameState.data.coins < cost ? "disabled" : ""}>${coin(cost)}</button>
           </div>`;
       })
       .join("");
@@ -312,7 +394,7 @@ export function mountUI(root: HTMLElement) {
              <div class="row-sub">고용하면 발주가 자동이 돼요. 자리를 비운 동안에도 재고가 안 끊깁니다</div>
            </div>
            <button class="buy-btn alt" id="hire-gm"
-             ${gameState.data.coins < gmCost ? "disabled" : ""}>🪙 ${num(gmCost)}</button>
+             ${gameState.data.coins < gmCost ? "disabled" : ""}>${coin(gmCost)}</button>
          </div>`;
 
     bodyEl.innerHTML = `
@@ -345,24 +427,117 @@ export function mountUI(root: HTMLElement) {
     });
   }
 
+  /* ---------------------------- 매출표 패널 ---------------------------- */
+
+  /** 매출 · 지출 · 순이익을 한 줄씩 보여주는 정산표 */
+  function ledgerTable(l: DayLedger, wagePreview?: number): string {
+    const wage = wagePreview ?? l.wageCost;
+    const expense = l.supplyCost + wage;
+    const profit = l.revenue - expense;
+    return `
+      <div class="ledger">
+        <div class="ledger-row">
+          <span>매출</span><b class="plus">+${num(l.revenue)}</b>
+        </div>
+        <div class="ledger-row sub">
+          <span>└ 재료비 (발주)</span><b class="minus">-${num(l.supplyCost)}</b>
+        </div>
+        <div class="ledger-row sub">
+          <span>└ 인건비 (직원 ${gameState.totalStaff()}명)</span><b class="minus">-${num(wage)}</b>
+        </div>
+        <div class="ledger-row">
+          <span>지출 합계</span><b class="minus">-${num(expense)}</b>
+        </div>
+        <div class="ledger-row total ${profit < 0 ? "loss" : ""}">
+          <span>순이익</span><b>${profit < 0 ? "" : "+"}${num(profit)}</b>
+        </div>
+      </div>`;
+  }
+
+  function renderSalesPanel() {
+    const today = gameState.data.today;
+    const wageNow = gameState.dailyWageTotal();
+    const history = gameState.data.history;
+
+    const rows = history.length
+      ? history
+          .map((l) => {
+            const profit = ledgerProfit(l);
+            return `
+              <div class="row">
+                <div class="row-main">
+                  <div class="row-label">${l.day}일차 <span class="pill">손님 ${l.served}명</span></div>
+                  <div class="row-sub">매출 ${num(l.revenue)} · 지출 ${num(ledgerExpense(l))}</div>
+                </div>
+                <div class="profit ${profit < 0 ? "loss" : ""}">
+                  ${profit < 0 ? "" : "+"}${num(profit)}
+                </div>
+              </div>`;
+          })
+          .join("")
+      : `<p class="muted">아직 마감한 날이 없어요. 밤 ${CLOSE_HOUR}시에 첫 정산이 나옵니다.</p>`;
+
+    bodyEl.innerHTML = `
+      <div class="note">
+        매일 아침 ${OPEN_HOUR}시에 열고 밤 ${CLOSE_HOUR}시에 마감해요.
+        인건비는 <b>마감할 때 하루치가 한 번에</b> 나갑니다.
+      </div>
+
+      <h3>오늘 (${gameState.data.day}일차 · ${clockText(gameState.data.clock)})</h3>
+      <div class="row-plain"><span class="muted">받은 손님</span><b>${today.served}명</b></div>
+      ${ledgerTable(today, wageNow)}
+      <p class="muted small">아직 마감 전이라, 인건비는 지금 인원 기준으로 미리 보여드리는 금액이에요.</p>
+
+      <h3>지난 날</h3>
+      ${rows}
+    `;
+  }
+
+  /* ---------------------------- 마감 정산 ---------------------------- */
+
+  function showDayClosed(ledger: DayLedger) {
+    const profit = ledgerProfit(ledger);
+    const short = gameState.data.coins <= 0 && ledger.wageCost > 0;
+    closeBody.innerHTML = `
+      <p class="close-lead">${ledger.day}일차 영업을 마쳤어요.
+        오늘 ${ledger.served}명의 손님을 받았습니다.</p>
+      ${ledgerTable(ledger)}
+      ${
+        profit < 0
+          ? `<p class="warn-text">오늘은 적자예요. 인건비를 줄이거나, 비싼 메뉴를 키워보세요.</p>`
+          : ""
+      }
+      ${short ? `<p class="warn-text">돈이 모자라 인건비를 다 드리지 못했어요.</p>` : ""}
+    `;
+    closeModal.classList.remove("hidden");
+    refreshAll();
+  }
+
   /* ---------------------------- 직원 패널 ---------------------------- */
 
   function roleRow(role: Role, floorIndex: number): string {
     const info = ROLE_INFO[role];
-    const level = gameState.roleLevel(floorIndex, role);
-    const maxed = level >= MAX_ROLE_LEVEL;
-    const cost = roleCost(role, level, floorIndex);
-    const label = level === 0 ? `${info.name} 고용` : `${info.name} Lv.${level} → ${level + 1}`;
+    const count = gameState.roleCount(floorIndex, role);
+    const full = count >= MAX_ROLE_COUNT;
+    const cost = roleCost(role, count, floorIndex);
+    // 한 명 한 명이 사람이라, 몇 명 있는지를 점으로도 보여줍니다.
+    const pips = Array.from({ length: MAX_ROLE_COUNT }, (_, i) =>
+      `<i class="pip ${i < count ? "on" : ""}"></i>`,
+    ).join("");
+
     return `
       <div class="row">
+        ${ic(staffKey(role), 40)}
         <div class="row-main">
-          <div class="row-label">${info.emoji} ${maxed ? `${info.name} Lv.${level}` : label}
-            ${level === 0 ? `<span class="pill zero">없음</span>` : ""}</div>
+          <div class="row-label">${info.name}
+            <span class="pill ${count === 0 ? "zero" : ""}">${count} / ${MAX_ROLE_COUNT}명</span>
+          </div>
           <div class="row-sub">${info.desc}</div>
+          <div class="pips">${pips}<span class="wage">1명당 하루 ${num(info.wage)}</span></div>
         </div>
         <button class="buy-btn" data-hire="${role}"
-          ${maxed || gameState.data.coins < cost ? "disabled" : ""}>
-          ${maxed ? "MAX" : `🪙 ${num(cost)}`}
+          ${full || gameState.data.coins < cost ? "disabled" : ""}>
+          ${full ? "가득" : coin(cost)}
         </button>
       </div>`;
   }
@@ -375,26 +550,40 @@ export function mountUI(root: HTMLElement) {
       return;
     }
 
+    const floorWage = ROLE_ORDER.reduce(
+      (sum, role) => sum + gameState.roleCount(floorIndex, role) * roleWage(role),
+      0,
+    );
+
     bodyEl.innerHTML = `
-      <div class="note">직원은 <b>층마다 따로</b> 고용해요. 지금 보고 있는 층은 <b>${floorIndex + 1}층</b> 입니다.</div>
+      <div class="note">직원은 <b>층마다 따로</b> 고용해요. 직급마다 <b>${MAX_ROLE_COUNT}명</b>까지 뽑을 수 있고,
+      사람이 많을수록 그만큼 빨라집니다. 지금 보고 있는 층은 <b>${floorIndex + 1}층</b> 입니다.</div>
+
       <h3>${floorIndex + 1}층 직원</h3>
-      ${roleRow("barista", floorIndex)}
-      ${roleRow("server", floorIndex)}
-      ${roleRow("manager", floorIndex)}
+      ${ROLE_ORDER.map((role) => roleRow(role, floorIndex)).join("")}
+
+      <div class="row-plain">
+        <span class="muted">${floorIndex + 1}층 하루 인건비</span><b>${num(floorWage)}</b>
+      </div>
+      <div class="row-plain">
+        <span class="muted">전체 하루 인건비</span><b>${num(gameState.dailyWageTotal())}</b>
+      </div>
+
       <div class="note">
         바리스타가 없으면 손님을 눌러 <b>직접 만들어야</b> 하고,
-        직원이 없으면 <b>직접 서빙하고 테이블도 치워야</b> 해요.
-        둘 다 고용한 층만 자리를 비운 동안에도 돈을 법니다.
+        홀 직원이 없으면 <b>직접 서빙하고 테이블도 치워야</b> 해요.
+        둘 다 있는 층만 자리를 비운 동안에도 돈을 법니다.
+        인건비는 <b>밤 ${CLOSE_HOUR}시 마감할 때</b> 하루치가 한 번에 나갑니다.
       </div>
     `;
 
     wire("[data-hire]", (el) => {
       const role = el.dataset.hire as Role;
-      const level = gameState.roleLevel(floorIndex, role);
-      if (level >= MAX_ROLE_LEVEL) return;
-      const cost = roleCost(role, level, floorIndex);
+      const count = gameState.roleCount(floorIndex, role);
+      if (count >= MAX_ROLE_COUNT) return;
+      const cost = roleCost(role, count, floorIndex);
       if (!gameState.spendCoins(cost)) return;
-      gameState.setRoleLevel(floorIndex, role, level + 1);
+      gameState.setRoleCount(floorIndex, role, count + 1);
       gameState.save();
       bus.emit(EVENTS.STAFF_CHANGED);
       refreshAll();
@@ -421,7 +610,7 @@ export function mountUI(root: HTMLElement) {
             </div>
             <button class="buy-btn" data-table="${i}"
               ${maxed || gameState.data.coins < cost ? "disabled" : ""}>
-              ${maxed ? "MAX" : `🪙 ${num(cost)}`}
+              ${maxed ? "MAX" : coin(cost)}
             </button>
           </div>`);
       } else {
@@ -438,7 +627,7 @@ export function mountUI(root: HTMLElement) {
               }</div>
             </div>
             <button class="buy-btn alt" data-floor-buy="${i}"
-              ${!prevOpen || gameState.data.coins < cost ? "disabled" : ""}>🪙 ${num(cost)}</button>
+              ${!prevOpen || gameState.data.coins < cost ? "disabled" : ""}>${coin(cost)}</button>
           </div>`);
       }
     }
@@ -480,12 +669,13 @@ export function mountUI(root: HTMLElement) {
       const owned = gameState.hasEquipment(eq.id);
       const uses = [...DRINKS, ...DESSERTS]
         .filter((m) => m.equipmentId === eq.id)
-        .map((m) => m.emoji)
-        .join(" ");
+        .map((m) => ic(itemKey(m.id), 26))
+        .join("");
       return `
         <div class="row">
+          ${ic(equipKey(eq.id), 44)}
           <div class="row-main">
-            <div class="row-label">${eq.emoji} ${eq.name} ${
+            <div class="row-label">${eq.name} ${
               owned ? `<span class="pill">보유</span>` : ""
             }</div>
             <div class="row-sub">${eq.desc}<br>${uses}</div>
@@ -494,7 +684,7 @@ export function mountUI(root: HTMLElement) {
             owned
               ? `<div class="buy-btn" style="background:#f0e3ca;color:#7a5a33">✓</div>`
               : `<button class="buy-btn" data-equip="${eq.id}"
-                   ${gameState.data.coins < eq.cost ? "disabled" : ""}>🪙 ${num(eq.cost)}</button>`
+                   ${gameState.data.coins < eq.cost ? "disabled" : ""}>${coin(eq.cost)}</button>`
           }
         </div>`;
     }).join("");
@@ -530,7 +720,7 @@ export function mountUI(root: HTMLElement) {
     const timeStr = hours > 0 ? `${hours}시간 ${minutes}분` : `${minutes}분`;
     offlineBody.innerHTML = `
       <p>자리를 비운 <b>${timeStr}</b> 동안</p>
-      <p class="offline-earn">🪙 +${num(gameState.offlineEarnings)}</p>
+      <p class="offline-earn">${ic("icon-coin", 26)} +${num(gameState.offlineEarnings)}</p>
       <p class="muted">손님 ${num(gameState.offlineServes)}명을 받았어요</p>
       ${
         gameState.data.generalManager
@@ -544,15 +734,24 @@ export function mountUI(root: HTMLElement) {
 
   /* ----------------------------- 배선 ----------------------------- */
 
-  root.querySelectorAll<HTMLElement>("[data-panel]").forEach((btn) => {
-    btn.addEventListener("click", () => showPanel(btn.dataset.panel as PanelId));
-  });
   root.querySelector("#panel-close")?.addEventListener("click", closePanel);
   modal.addEventListener("click", (e) => {
     if (e.target === modal) closePanel();
   });
+  clockPill.addEventListener("click", () => showPanel("sales"));
+  root.querySelector("#close-confirm")?.addEventListener("click", () => {
+    closeModal.classList.add("hidden");
+    sim.openNextDay();
+    refreshAll();
+  });
 
   bus.on(EVENTS.OPEN_PANEL, (id: PanelId) => showPanel(id));
+  bus.on(EVENTS.DAY_CLOSED, (ledger: DayLedger) => showDayClosed(ledger));
+  // 코드로 그린 그림이 준비되면, 이모지 자리를 그림으로 바꿔 다시 그립니다.
+  bus.on(EVENTS.ART_READY, () => {
+    refreshNav();
+    refreshAll();
+  });
   bus.on(EVENTS.COINS_CHANGED, () => {
     refreshCoins();
     if (openPanel) renderPanel();
@@ -572,7 +771,10 @@ export function mountUI(root: HTMLElement) {
 
   // 층 탭의 "직접 눌러야 해요" 표시를 주기적으로 갱신
   setInterval(refreshTabs, 700);
+  // 게임 속 시계는 계속 흐르므로 짧은 간격으로 표시만 갱신합니다
+  setInterval(refreshClock, 250);
 
+  refreshNav();
   refreshAll();
   showOfflineIfAny();
 }
