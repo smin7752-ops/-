@@ -1,27 +1,97 @@
 import {
-  MENU_ITEMS,
+  ALL_MENU,
+  AUTO_RESTOCK_BATCH,
+  AUTO_RESTOCK_THRESHOLD,
+  DESSERTS,
+  DRINKS,
+  EAT_TIME_MS,
+  EQUIPMENT,
+  MAX_FLOORS,
+  MAX_MENU_LEVEL,
+  MAX_STOCK,
   OFFLINE_EARNINGS_CAP_MS,
   OFFLINE_EARNINGS_RATE,
+  OFFLINE_MIN_AWAY_MS,
+  OFFLINE_NO_GM_CAP_MS,
   SAVE_KEY,
+  SETS,
+  STARTING_EQUIPMENT,
+  STARTING_STOCK,
   STARTING_TABLES,
-  staffServeIntervalMs,
+  baristaSpeed,
+  cleanDelayMs,
+  expToNext,
+  menuById,
+  menuListOf,
+  priceMultiplier,
+  serveDelayMs,
+  spawnIntervalMs,
+  type Category,
+  type MenuDef,
+  type Role,
+  type SetDef,
 } from "./config";
+
+export interface MenuProgress {
+  level: number;
+  exp: number;
+  stock: number;
+}
+
+export interface FloorData {
+  unlocked: boolean;
+  tables: number;
+  barista: number;
+  server: number;
+  manager: number;
+}
 
 export interface SaveData {
   coins: number;
-  tables: number;
-  staffLevel: number;
-  unlockedMenuIds: string[];
+  menu: Record<string, MenuProgress>;
+  equipment: string[];
+  floors: FloorData[];
+  generalManager: boolean;
   lastSavedAt: number;
   totalEarned: number;
 }
 
-function defaultSave(): SaveData {
+/** 손님 한 명의 주문 (단품 또는 세트) */
+export interface Order {
+  kind: "single" | "set";
+  /** 단품이면 1개, 세트면 [음료, 디저트] */
+  itemIds: string[];
+  label: string;
+  name: string;
+  price: number;
+  makeTimeMs: number;
+}
+
+function defaultFloor(index: number): FloorData {
   return {
-    coins: 20,
-    tables: STARTING_TABLES,
-    staffLevel: 0,
-    unlockedMenuIds: [MENU_ITEMS[0].id],
+    unlocked: index === 0,
+    tables: index === 0 ? STARTING_TABLES : 0,
+    // 1층은 바리스타 한 명과 함께 시작합니다.
+    barista: index === 0 ? 1 : 0,
+    server: 0,
+    manager: 0,
+  };
+}
+
+function defaultSave(): SaveData {
+  const menu: Record<string, MenuProgress> = {};
+  for (const item of ALL_MENU) {
+    menu[item.id] = { level: 1, exp: 0, stock: 0 };
+  }
+  // 첫 메뉴는 재고를 조금 채워서 시작합니다.
+  menu[DRINKS[0].id].stock = STARTING_STOCK;
+
+  return {
+    coins: 100,
+    menu,
+    equipment: [...STARTING_EQUIPMENT],
+    floors: Array.from({ length: MAX_FLOORS }, (_, i) => defaultFloor(i)),
+    generalManager: false,
     lastSavedAt: Date.now(),
     totalEarned: 0,
   };
@@ -29,24 +99,41 @@ function defaultSave(): SaveData {
 
 class GameState {
   data: SaveData;
-  /** coins earned while the player was away, computed once at load time */
   offlineEarnings = 0;
   offlineDurationMs = 0;
+  offlineServes = 0;
 
   constructor() {
     this.data = this.load();
-    this.applyOfflineEarnings();
   }
 
+  /* ------------------------------ 저장 ------------------------------ */
+
   private load(): SaveData {
+    const base = defaultSave();
+    let parsed: Partial<SaveData> | null = null;
     try {
       const raw = localStorage.getItem(SAVE_KEY);
-      if (!raw) return defaultSave();
-      const parsed = JSON.parse(raw) as Partial<SaveData>;
-      return { ...defaultSave(), ...parsed };
+      if (raw) parsed = JSON.parse(raw) as Partial<SaveData>;
     } catch {
-      return defaultSave();
+      parsed = null;
     }
+    if (!parsed) return base;
+
+    // 저장본에 없는 항목(업데이트로 새로 추가된 메뉴/층)은 기본값으로 메웁니다.
+    const merged: SaveData = { ...base, ...parsed };
+    merged.menu = { ...base.menu };
+    for (const [id, progress] of Object.entries(parsed.menu ?? {})) {
+      if (merged.menu[id]) merged.menu[id] = { ...merged.menu[id], ...progress };
+    }
+    merged.equipment = Array.from(
+      new Set([...STARTING_EQUIPMENT, ...(parsed.equipment ?? [])]),
+    );
+    merged.floors = base.floors.map((floor, i) => ({
+      ...floor,
+      ...(parsed?.floors?.[i] ?? {}),
+    }));
+    return merged;
   }
 
   save() {
@@ -54,39 +141,19 @@ class GameState {
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify(this.data));
     } catch {
-      // storage unavailable (private mode etc.) — silently skip
+      // 저장 공간을 못 쓰는 환경(시크릿 모드 등)에서는 조용히 넘어갑니다.
     }
   }
 
-  private applyOfflineEarnings() {
-    const elapsed = Math.min(
-      Date.now() - this.data.lastSavedAt,
-      OFFLINE_EARNINGS_CAP_MS,
-    );
-    if (elapsed < 15000 || this.data.staffLevel <= 0) {
-      this.offlineEarnings = 0;
-      this.offlineDurationMs = 0;
-      return;
-    }
-    const interval = staffServeIntervalMs(this.data.staffLevel);
-    const avgReward = this.averageUnlockedReward();
-    const serves = elapsed / interval;
-    const earned = Math.round(serves * avgReward * OFFLINE_EARNINGS_RATE);
-    this.offlineEarnings = earned;
-    this.offlineDurationMs = elapsed;
-    if (earned > 0) {
-      this.data.coins += earned;
-      this.data.totalEarned += earned;
-    }
+  reset() {
+    this.data = defaultSave();
+    this.offlineEarnings = 0;
+    this.offlineDurationMs = 0;
+    this.offlineServes = 0;
+    this.save();
   }
 
-  private averageUnlockedReward(): number {
-    const unlocked = MENU_ITEMS.filter((m) =>
-      this.data.unlockedMenuIds.includes(m.id),
-    );
-    if (unlocked.length === 0) return MENU_ITEMS[0].reward;
-    return unlocked.reduce((sum, m) => sum + m.reward, 0) / unlocked.length;
-  }
+  /* ------------------------------ 재화 ------------------------------ */
 
   addCoins(amount: number) {
     this.data.coins += amount;
@@ -99,16 +166,289 @@ class GameState {
     return true;
   }
 
-  unlockedMenu() {
-    return MENU_ITEMS.filter((m) => this.data.unlockedMenuIds.includes(m.id));
+  /* --------------------------- 메뉴 / 해금 --------------------------- */
+
+  progress(id: string): MenuProgress {
+    return this.data.menu[id];
   }
 
-  nextLockedMenu() {
-    return MENU_ITEMS.find(
-      (m) => !this.data.unlockedMenuIds.includes(m.id),
+  hasEquipment(id: string): boolean {
+    return this.data.equipment.includes(id);
+  }
+
+  /** 앞 메뉴를 충분히 키워서 "레시피"가 열렸는가 (설비는 별개) */
+  isRecipeUnlocked(id: string): boolean {
+    const item = menuById(id);
+    const list = menuListOf(item.category);
+    const index = list.findIndex((m) => m.id === id);
+    if (index <= 0) return true;
+    const prev = list[index - 1];
+    return this.progress(prev.id).level >= item.unlockPrevLevel;
+  }
+
+  /** 실제로 팔 수 있는 상태인가 (레시피 + 설비) */
+  isSellable(id: string): boolean {
+    return this.isRecipeUnlocked(id) && this.hasEquipment(menuById(id).equipmentId);
+  }
+
+  sellableItems(category?: Category): MenuDef[] {
+    const list = category ? menuListOf(category) : ALL_MENU;
+    return list.filter((m) => this.isSellable(m.id));
+  }
+
+  /** 다음에 열릴 메뉴와, 무엇이 필요한지 */
+  nextLockedItem(category: Category): { item: MenuDef; prev: MenuDef } | null {
+    const list = menuListOf(category);
+    for (let i = 1; i < list.length; i++) {
+      if (!this.isRecipeUnlocked(list[i].id)) {
+        return { item: list[i], prev: list[i - 1] };
+      }
+    }
+    return null;
+  }
+
+  priceOf(id: string): number {
+    const item = menuById(id);
+    return Math.round(item.basePrice * priceMultiplier(this.progress(id).level));
+  }
+
+  /** 판매 경험치를 주고, 레벨이 올랐으면 true */
+  addExp(id: string, amount = 1): boolean {
+    const p = this.progress(id);
+    if (p.level >= MAX_MENU_LEVEL) return false;
+    p.exp += amount;
+    let leveled = false;
+    while (p.level < MAX_MENU_LEVEL && p.exp >= expToNext(p.level)) {
+      p.exp -= expToNext(p.level);
+      p.level += 1;
+      leveled = true;
+    }
+    if (p.level >= MAX_MENU_LEVEL) p.exp = 0;
+    return leveled;
+  }
+
+  /* ---------------------------- 세트 메뉴 ---------------------------- */
+
+  sellableSets(): SetDef[] {
+    return SETS.filter(
+      (s) => this.isSellable(s.drinkId) && this.isSellable(s.dessertId),
     );
+  }
+
+  setPrice(set: SetDef): number {
+    return Math.round(
+      (this.priceOf(set.drinkId) + this.priceOf(set.dessertId)) * set.bonusRate,
+    );
+  }
+
+  /* ------------------------------ 재고 ------------------------------ */
+
+  stockOf(id: string): number {
+    return this.progress(id).stock;
+  }
+
+  /** 발주 1회 비용 */
+  restockCost(id: string, qty: number): number {
+    return menuById(id).supplyCost * qty;
+  }
+
+  restock(id: string, qty: number): boolean {
+    const p = this.progress(id);
+    const room = MAX_STOCK - p.stock;
+    const actual = Math.min(qty, room);
+    if (actual <= 0) return false;
+    if (!this.spendCoins(this.restockCost(id, actual))) return false;
+    p.stock += actual;
+    return true;
+  }
+
+  /** 총괄 매니저가 있을 때 부족한 재고를 자동으로 채웁니다. */
+  autoRestock() {
+    if (!this.data.generalManager) return;
+    for (const item of this.sellableItems()) {
+      const p = this.progress(item.id);
+      if (p.stock >= AUTO_RESTOCK_THRESHOLD) continue;
+      const cost = this.restockCost(item.id, AUTO_RESTOCK_BATCH);
+      if (this.data.coins < cost) continue;
+      this.restock(item.id, AUTO_RESTOCK_BATCH);
+    }
+  }
+
+  /** 지금 팔 수 있고 재고도 남은 메뉴 */
+  inStockItems(category?: Category): MenuDef[] {
+    return this.sellableItems(category).filter((m) => this.stockOf(m.id) > 0);
+  }
+
+  isOutOfStock(): boolean {
+    return this.inStockItems().length === 0;
+  }
+
+  /* ------------------------------ 매장 ------------------------------ */
+
+  floor(index: number): FloorData {
+    return this.data.floors[index];
+  }
+
+  unlockedFloors(): number[] {
+    return this.data.floors
+      .map((f, i) => (f.unlocked ? i : -1))
+      .filter((i) => i >= 0);
+  }
+
+  totalTables(): number {
+    return this.data.floors.reduce((sum, f) => sum + (f.unlocked ? f.tables : 0), 0);
+  }
+
+  /* ------------------------- 자리 비운 동안 ------------------------- */
+
+  /** 한 층이 완전 자동으로 돌아가는가 (바리스타 + 직원 모두 있어야) */
+  isFloorAutomated(index: number): boolean {
+    const f = this.floor(index);
+    return f.unlocked && f.barista > 0 && f.server > 0;
+  }
+
+  hasEquipmentFor(id: string): boolean {
+    return this.hasEquipment(menuById(id).equipmentId);
+  }
+
+  equipmentDefs() {
+    return EQUIPMENT;
+  }
+
+  buyEquipment(id: string): boolean {
+    if (this.hasEquipment(id)) return false;
+    const def = EQUIPMENT.find((e) => e.id === id);
+    if (!def) return false;
+    if (!this.spendCoins(def.cost)) return false;
+    this.data.equipment.push(id);
+    return true;
+  }
+
+  roleLevel(floorIndex: number, role: Role): number {
+    return this.floor(floorIndex)[role];
+  }
+
+  setRoleLevel(floorIndex: number, role: Role, level: number) {
+    this.floor(floorIndex)[role] = level;
+  }
+
+  /** 메뉴/디저트 평균 판매가 (자리 비운 동안 계산용) */
+  averagePrice(): number {
+    const items = this.inStockItems();
+    const pool = items.length > 0 ? items : this.sellableItems();
+    if (pool.length === 0) return DRINKS[0].basePrice;
+    return pool.reduce((sum, m) => sum + this.priceOf(m.id), 0) / pool.length;
+  }
+
+  averageSupplyCost(): number {
+    const pool = this.sellableItems();
+    if (pool.length === 0) return DRINKS[0].supplyCost;
+    return pool.reduce((sum, m) => sum + m.supplyCost, 0) / pool.length;
+  }
+
+  averageMakeTime(): number {
+    const pool = this.sellableItems();
+    if (pool.length === 0) return DRINKS[0].makeTimeMs;
+    return pool.reduce((sum, m) => sum + m.makeTimeMs, 0) / pool.length;
+  }
+
+  totalStock(): number {
+    return this.sellableItems().reduce((sum, m) => sum + this.stockOf(m.id), 0);
+  }
+
+  /**
+   * 자리를 비운 동안 자동화된 층이 번 돈을 계산해서 넣어줍니다.
+   * 완전 자동(바리스타+직원)인 층만 돈을 벌고, 총괄 매니저가 없으면
+   * 재고가 떨어지므로 짧게 끊고 남은 재고만큼만 인정합니다.
+   */
+  applyOfflineEarnings() {
+    const gm = this.data.generalManager;
+    const cap = gm ? OFFLINE_EARNINGS_CAP_MS : OFFLINE_NO_GM_CAP_MS;
+    const elapsed = Math.min(Math.max(0, Date.now() - this.data.lastSavedAt), cap);
+    this.offlineEarnings = 0;
+    this.offlineDurationMs = 0;
+    this.offlineServes = 0;
+    if (elapsed < OFFLINE_MIN_AWAY_MS) return;
+
+    const autoFloors = this.data.floors
+      .map((_, i) => i)
+      .filter((i) => this.isFloorAutomated(i));
+    if (autoFloors.length === 0) return;
+    if (this.sellableItems().length === 0) return;
+
+    // 층별로 "테이블 회전율"과 "손님 등장 속도" 중 느린 쪽이 실제 처리량입니다.
+    let servesPerMs = 0;
+    for (const i of autoFloors) {
+      const f = this.floor(i);
+      const cycleMs =
+        this.averageMakeTime() / baristaSpeed(f.barista) +
+        serveDelayMs(f.server) +
+        EAT_TIME_MS +
+        cleanDelayMs(f.server);
+      const tableThroughput = f.tables / cycleMs;
+      const spawnThroughput = 1 / spawnIntervalMs(f.manager);
+      servesPerMs += Math.min(tableThroughput, spawnThroughput);
+    }
+
+    let serves = Math.floor(servesPerMs * elapsed * OFFLINE_EARNINGS_RATE);
+    if (serves <= 0) return;
+
+    const avgPrice = this.averagePrice();
+    const avgSupply = this.averageSupplyCost();
+
+    let supplySpent = 0;
+    if (gm) {
+      // 총괄 매니저가 알아서 발주하지만, 그 원가는 매출에서 빠집니다.
+      supplySpent = Math.round(serves * avgSupply);
+      this.consumeStockSpread(serves);
+      this.autoRestock();
+    } else {
+      // 총괄 매니저가 없으면 남아있던 재고만큼만 팔 수 있습니다.
+      serves = this.consumeStockSpread(Math.min(serves, this.totalStock()));
+      if (serves <= 0) return;
+    }
+
+    const revenue = Math.round(serves * avgPrice);
+    const net = Math.max(0, revenue - supplySpent);
+    this.offlineServes = serves;
+    this.offlineDurationMs = elapsed;
+    this.offlineEarnings = net;
+    if (net > 0) this.addCoins(net);
+  }
+
+  /** 재고를 골고루 소모합니다. 실제로 소모한 개수를 돌려줍니다. */
+  consumeStockSpread(count: number): number {
+    let left = Math.floor(count);
+    let consumed = 0;
+    let guard = 0;
+    while (left > 0 && guard < 1000) {
+      guard += 1;
+      const pool = this.inStockItems();
+      if (pool.length === 0) break;
+      const per = Math.max(1, Math.floor(left / pool.length));
+      for (const item of pool) {
+        if (left <= 0) break;
+        const take = Math.min(per, this.stockOf(item.id), left);
+        this.progress(item.id).stock -= take;
+        left -= take;
+        consumed += take;
+      }
+    }
+    return consumed;
   }
 }
 
+/** 개별 메뉴가 다음 레벨까지 얼마나 남았는지 (UI 표시용) */
+export function levelProgressText(p: MenuProgress): string {
+  if (p.level >= MAX_MENU_LEVEL) return "MAX";
+  return `${p.exp}/${expToNext(p.level)}`;
+}
+
+export function levelProgressRatio(p: MenuProgress): number {
+  if (p.level >= MAX_MENU_LEVEL) return 1;
+  return Math.min(1, p.exp / expToNext(p.level));
+}
+
+export { DESSERTS, DRINKS };
 export type { GameState };
 export const gameState = new GameState();

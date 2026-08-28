@@ -50,3 +50,7 @@ body {
 #ui-root .ui-interactive {
   pointer-events: auto;
 }
+
+#ui-root .hidden {
+  display: none !important;
+}
