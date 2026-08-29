@@ -3,6 +3,7 @@ import {
   MAX_ROLE_COUNT,
   SEATS_PER_TABLE,
   TABLES_PER_FLOOR,
+  menuById,
 } from "../game/config";
 import { bus, EVENTS } from "../game/bus";
 import { gameState } from "../game/state";
@@ -50,12 +51,12 @@ const SEAT_DX = 74;
 
 /* 자리 기준으로 의자와 테이블 상판이 놓이는 높이.
    의자는 손님 뒤, 상판은 손님 앞에 와야 "테이블에 앉은" 것처럼 보입니다. */
-const CHAIR_DY = -2;
+const CHAIR_DY = 10;
 const TABLE_TOP_DY = 20;
 
 /* 먹고 간 흔적(더러운 컵)은 의자가 아니라 상판 위, 테이블 중앙 쪽에 놓습니다. */
 const DIRTY_ITEM_DX = 34;
-const DIRTY_ITEM_DY = TABLE_TOP_DY - 10;
+const DIRTY_ITEM_DY = TABLE_TOP_DY - 22;
 
 /* 손님 그림의 각 부분이 놓이는 자리 (앉은 자리 기준).
    머리와 몸이 붙어 보이도록 겹치게 두고, 말풍선·막대는 머리 바로 위에
@@ -113,6 +114,11 @@ export class CafeScene extends Phaser.Scene {
   private manager!: Phaser.GameObjects.Image;
   private generalManager!: Phaser.GameObjects.Image;
   private equipmentImages: Phaser.GameObjects.Image[] = [];
+  /** 설비 id → 대기 중인 주문 수를 보여주는 뱃지 */
+  private equipmentBadges = new Map<
+    string,
+    { container: Phaser.GameObjects.Container; text: Phaser.GameObjects.Text }
+  >();
 
   constructor() {
     super("cafe");
@@ -160,6 +166,7 @@ export class CafeScene extends Phaser.Scene {
     this.syncTables();
     this.syncCustomers();
     this.syncStaff();
+    this.syncEquipment();
   }
 
   /* ---------------------------- 가게 배경 ---------------------------- */
@@ -281,6 +288,8 @@ export class CafeScene extends Phaser.Scene {
   private refreshEquipmentRow() {
     this.equipmentImages.forEach((img) => img.destroy());
     this.equipmentImages = [];
+    this.equipmentBadges.forEach((b) => b.container.destroy());
+    this.equipmentBadges.clear();
 
     // 설비는 층마다 따로 사므로, 지금 보고 있는 층의 것만 올립니다.
     const owned = gameState
@@ -303,12 +312,43 @@ export class CafeScene extends Phaser.Scene {
       naturalWidth > available ? ART_SCALE * (available / naturalWidth) : ART_SCALE;
 
     let x = EQUIP_ZONE.left;
-    for (const img of images) {
+    owned.forEach((def, i) => {
+      const img = images[i];
       img.setScale(scale);
       img.setX(x + img.displayWidth / 2);
       x += img.displayWidth + gap;
-    }
+
+      // 설비마다, 지금 그 설비를 기다리는 주문 수를 보여주는 뱃지입니다.
+      const bg = this.add
+        .circle(0, 0, 17, ART_COLORS.ink)
+        .setStrokeStyle(3, 0xffffff);
+      const text = this.add
+        .text(0, 0, "", { fontSize: "20px", color: "#ffffff", fontStyle: "bold" })
+        .setOrigin(0.5);
+      const container = this.add
+        .container(img.x + img.displayWidth / 2 - 8, img.y - img.displayHeight, [bg, text])
+        .setDepth(7)
+        .setVisible(false);
+      this.equipmentBadges.set(def.id, { container, text });
+    });
     this.equipmentImages = images;
+  }
+
+  /** 설비마다, 지금 그 설비에서 만들고 있는 주문 수를 뱃지로 보여줍니다 */
+  private syncEquipment() {
+    const counts = new Map<string, number>();
+    for (const c of sim.customersOn(this.activeFloor)) {
+      if (c.leaving || c.phase !== "preparing") continue;
+      for (const itemId of c.order.itemIds) {
+        const equipmentId = menuById(itemId).equipmentId;
+        counts.set(equipmentId, (counts.get(equipmentId) ?? 0) + 1);
+      }
+    }
+    this.equipmentBadges.forEach((badge, id) => {
+      const count = counts.get(id) ?? 0;
+      badge.container.setVisible(count > 0);
+      if (count > 0) badge.text.setText(String(count));
+    });
   }
 
   private updateFloorLabel() {
@@ -418,7 +458,7 @@ export class CafeScene extends Phaser.Scene {
         const dirtySide = side === 0 ? -1 : 1;
         const dirtyIcon = this.add
           .image(pos.x + dirtySide * DIRTY_ITEM_DX, pos.y + DIRTY_ITEM_DY, "icon-dirty")
-          .setScale(ART_SCALE * 0.8)
+          .setScale(ART_SCALE * 1.2)
           .setDepth(6)
           .setVisible(false);
         this.dirtyIcons.set(seatIndex, dirtyIcon);

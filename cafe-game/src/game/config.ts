@@ -254,17 +254,17 @@ export function baristaSpeed(count: number): number {
 
 /** 홀 직원이 서빙까지 걸리는 시간(ms). Infinity = 미고용(수동) */
 export function serveDelayMs(serverCount: number): number {
-  return serverCount <= 0 ? Infinity : 2600 / serverCount;
+  return serverCount <= 0 ? Infinity : 3500 / serverCount;
 }
 
 /** 홀 직원이 테이블을 치우는 데 걸리는 시간(ms). Infinity = 미고용(수동) */
 export function cleanDelayMs(serverCount: number): number {
-  return serverCount <= 0 ? Infinity : 3200 / serverCount;
+  return serverCount <= 0 ? Infinity : 4300 / serverCount;
 }
 
 /* 테이블 하나에 두 명이 앉게 되어 자리가 두 배로 늘었으므로,
    손님도 그만큼 자주 들어와야 자리가 채워집니다. */
-export const BASE_SPAWN_INTERVAL_MS = 2600;
+export const BASE_SPAWN_INTERVAL_MS = 3500;
 
 /** 매니저가 문 앞에 있으면 손님이 더 자주 들어옵니다 (등급이 높을수록 더) */
 export function spawnIntervalMs(managerLevel: number): number {
@@ -323,9 +323,9 @@ export const MAX_STOCK = 999;
 
 /* ------------------------ 손님 / 시간 관련 ------------------------ */
 
-export const CUSTOMER_PATIENCE_MS = 14000;
-export const WALK_TIME_MS = 700;
-export const EAT_TIME_MS = 2600;
+export const CUSTOMER_PATIENCE_MS = 18000;
+export const WALK_TIME_MS = 950;
+export const EAT_TIME_MS = 3500;
 
 /* ------------------------------ 저장 ------------------------------ */
 
