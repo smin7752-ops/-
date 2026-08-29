@@ -50,8 +50,12 @@ const SEAT_DX = 74;
 
 /* 자리 기준으로 의자와 테이블 상판이 놓이는 높이.
    의자는 손님 뒤, 상판은 손님 앞에 와야 "테이블에 앉은" 것처럼 보입니다. */
-const CHAIR_DY = -12;
+const CHAIR_DY = -2;
 const TABLE_TOP_DY = 20;
+
+/* 먹고 간 흔적(더러운 컵)은 의자가 아니라 상판 위, 테이블 중앙 쪽에 놓습니다. */
+const DIRTY_ITEM_DX = 34;
+const DIRTY_ITEM_DY = TABLE_TOP_DY - 10;
 
 /* 손님 그림의 각 부분이 놓이는 자리 (앉은 자리 기준).
    머리와 몸이 붙어 보이도록 겹치게 두고, 말풍선·막대는 머리 바로 위에
@@ -411,8 +415,9 @@ export class CafeScene extends Phaser.Scene {
           .setScale(ART_SCALE)
           .setDepth(1);
 
+        const dirtySide = side === 0 ? -1 : 1;
         const dirtyIcon = this.add
-          .image(seat.x, seat.y + 6, "icon-dirty")
+          .image(pos.x + dirtySide * DIRTY_ITEM_DX, pos.y + DIRTY_ITEM_DY, "icon-dirty")
           .setScale(ART_SCALE * 0.8)
           .setDepth(6)
           .setVisible(false);
