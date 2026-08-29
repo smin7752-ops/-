@@ -58,6 +58,11 @@ const TABLE_TOP_DY = 20;
 const DIRTY_ITEM_DX = 34;
 const DIRTY_ITEM_DY = TABLE_TOP_DY - 22;
 
+/* 직원이 자리를 치우는 동안 세로로 채워지는 게이지 바. 의자 바깥쪽(테이블 반대쪽)에 세웁니다. */
+const CLEAN_GAUGE_DX = 46;
+const CLEAN_GAUGE_W = 10;
+const CLEAN_GAUGE_H = 54;
+
 /* 손님 그림의 각 부분이 놓이는 자리 (앉은 자리 기준).
    머리와 몸이 붙어 보이도록 겹치게 두고, 말풍선·막대는 머리 바로 위에
    촘촘히 쌓습니다. 한 손님이 차지하는 세로 높이(말풍선 꼭대기 ~ 테이블
@@ -108,6 +113,11 @@ export class CafeScene extends Phaser.Scene {
   private roomParts: Phaser.GameObjects.GameObject[] = [];
   /** 자리 번호 → "치워주세요" 표시 */
   private dirtyIcons = new Map<number, Phaser.GameObjects.Image>();
+  /** 자리 번호 → 청소 진행도를 보여주는 세로 게이지 바 */
+  private cleanGauges = new Map<
+    number,
+    { bg: Phaser.GameObjects.Rectangle; fill: Phaser.GameObjects.Rectangle }
+  >();
   private floorLabel!: Phaser.GameObjects.Text;
   private baristas: Phaser.GameObjects.Image[] = [];
   private servers: Phaser.GameObjects.Image[] = [];
@@ -372,15 +382,29 @@ export class CafeScene extends Phaser.Scene {
       img.setY(STAFF_BASE_Y + bob);
     });
 
-    // 홀 직원: 손이 필요한 자리로 걸어갔다가 통로로 돌아옵니다.
-    const jobs = this.serviceJobs(customers);
+    // 홀 직원: 청소를 배정받았으면 그 자리로 고정해서 가고(다른 직원은 안 갑니다),
+    // 아니면 서빙할 손님에게 갔다가 통로로 돌아옵니다.
+    const seats = sim.tablesOn(this.activeFloor);
+    const cleaningTarget = new Map<number, { x: number; y: number }>();
+    seats.forEach((seat, i) => {
+      if (seat.state === "dirty" && seat.assignedServer !== null) {
+        cleaningTarget.set(seat.assignedServer, seatPosition(i));
+      }
+    });
+    const serveJobs: { x: number; y: number }[] = [];
+    for (const c of customers) {
+      if (c.phase === "ready" && !c.leaving) serveJobs.push(seatPosition(c.tableIndex));
+    }
+    let serveJobIndex = 0;
+
     this.servers.forEach((img, i) => {
       const show = i < data.server;
       if (img.visible !== show) img.setVisible(show);
       if (!show) return;
 
-      const job = jobs[i];
       const home = this.serverHome(i);
+      // 청소 배정이 최우선이고, 없으면 서빙 대기 중인 손님을 순서대로 맡습니다.
+      const job = cleaningTarget.get(i) ?? (serveJobIndex < serveJobs.length ? serveJobs[serveJobIndex++] : undefined);
       // 손님 옆에 서야 하므로 자리보다 통로 쪽으로 조금 비켜섭니다.
       const target = job
         ? { x: job.x + (job.x < VIRTUAL_WIDTH / 2 ? 46 : -46), y: job.y + 34 }
@@ -408,24 +432,13 @@ export class CafeScene extends Phaser.Scene {
     }
   }
 
-  /** 홀 직원이 가봐야 할 자리들 (서빙할 손님 먼저, 그다음 치울 자리) */
-  private serviceJobs(customers: SimCustomer[]) {
-    const jobs: { x: number; y: number }[] = [];
-    for (const c of customers) {
-      if (c.phase === "ready" && !c.leaving) jobs.push(seatPosition(c.tableIndex));
-    }
-    sim.tablesOn(this.activeFloor).forEach((seat, i) => {
-      if (seat.state === "dirty") jobs.push(seatPosition(i));
-    });
-    return jobs;
-  }
-
   /* ------------------------- 테이블 · 자리 ------------------------- */
 
   private rebuildTables() {
     this.roomParts.forEach((p) => p.destroy());
     this.roomParts = [];
     this.dirtyIcons.clear();
+    this.cleanGauges.clear();
 
     const data = gameState.floor(this.activeFloor);
     for (let t = 0; t < TABLES_PER_FLOOR; t++) {
@@ -463,6 +476,21 @@ export class CafeScene extends Phaser.Scene {
           .setVisible(false);
         this.dirtyIcons.set(seatIndex, dirtyIcon);
 
+        // 청소 게이지 — 의자 바깥쪽(테이블 반대쪽)에 세로로 세우고, 치우는 동안 아래에서부터 채웁니다.
+        const gaugeX = seat.x - dirtySide * CLEAN_GAUGE_DX;
+        const gaugeY = seat.y + CHAIR_DY;
+        const gaugeBg = this.add
+          .rectangle(gaugeX, gaugeY, CLEAN_GAUGE_W, CLEAN_GAUGE_H, 0x000000, 0.28)
+          .setOrigin(0.5, 1)
+          .setDepth(6)
+          .setVisible(false);
+        const gaugeFill = this.add
+          .rectangle(gaugeX, gaugeY, CLEAN_GAUGE_W, 0, 0x4aa3df, 1)
+          .setOrigin(0.5, 1)
+          .setDepth(6)
+          .setVisible(false);
+        this.cleanGauges.set(seatIndex, { bg: gaugeBg, fill: gaugeFill });
+
         // 손님(깊이 3)보다 아래에 둬야 손님 탭이 이 영역에 먹히지 않습니다.
         const hit = this.add
           .rectangle(seat.x, seat.y - 10, 120, 130, 0xffffff, 0)
@@ -470,7 +498,7 @@ export class CafeScene extends Phaser.Scene {
         hit.setInteractive({ useHandCursor: true });
         hit.on("pointerdown", () => sim.tapTable(this.activeFloor, seatIndex));
 
-        this.roomParts.push(chair, dirtyIcon, hit);
+        this.roomParts.push(chair, dirtyIcon, gaugeBg, gaugeFill, hit);
       }
 
       // 상판은 손님 앞(깊이 4)에 덮여, 두 손님이 마주 앉은 것처럼 보입니다.
@@ -486,8 +514,21 @@ export class CafeScene extends Phaser.Scene {
   private syncTables() {
     const seats = sim.tablesOn(this.activeFloor);
     for (const [seatIndex, icon] of this.dirtyIcons) {
-      const dirty = seats[seatIndex]?.state === "dirty";
+      const seat = seats[seatIndex];
+      const dirty = seat?.state === "dirty";
       if (icon.visible !== dirty) icon.setVisible(dirty);
+
+      const gauge = this.cleanGauges.get(seatIndex);
+      if (!gauge) continue;
+      const cleaning = dirty && seat!.assignedServer !== null && seat!.cleanTotal > 0;
+      if (gauge.bg.visible !== cleaning) {
+        gauge.bg.setVisible(cleaning);
+        gauge.fill.setVisible(cleaning);
+      }
+      if (cleaning) {
+        const progress = Phaser.Math.Clamp(1 - seat!.cleanLeft / seat!.cleanTotal, 0, 1);
+        gauge.fill.setSize(CLEAN_GAUGE_W, CLEAN_GAUGE_H * progress);
+      }
     }
   }
 

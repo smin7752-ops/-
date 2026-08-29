@@ -3,6 +3,8 @@ import {
   CLOSE_HOUR,
   managerTipRate,
   ratingSpawnScale,
+  CLEAN_STAY_MAX_MS,
+  CLEAN_STAY_MIN_MS,
   CUSTOMER_PATIENCE_MS,
   EAT_TIME_MS,
   GAME_MINUTES_PER_SECOND,
@@ -11,7 +13,6 @@ import {
   SET_ORDER_CHANCE,
   WALK_TIME_MS,
   baristaSpeed,
-  cleanDelayMs,
   menuById,
   serveDelayMs,
   spawnIntervalMs,
@@ -49,8 +50,12 @@ export interface SimCustomer {
 
 export interface SimTable {
   state: TableState;
-  /** 더러운 자리를 직원이 치우기까지 남은 시간 */
+  /** 지금 이 자리를 치우고 있는 홀 직원 자리 번호 (0부터). 아직 아무도 안 왔으면 null */
+  assignedServer: number | null;
+  /** 치우는 데 남은 시간(ms). 직원이 오기 전에는 0 */
   cleanLeft: number;
+  /** 이번 청소에 걸리는 전체 시간(ms). 게이지 바 비율 계산용 */
+  cleanTotal: number;
 }
 
 interface SimFloor {
@@ -91,7 +96,9 @@ class Simulation {
       const old = previous[i];
       const seatCount = data.tables * SEATS_PER_TABLE;
       const tables: SimTable[] = Array.from({ length: seatCount }, (_, t) => {
-        return old?.tables[t] ?? { state: "clean", cleanLeft: 0 };
+        return (
+          old?.tables[t] ?? { state: "clean", assignedServer: null, cleanLeft: 0, cleanTotal: 0 }
+        );
       });
       return {
         tables,
@@ -339,7 +346,9 @@ class Simulation {
     const table = floor.tables[c.tableIndex];
     if (table) {
       table.state = "dirty";
-      table.cleanLeft = cleanDelayMs(gameState.floor(c.floorIndex).server);
+      table.assignedServer = null;
+      table.cleanLeft = 0;
+      table.cleanTotal = 0;
     }
   }
 
@@ -403,27 +412,53 @@ class Simulation {
     const table = floor?.tables[tableIndex];
     if (!table || table.state !== "dirty") return false;
     table.state = "clean";
+    table.assignedServer = null;
     table.cleanLeft = 0;
+    table.cleanTotal = 0;
     bus.emit(EVENTS.TABLE_CLEANED, { floorIndex, tableIndex });
     return true;
   }
 
   /* ---------------------------- 테이블 정리 ---------------------------- */
 
+  /**
+   * 더러운 자리마다 홀 직원 한 명이 붙어서 3~5초 머무른 뒤에 치웁니다.
+   * 직원 수만큼만 동시에 치울 수 있어서, 한 자리를 두 명이 같이 가지 않습니다.
+   */
   private tickTables(floorIndex: number, floor: SimFloor, dt: number) {
-    const serverLevel = gameState.floor(floorIndex).server;
+    const serverCount = gameState.floor(floorIndex).server;
+    if (serverCount <= 0) return; // 아무도 없으면 손님이 직접 눌러야 치워집니다.
+
+    const busy = new Set<number>();
+    for (const table of floor.tables) {
+      if (table.assignedServer !== null) busy.add(table.assignedServer);
+    }
+
     for (const table of floor.tables) {
       if (table.state !== "dirty") continue;
-      if (!Number.isFinite(table.cleanLeft)) {
-        // 직원을 나중에 고용했다면 그때부터 타이머가 돌게 해줍니다.
-        const delay = cleanDelayMs(serverLevel);
-        if (!Number.isFinite(delay)) continue;
-        table.cleanLeft = delay;
+
+      if (table.assignedServer === null) {
+        let freeSlot = -1;
+        for (let s = 0; s < serverCount; s++) {
+          if (!busy.has(s)) {
+            freeSlot = s;
+            break;
+          }
+        }
+        if (freeSlot === -1) continue; // 다들 다른 자리를 치우는 중이면 기다립니다.
+        table.assignedServer = freeSlot;
+        busy.add(freeSlot);
+        table.cleanTotal = Phaser.Math.Between(CLEAN_STAY_MIN_MS, CLEAN_STAY_MAX_MS);
+        table.cleanLeft = table.cleanTotal;
+        continue;
       }
+
       table.cleanLeft -= dt;
       if (table.cleanLeft <= 0) {
         table.state = "clean";
+        table.assignedServer = null;
         table.cleanLeft = 0;
+        table.cleanTotal = 0;
       }
     }
   }

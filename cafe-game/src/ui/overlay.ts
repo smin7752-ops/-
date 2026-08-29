@@ -232,7 +232,7 @@ export function mountUI(root: HTMLElement) {
         .join(" ");
       const dot = unlocked && sim.needsAttention(i) ? `<span class="dot"></span>` : "";
       parts.push(
-        `<button class="${cls}" data-floor="${i}">${unlocked ? `${i + 1}층` : "🔒"}${dot}</button>`,
+        `<button class="${cls}" data-floor="${i}">${unlocked ? `${i + 1}층` : ic(uiKey("lock"), 16)}${dot}</button>`,
       );
     }
     tabsEl.innerHTML = parts.join("");
@@ -324,7 +324,7 @@ export function mountUI(root: HTMLElement) {
         rows.push(`
           <div class="row locked">
             <div class="row-main">
-              <div class="row-label">🔒 ???</div>
+              <div class="row-label">${ic(uiKey("lock"), 20)} ???</div>
               <div class="row-sub">${withParticle(prev.name, "을", "를")} Lv.${item.unlockPrevLevel} 까지 키우면 열려요</div>
             </div>
           </div>`);
@@ -333,7 +333,7 @@ export function mountUI(root: HTMLElement) {
 
       const sub = equipped
         ? `판매가 ${num(gameState.priceOf(item.id))}코인 · 원가 ${item.supplyCost}`
-        : `⚠️ 어느 층에든 ${equipName} 설비가 있어야 해요`;
+        : `${ic(uiKey("warning"), 16)} 어느 층에든 ${equipName} 설비가 있어야 해요`;
       rows.push(`
         <div class="row ${equipped ? "" : "locked"}">
           ${ic(itemKey(item.id), 40)}
@@ -361,7 +361,7 @@ export function mountUI(root: HTMLElement) {
         return `
           <div class="row locked">
             <div class="row-main">
-              <div class="row-label">🔒 ${set.name}</div>
+              <div class="row-label">${ic(uiKey("lock"), 20)} ${set.name}</div>
               <div class="row-sub">${drink.name} + ${dessert.name} 를 모두 팔 수 있게 되면 열려요</div>
             </div>
           </div>`;
@@ -425,13 +425,13 @@ export function mountUI(root: HTMLElement) {
     const gmRow = gm
       ? `<div class="row">
            <div class="row-main">
-             <div class="row-label">👔 총괄 매니저 <span class="pill">고용 중</span></div>
+             <div class="row-label">${ic(staffKey("gm"), 24)} 점장 <span class="pill">고용 중</span></div>
              <div class="row-sub">재고가 ${AUTO_RESTOCK_THRESHOLD}개 밑으로 떨어지면 알아서 발주를 넣어줘요</div>
            </div>
          </div>`
       : `<div class="row">
            <div class="row-main">
-             <div class="row-label">👔 총괄 매니저 고용</div>
+             <div class="row-label">${ic(staffKey("gm"), 24)} 점장 고용</div>
              <div class="row-sub">고용하면 발주가 자동이 돼요. 자리를 비운 동안에도 재고가 안 끊깁니다</div>
            </div>
            <button class="buy-btn alt" id="hire-gm"
@@ -441,10 +441,10 @@ export function mountUI(root: HTMLElement) {
     bodyEl.innerHTML = `
       <div class="note">${
         gm
-          ? "총괄 매니저가 재고를 알아서 채워줍니다. 직접 발주해도 돼요."
+          ? "점장이 재고를 알아서 채워줍니다. 직접 발주해도 돼요."
           : "재고가 없으면 손님이 들어오지 않아요. 팔 물건을 미리 발주해두세요."
       }</div>
-      <h3>총괄 매니저</h3>
+      <h3>점장</h3>
       ${gmRow}
       <h3>재고 발주</h3>
       ${rows || `<p class="muted">아직 팔 수 있는 메뉴가 없어요.</p>`}
@@ -793,7 +793,7 @@ export function mountUI(root: HTMLElement) {
         rows.push(`
           <div class="row">
             <div class="row-main">
-              <div class="row-label">🏢 ${i + 1}층 <span class="pill">테이블 ${f.tables}/${TABLES_PER_FLOOR}</span></div>
+              <div class="row-label">${ic(uiKey("store"), 20)} ${i + 1}층 <span class="pill">테이블 ${f.tables}/${TABLES_PER_FLOOR}</span></div>
               <div class="row-sub">${
                 maxed ? "테이블을 더 놓을 자리가 없어요" : "테이블을 하나 더 놓아요"
               }</div>
@@ -809,7 +809,7 @@ export function mountUI(root: HTMLElement) {
         rows.push(`
           <div class="row ${prevOpen ? "" : "locked"}">
             <div class="row-main">
-              <div class="row-label">🔒 ${i + 1}층 증축</div>
+              <div class="row-label">${ic(uiKey("lock"), 20)} ${i + 1}층 증축</div>
               <div class="row-sub">${
                 prevOpen
                   ? "새 층을 올려요. 층마다 직원을 따로 고용해야 해요"
@@ -926,8 +926,8 @@ export function mountUI(root: HTMLElement) {
       <p class="muted">손님 ${num(gameState.offlineServes)}명을 받았어요</p>
       ${
         gameState.data.generalManager
-          ? `<p class="muted">총괄 매니저가 발주까지 챙겼어요 (원가는 차감됨)</p>`
-          : `<p class="muted">총괄 매니저를 고용하면 재고가 안 끊겨서 훨씬 오래 벌 수 있어요</p>`
+          ? `<p class="muted">점장이 발주까지 챙겼어요 (원가는 차감됨)</p>`
+          : `<p class="muted">점장을 고용하면 재고가 안 끊겨서 훨씬 오래 벌 수 있어요</p>`
       }
     `;
     offlineModal.classList.remove("hidden");

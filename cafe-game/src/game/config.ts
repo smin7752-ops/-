@@ -169,10 +169,10 @@ export function floorUnlockCost(floorIndex: number): number {
   return Math.round(5000 * Math.pow(4, floorIndex - 1));
 }
 
-/** 그 층에 테이블을 하나 더 놓는 비용 */
+/** 그 층에 테이블을 하나 더 놓는 비용. 놓을수록 훨씬 가파르게 비싸집니다 */
 export function tableCost(tablesOnFloor: number, floorIndex: number): number {
   return Math.round(
-    120 * Math.pow(2, tablesOnFloor - STARTING_TABLES) * (1 + floorIndex * 0.6),
+    150 * Math.pow(2.6, tablesOnFloor - STARTING_TABLES) * (1 + floorIndex * 0.6),
   );
 }
 
@@ -257,9 +257,13 @@ export function serveDelayMs(serverCount: number): number {
   return serverCount <= 0 ? Infinity : 3500 / serverCount;
 }
 
-/** 홀 직원이 테이블을 치우는 데 걸리는 시간(ms). Infinity = 미고용(수동) */
+/** 직원 한 명이 자리 하나를 치우는 데 붙어 있는 시간(ms) — 이 사이에서 무작위로 걸립니다 */
+export const CLEAN_STAY_MIN_MS = 3000;
+export const CLEAN_STAY_MAX_MS = 5000;
+
+/** 자리를 비운 동안 대략 얼마나 빨리 치워질지 어림잡을 때 쓰는 평균값(ms). Infinity = 미고용(수동) */
 export function cleanDelayMs(serverCount: number): number {
-  return serverCount <= 0 ? Infinity : 4300 / serverCount;
+  return serverCount <= 0 ? Infinity : (CLEAN_STAY_MIN_MS + CLEAN_STAY_MAX_MS) / 2 / serverCount;
 }
 
 /* 테이블 하나에 두 명이 앉게 되어 자리가 두 배로 늘었으므로,
@@ -354,7 +358,7 @@ export const SLOT_NAME: Record<UniformSlot, string> = {
   barista: "바리스타",
   server: "홀 직원",
   manager: "매니저",
-  gm: "총괄 매니저",
+  gm: "점장",
 };
 
 /** 입었을 때 붙는 효과 */

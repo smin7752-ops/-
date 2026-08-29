@@ -920,6 +920,33 @@ function buildUiIcons(scene: Phaser.Scene) {
     g.fillRoundedRect(23, 32, 18, 22, 5);
   });
 
+  U("lock", (g) => {
+    // 자물쇠 고리
+    g.lineStyle(6, S.steelDark, 1);
+    g.beginPath();
+    g.arc(32, 26, 13, Phaser.Math.DegToRad(200), Phaser.Math.DegToRad(-20), false);
+    g.strokePath();
+    blob(g, 12, 26, 40, 30, 7, S.steel, 5); // 몸통
+    disc(g, 32, 38, 6, S.steelDark, 0); // 열쇠 구멍
+    g.fillStyle(S.steelDark, 1);
+    g.fillRect(29, 38, 6, 10);
+  });
+
+  U("warning", (g) => {
+    g.fillStyle(0xf5c542, 1); // 삼각형
+    g.beginPath();
+    g.moveTo(32, 8);
+    g.lineTo(58, 54);
+    g.lineTo(6, 54);
+    g.closePath();
+    g.fillPath();
+    g.lineStyle(5, INK, 1);
+    g.strokePath();
+    g.fillStyle(INK, 1);
+    g.fillRoundedRect(28, 24, 8, 16, 3); // 느낌표 막대
+    disc(g, 32, 46, 4, INK, 0); // 느낌표 점
+  });
+
   U("equipment", (g) => {
     // 톱니바퀴. 스패너는 이 크기에서 뭉개져서, 톱니가 둥근 톱니바퀴로 그립니다.
     const teeth = (r: number, color: number) => {
@@ -979,6 +1006,21 @@ function buildUiIcons(scene: Phaser.Scene) {
       gg.fillTriangle(29, 48, 35, 48, 32, 62);
     });
   });
+
+  // 점장 — 어깨에 걸친 코트로 구분합니다 (총괄 매니저)
+  tex(scene, staffKey("gm"), 64, 64, (g) => {
+    portrait(g, 0x5b5f6e, (gg) => {
+      gg.fillStyle(0xdfe3ea, 1); // 어깨에 걸친 코트
+      gg.fillRoundedRect(14, 42, 9, 16, 4);
+      gg.fillRoundedRect(41, 42, 9, 16, 4);
+      gg.lineStyle(3, INK, 1);
+      gg.strokeRoundedRect(14, 42, 9, 16, 4);
+      gg.strokeRoundedRect(41, 42, 9, 16, 4);
+      gg.fillStyle(ART_COLORS.paper, 1); // 셔츠 깃
+      gg.fillTriangle(25, 44, 39, 44, 32, 56);
+      disc(gg, 32, 58, 3, 0xdfe3ea, 3); // 브로치
+    });
+  });
 }
 
 /* ------------------------------------------------------------------ *
@@ -1012,9 +1054,11 @@ export function publishIconUrls(scene: Phaser.Scene) {
     "icon-coin",
     ...ALL_MENU.map((m) => itemKey(m.id)),
     ...EQUIPMENT.map((e) => equipKey(e.id)),
-    ...["barista", "server", "manager"].map(staffKey),
+    ...["barista", "server", "manager", "gm"].map(staffKey),
     ...UNIFORMS.map((u) => personKey(u.id)),
-    ...["menu", "supply", "staff", "store", "equipment", "sales", "uniform"].map(uiKey),
+    ...["menu", "supply", "staff", "store", "equipment", "sales", "uniform", "lock", "warning"].map(
+      uiKey,
+    ),
   ];
   for (const key of keys) {
     if (iconUrls[key] || !scene.textures.exists(key)) continue;
