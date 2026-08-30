@@ -38,6 +38,11 @@ jobs:
         run: npm run build
 
       - uses: actions/configure-pages@v5
+        with:
+          # Pages hasn't been switched on for this repo yet; let the action
+          # turn it on (Source: GitHub Actions) instead of failing and
+          # requiring someone to click through Settings → Pages first.
+          enablement: true
 
       - uses: actions/upload-pages-artifact@v3
         with:
