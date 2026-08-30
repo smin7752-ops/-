@@ -140,24 +140,39 @@ export const SET_ORDER_CHANCE = 0.4;
 
 /* ---------------------------- 메뉴 레벨 --------------------------- */
 
-export const MAX_MENU_LEVEL = 20;
+/** 별 강화의 마지막 단계가 Lv.300을 요구하므로, 레벨도 그만큼 오를 수 있어야 합니다 */
+export const MAX_MENU_LEVEL = 300;
 
 /** 다음 레벨까지 필요한 판매 횟수 */
 export function expToNext(level: number): number {
   return 5 + (level - 1) * 4;
 }
 
-/** 레벨에 따른 판매가 배수 (레벨 1 = 1.0) */
+/**
+ * 레벨에 따른 판매가 배수 (레벨 1 = 1.0).
+ * 레벨 20까지만 값이 오르고, 그 뒤로는 오르지 않습니다 — 20레벨 이후의 레벨은
+ * 오직 별 강화 조건(강화는 Lv.20/50/100/200/300에 열립니다)으로만 쓰여서,
+ * 판매가는 레벨이 아니라 별로 계속 올려야 합니다.
+ */
 export function priceMultiplier(level: number): number {
-  return 1 + (level - 1) * 0.1;
+  return 1 + (Math.min(level, 20) - 1) * 0.1;
 }
 
 /* --------------------------- 메뉴 강화(별) --------------------------- */
 /* 레벨과는 별개로, 메뉴마다 최대 5성까지 "강화"로 올릴 수 있습니다.
    강화는 돈을 내고 도전하는 확률성 뽑기이고, 실패해도 별이 깎이진 않습니다.
-   별이 오를수록 그 메뉴 판매가가 더 붙습니다. */
+   별이 오를수록 그 메뉴 판매가가 더 붙습니다.
+   각 별은 그 메뉴 레벨이 일정 수준을 넘어야 도전할 수 있습니다. */
 
 export const MAX_MENU_STARS = 5;
+
+/** 별 하나하나를 강화하려면 도달해야 하는 메뉴 레벨 (0성→1성은 Lv.20, ... 4성→5성은 Lv.300) */
+export const MENU_STAR_UNLOCK_LEVELS = [20, 50, 100, 200, 300];
+
+/** 지금 별(currentStars)에서 다음 별로 가려면 필요한 레벨 */
+export function enhanceRequiredLevel(currentStars: number): number {
+  return MENU_STAR_UNLOCK_LEVELS[currentStars] ?? Infinity;
+}
 
 /** 별 등급에 따른 판매가 배수 (0성 = 1.0) */
 export function starMultiplier(stars: number): number {
@@ -497,9 +512,24 @@ export function ownEffectText(e: UniformOwnEffect): string {
    유니폼처럼 가게 전체 공용이고, 자리마다 한 번에 하나씩만 씁니다.
    지금 쓰고 있는(장착한) 인테리어에서만 효과가 붙습니다. */
 
-export type DecorSlot = "floor" | "wallpaper" | "table" | "chair" | "door";
+export type DecorSlot =
+  | "floor"
+  | "wallpaper"
+  | "table"
+  | "chair"
+  | "door"
+  | "counter"
+  | "register";
 
-export const DECOR_SLOTS: DecorSlot[] = ["floor", "wallpaper", "table", "chair", "door"];
+export const DECOR_SLOTS: DecorSlot[] = [
+  "floor",
+  "wallpaper",
+  "table",
+  "chair",
+  "door",
+  "counter",
+  "register",
+];
 
 export const DECOR_SLOT_NAME: Record<DecorSlot, string> = {
   floor: "바닥",
@@ -507,6 +537,8 @@ export const DECOR_SLOT_NAME: Record<DecorSlot, string> = {
   table: "테이블",
   chair: "의자",
   door: "출입문",
+  counter: "주방 테이블",
+  register: "캐셔 포스기",
 };
 
 /** 색만 다르면 되므로, 자리마다 뜻은 다르지만 세 색만 씁니다. */
@@ -587,6 +619,26 @@ export const DECOR: DecorDef[] = [
     colors: { primary: 0x8a3b34, secondary: 0xf5e6d8, accent: 0xf5c542 }, effect: { spawnBoost: 0.1 } },
   { id: "door_glass", name: "올글라스 도어", slot: "door", cost: 18000,
     colors: { primary: 0x9fb4bd, secondary: 0xeaf6f8, accent: 0x4a9d94 }, effect: { spawnBoost: 0.16 } },
+
+  // 주방 테이블(카운터) — primary: 몸통, secondary: 위쪽 상판, accent: 테두리 장식 / 효과: 손님 인내심
+  { id: "counter_classic", name: "클래식 주방 테이블", slot: "counter", cost: 0,
+    colors: { primary: 0x8a5a34, secondary: 0xb98350, accent: 0x5a3b22 }, effect: {} },
+  { id: "counter_white", name: "화이트 주방 테이블", slot: "counter", cost: 3500,
+    colors: { primary: 0xd8cdb8, secondary: 0xf3ede1, accent: 0xcac0ac }, effect: { patience: 0.05 } },
+  { id: "counter_marble", name: "마블 주방 테이블", slot: "counter", cost: 9500,
+    colors: { primary: 0x8f96a3, secondary: 0xe4e1e6, accent: 0xc3c7cf }, effect: { patience: 0.1 } },
+  { id: "counter_slate", name: "다크 슬레이트 주방 테이블", slot: "counter", cost: 22000,
+    colors: { primary: 0x53565c, secondary: 0x6b6f76, accent: 0x3f4146 }, effect: { patience: 0.18 } },
+
+  // 캐셔 포스기 — primary: 몸통, secondary: 화면, accent: 버튼·테두리 / 효과: 판매가
+  { id: "register_classic", name: "클래식 포스기", slot: "register", cost: 0,
+    colors: { primary: 0xc9ccd4, secondary: 0x3f4146, accent: 0x8f96a3 }, effect: {} },
+  { id: "register_silver", name: "실버 포스기", slot: "register", cost: 1800,
+    colors: { primary: 0xe4e1e6, secondary: 0x2b2b2f, accent: 0x4a9d94 }, effect: { price: 0.04 } },
+  { id: "register_gold", name: "골드 포스기", slot: "register", cost: 5000,
+    colors: { primary: 0xf5c542, secondary: 0x2b2b2f, accent: 0xffe08a }, effect: { price: 0.08 } },
+  { id: "register_deluxe", name: "디럭스 포스기", slot: "register", cost: 12000,
+    colors: { primary: 0x1f2733, secondary: 0x4a9d94, accent: 0xc0a062 }, effect: { price: 0.14 } },
 ];
 
 /** 사람이 읽을 수 있는 인테리어 효과 설명 */

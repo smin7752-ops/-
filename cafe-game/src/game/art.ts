@@ -64,6 +64,7 @@ export const personKey = (uniformId: string) => `person-${uniformId}`;
 export const chairKey = (decorId: string) => `chair-${decorId}`;
 export const tableKey = (decorId: string) => `table-${decorId}`;
 export const doorKey = (decorId: string) => `door-${decorId}`;
+export const registerKey = (decorId: string) => `register-${decorId}`;
 
 /* ------------------------------------------------------------------ *
  * 그리기 도우미
@@ -595,6 +596,18 @@ function buildFurniture(scene: Phaser.Scene) {
     });
   }
 
+  // 캐셔 포스기 — 카운터 위에 놓이는 작은 소품입니다. 100x100
+  // primary: 몸통·받침, secondary: 화면, accent: 화면 불빛·영수증 슬롯
+  for (const d of decorOfSlot("register")) {
+    tex(scene, registerKey(d.id), 100, 100, (g) => {
+      blob(g, 10, 62, 80, 32, 8, d.colors.primary, 5); // 받침(몸통)
+      blob(g, 18, 12, 64, 52, 8, d.colors.secondary, 5); // 화면
+      g.fillStyle(d.colors.accent, 1); // 화면 불빛
+      g.fillRoundedRect(26, 20, 48, 28, 4);
+      blob(g, 30, 72, 40, 14, 5, d.colors.accent, 4); // 영수증 슬롯
+    });
+  }
+
   // 아직 안 산 자리 — 200x200
   tex(scene, "table-empty", 200, 200, (g) => {
     g.fillStyle(0x5a3b22, 0.07);
@@ -1085,6 +1098,7 @@ export function publishIconUrls(scene: Phaser.Scene) {
     ...decorOfSlot("chair").map((d) => chairKey(d.id)),
     ...decorOfSlot("table").map((d) => tableKey(d.id)),
     ...decorOfSlot("door").map((d) => doorKey(d.id)),
+    ...decorOfSlot("register").map((d) => registerKey(d.id)),
     ...[
       "menu",
       "supply",

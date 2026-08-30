@@ -53,6 +53,7 @@ import { sim } from "../game/sim";
 import {
   chairKey,
   doorKey,
+  registerKey,
   equipKey,
   iconUrl,
   itemKey,
@@ -149,6 +150,17 @@ export function mountUI(root: HTMLElement) {
         <button id="close-confirm" class="primary-btn">내일 열기</button>
       </div>
     </div>
+
+    <div id="enhance-modal" class="modal hidden ui-interactive">
+      <div class="modal-card">
+        <div class="modal-header"><h2>메뉴 강화</h2></div>
+        <div class="modal-body" id="enhance-body"></div>
+        <div style="display:flex;gap:10px;margin-top:10px">
+          <button id="enhance-cancel" class="buy-btn alt" style="flex:1;width:auto;margin-top:0">취소</button>
+          <button id="enhance-confirm" class="primary-btn" style="flex:1;width:auto;margin-top:0">강화하기</button>
+        </div>
+      </div>
+    </div>
   `;
 
   const coinEl = root.querySelector("#coin-count") as HTMLElement;
@@ -167,6 +179,8 @@ export function mountUI(root: HTMLElement) {
   const modal = root.querySelector("#panel-modal") as HTMLElement;
   const titleEl = root.querySelector("#panel-title") as HTMLElement;
   const bodyEl = root.querySelector("#panel-body") as HTMLElement;
+  const enhanceModal = root.querySelector("#enhance-modal") as HTMLElement;
+  const enhanceBody = root.querySelector("#enhance-body") as HTMLElement;
 
   let activeFloor = 0;
   let openPanel: PanelId | null = null;
@@ -330,6 +344,8 @@ export function mountUI(root: HTMLElement) {
 
   /** 강화 결과를 잠깐 보여주기 위한 상태 (메뉴 id -> 결과) */
   const enhanceFlash: Record<string, "success" | "fail" | null> = {};
+  /** 지금 확인 팝업이 뜬 메뉴 (실수로 눌러서 바로 강화되는 걸 막으려고, 확인을 거칩니다) */
+  let pendingEnhanceId: string | null = null;
 
   function starsText(stars: number): string {
     let out = "";
@@ -342,14 +358,22 @@ export function mountUI(root: HTMLElement) {
   }
 
   function enhanceBox(item: MenuDef): string {
-    const stars = gameState.progress(item.id).stars;
+    const p = gameState.progress(item.id);
+    const stars = p.stars;
     const flash = enhanceFlash[item.id];
     if (stars >= MAX_MENU_STARS) {
       return `<div class="row-sub" style="margin-top:4px">${starsText(stars)} <span class="muted">별 강화 완료!</span></div>`;
     }
+    const requiredLevel = gameState.enhanceRequiredLevelOf(item.id);
+    if (!gameState.canEnhance(item.id)) {
+      return `
+        <div class="row-sub" style="margin-top:4px">
+          ${starsText(stars)}
+          <span class="muted" style="font-size:11px">Lv.${requiredLevel} 되면 강화할 수 있어요 (지금 Lv.${p.level})</span>
+        </div>`;
+    }
     const cost = gameState.enhanceCostOf(item.id);
     const chance = Math.round(gameState.enhanceChanceOf(item.id) * 100);
-    const affordable = gameState.data.coins >= cost;
     const flashText =
       flash === "success" ? `<span style="color:#3a9d5c">강화 성공! ✨</span>`
       : flash === "fail" ? `<span style="color:#c0463a">강화 실패...</span>`
@@ -360,8 +384,7 @@ export function mountUI(root: HTMLElement) {
         <span class="muted" style="font-size:11px">성공확률 ${chance}%</span>
         ${flashText}
       </div>
-      <button class="buy-btn alt" style="margin-top:4px" data-enhance="${item.id}"
-        ${affordable ? "" : "disabled"}>강화 ${coin(cost)}</button>`;
+      <button class="buy-btn alt" style="margin-top:4px" data-open-enhance="${item.id}">강화 ${coin(cost)}</button>`;
   }
 
   function menuSection(title: string, category: Category): string {
@@ -459,19 +482,56 @@ export function mountUI(root: HTMLElement) {
     `;
 
     wire("[data-jump-supply]", () => showPanel("supply"));
-    wire("[data-enhance]", (el) => {
-      const id = el.dataset.enhance!;
-      const result = gameState.enhanceMenu(id);
-      if (result === "no-coins" || result === "maxed") return;
-      enhanceFlash[id] = result;
-      gameState.save();
-      bus.emit(EVENTS.COINS_CHANGED);
-      refreshAll();
-      window.setTimeout(() => {
-        enhanceFlash[id] = null;
-        if (openPanel === "menu") renderMenuPanel();
-      }, 1400);
-    });
+    wire("[data-open-enhance]", (el) => openEnhanceConfirm(el.dataset.openEnhance!));
+  }
+
+  /** 잘못 눌러서 바로 돈이 나가지 않도록, 강화는 확인 팝업을 한 번 거칩니다 */
+  function openEnhanceConfirm(id: string) {
+    const item = menuById(id);
+    const p = gameState.progress(id);
+    const cost = gameState.enhanceCostOf(id);
+    const chance = Math.round(gameState.enhanceChanceOf(id) * 100);
+    const affordable = gameState.data.coins >= cost;
+    pendingEnhanceId = id;
+    enhanceBody.innerHTML = `
+      <div class="row" style="border:none;padding:6px 0">
+        ${ic(itemKey(id), 44)}
+        <div class="row-main">
+          <div class="row-label">${item.name}</div>
+          <div class="row-sub" style="margin-top:4px">${starsText(p.stars)}
+            <span class="muted" style="font-size:12px">→ ${starsText(p.stars + 1)}</span></div>
+        </div>
+      </div>
+      <div class="note" style="margin-top:10px">
+        비용 <b>${num(cost)}코인</b>을 내고 강화에 도전해요. 성공 확률은 <b>${chance}%</b>이고,
+        실패해도 별은 그대로예요 (낸 돈만 사라져요).
+        ${affordable ? "" : `<br><span style="color:#c0463a">코인이 모자라요</span>`}
+      </div>
+    `;
+    const confirmBtn = root.querySelector("#enhance-confirm") as HTMLButtonElement;
+    confirmBtn.disabled = !affordable;
+    enhanceModal.classList.remove("hidden");
+  }
+
+  function closeEnhanceModal() {
+    pendingEnhanceId = null;
+    enhanceModal.classList.add("hidden");
+  }
+
+  function confirmEnhance() {
+    const id = pendingEnhanceId;
+    if (!id) return;
+    const result = gameState.enhanceMenu(id);
+    closeEnhanceModal();
+    if (result === "no-coins" || result === "maxed" || result === "level-locked") return;
+    enhanceFlash[id] = result;
+    gameState.save();
+    bus.emit(EVENTS.COINS_CHANGED);
+    refreshAll();
+    window.setTimeout(() => {
+      enhanceFlash[id] = null;
+      if (openPanel === "menu") renderMenuPanel();
+    }, 1400);
   }
 
   /* ---------------------------- 발주 패널 ---------------------------- */
@@ -663,6 +723,8 @@ export function mountUI(root: HTMLElement) {
         return ic(tableKey(d.id), 46);
       case "door":
         return ic(doorKey(d.id), 40);
+      case "register":
+        return ic(registerKey(d.id), 40);
       default: {
         const hex = `#${d.colors.primary.toString(16).padStart(6, "0")}`;
         return `<span class="ic-box" style="width:40px;height:40px;border-radius:8px;
@@ -757,24 +819,57 @@ export function mountUI(root: HTMLElement) {
       </div>`;
   }
 
+  /** 배열을 앞에서부터 size개씩 잘라 묶습니다 (매출표를 일주일 단위로 나눌 때 씁니다) */
+  function chunk<T>(arr: T[], size: number): T[][] {
+    const out: T[][] = [];
+    for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+    return out;
+  }
+
+  function dayRow(l: DayLedger): string {
+    const profit = ledgerProfit(l);
+    return `
+      <div class="row">
+        <div class="row-main">
+          <div class="row-label">${l.day}일차 <span class="pill">손님 ${l.served}명</span></div>
+          <div class="row-sub">매출 ${num(l.revenue)} · 지출 ${num(ledgerExpense(l))}</div>
+        </div>
+        <div class="profit ${profit < 0 ? "loss" : ""}">
+          ${profit < 0 ? "" : "+"}${num(profit)}
+        </div>
+      </div>`;
+  }
+
   function renderSalesPanel() {
     const today = gameState.data.today;
     const wageNow = gameState.dailyWageTotal();
     const history = gameState.data.history;
 
-    const rows = history.length
-      ? history
-          .map((l) => {
-            const profit = ledgerProfit(l);
+    const weeks = chunk(history, 7);
+    const rows = weeks.length
+      ? weeks
+          .map((week, i) => {
+            const revenue = week.reduce((sum, l) => sum + l.revenue, 0);
+            const expense = week.reduce((sum, l) => sum + ledgerExpense(l), 0);
+            const profit = week.reduce((sum, l) => sum + ledgerProfit(l), 0);
+            const served = week.reduce((sum, l) => sum + l.served, 0);
+            const label = i === 0 ? "이번 주" : `${i + 1}주 전`;
+            const dayRange =
+              week.length > 1
+                ? `${week[week.length - 1].day}~${week[0].day}일차`
+                : `${week[0].day}일차`;
             return `
-              <div class="row">
-                <div class="row-main">
-                  <div class="row-label">${l.day}일차 <span class="pill">손님 ${l.served}명</span></div>
-                  <div class="row-sub">매출 ${num(l.revenue)} · 지출 ${num(ledgerExpense(l))}</div>
+              <div class="week-block">
+                <div class="row week-summary">
+                  <div class="row-main">
+                    <div class="row-label">${label} <span class="pill">${dayRange}</span></div>
+                    <div class="row-sub">매출 ${num(revenue)} · 지출 ${num(expense)} · 손님 ${served}명</div>
+                  </div>
+                  <div class="profit ${profit < 0 ? "loss" : ""}">
+                    ${profit < 0 ? "" : "+"}${num(profit)}
+                  </div>
                 </div>
-                <div class="profit ${profit < 0 ? "loss" : ""}">
-                  ${profit < 0 ? "" : "+"}${num(profit)}
-                </div>
+                <div class="week-days">${week.map(dayRow).join("")}</div>
               </div>`;
           })
           .join("")
@@ -802,7 +897,7 @@ export function mountUI(root: HTMLElement) {
       ${ledgerTable(today, wageNow)}
       <p class="muted small">아직 마감 전이라, 인건비는 지금 인원 기준으로 미리 보여드리는 금액이에요.</p>
 
-      <h3>지난 날</h3>
+      <h3>지난 매출 (주간)</h3>
       ${rows}
     `;
   }
@@ -1132,6 +1227,11 @@ export function mountUI(root: HTMLElement) {
   clockPill.addEventListener("click", () => showPanel("sales"));
   ratingPill.addEventListener("click", () => showPanel("sales"));
   root.querySelector("#close-confirm")?.addEventListener("click", confirmDayClose);
+  root.querySelector("#enhance-confirm")?.addEventListener("click", confirmEnhance);
+  root.querySelector("#enhance-cancel")?.addEventListener("click", closeEnhanceModal);
+  enhanceModal.addEventListener("click", (e) => {
+    if (e.target === enhanceModal) closeEnhanceModal();
+  });
 
   bus.on(EVENTS.OPEN_PANEL, (id: PanelId) => showPanel(id));
   bus.on(EVENTS.DAY_CLOSED, (ledger: DayLedger) => showDayClosed(ledger));

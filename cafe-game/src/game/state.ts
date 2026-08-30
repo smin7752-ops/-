@@ -48,6 +48,7 @@ import {
   decorOfSlot,
   enhanceChance,
   enhanceCost,
+  enhanceRequiredLevel,
   expToNext,
   menuById,
   menuListOf,
@@ -640,13 +641,28 @@ class GameState {
     return enhanceChance(p.stars);
   }
 
+  /** 다음 별로 강화하려면 이 메뉴가 몇 레벨이어야 하는지 (이미 만렙이면 0) */
+  enhanceRequiredLevelOf(id: string): number {
+    const p = this.progress(id);
+    if (p.stars >= MAX_MENU_STARS) return 0;
+    return enhanceRequiredLevel(p.stars);
+  }
+
+  /** 지금 바로 강화를 시도할 수 있는가 (레벨 조건을 채웠는가) */
+  canEnhance(id: string): boolean {
+    const p = this.progress(id);
+    if (p.stars >= MAX_MENU_STARS) return false;
+    return p.level >= enhanceRequiredLevel(p.stars);
+  }
+
   /**
    * 돈을 내고 별 강화에 도전합니다. 확률에 따라 성공/실패가 갈리고,
    * 실패해도 낸 돈만 사라질 뿐 별은 그대로예요 (등급이 깎이지 않습니다).
    */
-  enhanceMenu(id: string): "success" | "fail" | "maxed" | "no-coins" {
+  enhanceMenu(id: string): "success" | "fail" | "maxed" | "no-coins" | "level-locked" {
     const p = this.progress(id);
     if (p.stars >= MAX_MENU_STARS) return "maxed";
+    if (p.level < enhanceRequiredLevel(p.stars)) return "level-locked";
     const cost = enhanceCost(menuById(id), p.stars);
     if (!this.spendCoins(cost)) return "no-coins";
     const success = Math.random() < enhanceChance(p.stars);

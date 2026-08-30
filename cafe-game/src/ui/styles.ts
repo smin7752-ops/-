@@ -289,6 +289,17 @@ export function injectStyles() {
   }
   #ui-root .profit.loss { color: #b4564c; }
 
+  #ui-root .week-block {
+    background: #f6ecd8;
+    border-radius: 14px;
+    padding: 4px 12px;
+    margin: 10px 0;
+  }
+  #ui-root .week-summary { border-bottom: 2px solid #e0cba0; }
+  #ui-root .week-summary .row-label { font-size: 16px; }
+  #ui-root .week-days .row:last-child { border-bottom: none; }
+  #ui-root .week-days .row { padding-left: 4px; }
+
   #ui-root .close-lead { font-size: 14px; line-height: 1.5; }
   #ui-root .warn-text {
     background: #fbe7e4;

@@ -22,6 +22,7 @@ import {
   itemKey,
   personKey,
   publishIconUrls,
+  registerKey,
   tableKey,
 } from "../game/art";
 
@@ -36,15 +37,19 @@ const COUNTER_Y = 262;
 const COUNTER_H = 66;
 /** 카운터 뒤 직원이 서 있는 바닥선 (그림의 발끝이 닿는 높이) */
 const STAFF_BASE_Y = COUNTER_Y + 30;
-/** 설비를 늘어놓을 카운터 위 구간 */
-const EQUIP_ZONE = { left: 300, right: VIRTUAL_WIDTH - 30 };
+/** 캐셔(포스기 + 총괄 매니저)가 차지하는, 카운터 오른쪽 끝 구역 */
+const CASHIER_ZONE_LEFT = VIRTUAL_WIDTH - 150;
+/** 설비를 늘어놓을 카운터 위 구간 — 오른쪽 끝은 캐셔 자리를 침범하지 않게 남겨둡니다 */
+const EQUIP_ZONE = { left: 300, right: CASHIER_ZONE_LEFT - 16 };
+/** 캐셔 포스기가 놓이는 자리 (주방 오른쪽) */
+const REGISTER_POS = { x: VIRTUAL_WIDTH - 78, y: COUNTER_Y + 6 };
+/** 총괄 매니저는 캐셔를 맡아 포스기 바로 뒤, 주방 오른쪽에 섭니다 */
+const CASHIER_POS = { x: VIRTUAL_WIDTH - 78, y: STAFF_BASE_Y };
 
 const DOOR = { x: VIRTUAL_WIDTH / 2, y: 1000 };
 const ENTRANCE = { x: DOOR.x, y: DOOR.y - 30 };
 /** 매니저는 문 옆에 서서 손님을 맞습니다 */
 const MANAGER_POS = { x: DOOR.x - 108, y: DOOR.y + 30 };
-/** 총괄 매니저는 홀 전체가 보이는 카운터 앞을 지킵니다 */
-const GM_POS = { x: VIRTUAL_WIDTH - 96, y: 420 };
 
 const COLS = 2;
 const TOP_MARGIN = 480;
@@ -135,6 +140,7 @@ export class CafeScene extends Phaser.Scene {
   private servers: Phaser.GameObjects.Image[] = [];
   private manager!: Phaser.GameObjects.Image;
   private generalManager!: Phaser.GameObjects.Image;
+  private registerImage!: Phaser.GameObjects.Image;
   private equipmentImages: Phaser.GameObjects.Image[] = [];
   /** 설비 id → 대기 중인 주문 수를 보여주는 뱃지 */
   private equipmentBadges = new Map<
@@ -235,20 +241,32 @@ export class CafeScene extends Phaser.Scene {
       .setDepth(-5);
   }
 
-  /** 인테리어를 사거나 바꿔 입으면 바닥·벽지·문·테이블·의자를 새로 그립니다 */
+  /** 인테리어를 사거나 바꿔 입으면 바닥·벽지·문·주방 테이블·테이블·의자·포스기를 새로 그립니다 */
   private applyDecor() {
     this.drawRoom();
+    this.drawCounterGraphic();
+    this.registerImage.setTexture(registerKey(gameState.equippedDecor("register")));
     this.rebuildTables();
   }
 
-  private drawCounter() {
+  /** 카운터(주방 테이블) 그림 — 인테리어를 바꾸면 통째로 지우고 다시 그립니다 */
+  private counterGraphics?: Phaser.GameObjects.Graphics;
+
+  private drawCounterGraphic() {
+    this.counterGraphics?.destroy();
     const g = this.add.graphics().setDepth(1);
-    g.fillStyle(ART_COLORS.wood, 1);
+    const colors = gameState.decorColors("counter");
+    g.fillStyle(colors.primary, 1);
     g.fillRoundedRect(30, COUNTER_Y, VIRTUAL_WIDTH - 60, COUNTER_H, 14);
-    g.fillStyle(ART_COLORS.woodLight, 1);
+    g.fillStyle(colors.secondary, 1);
     g.fillRoundedRect(30, COUNTER_Y, VIRTUAL_WIDTH - 60, 34, 14);
-    g.lineStyle(5, ART_COLORS.ink, 1);
+    g.lineStyle(5, colors.accent, 1);
     g.strokeRoundedRect(30, COUNTER_Y, VIRTUAL_WIDTH - 60, COUNTER_H, 14);
+    this.counterGraphics = g;
+  }
+
+  private drawCounter() {
+    this.drawCounterGraphic();
 
     this.floorLabel = this.add
       .text(52, COUNTER_Y + 48, "", {
@@ -294,13 +312,19 @@ export class CafeScene extends Phaser.Scene {
       .setDepth(5)
       .setVisible(false);
 
-    // 총괄 매니저는 가게 전체를 맡으므로 어느 층에서든 홀을 지켜봅니다.
+    // 총괄 매니저는 캐셔를 맡아 포스기 뒤, 주방 오른쪽에서 어느 층에서든 가게를 지켜봅니다.
     this.generalManager = this.add
-      .image(GM_POS.x, GM_POS.y, personKey(gameState.equippedUniform("gm")))
+      .image(CASHIER_POS.x, CASHIER_POS.y, personKey(gameState.equippedUniform("gm")))
       .setOrigin(0.5, 1)
       .setScale(ART_SCALE)
-      .setDepth(5)
+      .setDepth(0)
       .setVisible(false);
+
+    this.registerImage = this.add
+      .image(REGISTER_POS.x, REGISTER_POS.y, registerKey(gameState.equippedDecor("register")))
+      .setOrigin(0.5, 1)
+      .setScale(ART_SCALE)
+      .setDepth(0.5);
   }
 
   /** 유니폼을 갈아입으면 화면의 직원 그림도 그 옷으로 바꿉니다 */
@@ -468,11 +492,12 @@ export class CafeScene extends Phaser.Scene {
       img.setY(Phaser.Math.Linear(img.y, target.y, 0.06));
     });
 
-    // 총괄 매니저는 층과 상관없이 가게에 한 명입니다.
+    // 총괄 매니저는 캐셔가 되어, 층과 상관없이 포스기 뒤를 지킵니다.
+    // (포스기 자체는 산 인테리어라서, 총괄 매니저가 없어도 카운터에 그대로 놓여 있어요.)
     const hasGm = gameState.data.generalManager;
     if (this.generalManager.visible !== hasGm) this.generalManager.setVisible(hasGm);
     if (hasGm) {
-      this.generalManager.setY(GM_POS.y + Math.sin(this.time.now / 420) * 3);
+      this.generalManager.setY(CASHIER_POS.y + Math.sin(this.time.now / 420) * 3);
     }
 
     // 매니저: 손님이 들어오는 중이면 반겨줍니다.
