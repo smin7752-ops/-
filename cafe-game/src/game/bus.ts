@@ -40,4 +40,6 @@ export const EVENTS = {
   DECOR_CHANGED: "decor-changed",
   /** 손님이 왔다 가면서 인지도를 얻음 (팝업용) */
   FAME_GAINED: "fame-gained",
+  /** 초원 화면에서 카페를 눌러 들어옴 — 그때부터 상단·하단 UI를 보여줍니다 */
+  ENTERED_CAFE: "entered-cafe",
 } as const;

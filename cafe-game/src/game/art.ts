@@ -1133,6 +1133,149 @@ function buildUiIcons(scene: Phaser.Scene) {
  * 한 번에 만들기
  * ------------------------------------------------------------------ */
 
+/* ------------------------------------------------------------------ *
+ * 바깥 초원 화면 — 문을 열기 전, 카페 건물을 밖에서 보여줍니다.
+ * ------------------------------------------------------------------ */
+
+function buildWorldArt(scene: Phaser.Scene) {
+  const S = ART_COLORS;
+  const SKY_TOP = 0x8fd3ec;
+  const SKY_BOTTOM = 0xcdeef5;
+  const SUN = 0xffe27a;
+  const HILL = 0x9fcf7c;
+  const GRASS = 0x8fc36b;
+  const GRASS_DARK = 0x76b357;
+  const PATH = 0xe6d3a0;
+  const ROOF = 0xc0693a;
+  const ROOF_DARK = 0x9a4f2b;
+  const WALL = 0xf4e8ca;
+  const WALL_SHADE = 0xe7d6ac;
+  const GLASS = 0xbfe6ef;
+  const FLOWERS = [0xf4a9a8, 0xf7d08a, 0xd5b8e8, 0xffffff];
+
+  // 하늘 + 들판 배경 — 화면 전체(720x1280)를 통째로 채웁니다.
+  tex(scene, "world-bg", 720, 1280, (g) => {
+    g.fillStyle(SKY_TOP, 1);
+    g.fillRect(0, 0, 720, 560);
+    g.fillStyle(SKY_BOTTOM, 1);
+    g.fillRect(0, 380, 720, 180);
+
+    // 해
+    g.fillStyle(SUN, 0.35);
+    g.fillCircle(590, 130, 82);
+    disc(g, 590, 130, 58, SUN, 0);
+
+    // 구름
+    const cloud = (x: number, y: number, s: number) => {
+      g.fillStyle(0xffffff, 0.9);
+      g.fillEllipse(x, y, 90 * s, 40 * s);
+      g.fillEllipse(x - 42 * s, y + 6 * s, 56 * s, 30 * s);
+      g.fillEllipse(x + 42 * s, y + 6 * s, 56 * s, 30 * s);
+    };
+    cloud(150, 150, 1);
+    cloud(430, 230, 0.7);
+
+    // 먼 언덕
+    g.fillStyle(HILL, 1);
+    g.fillEllipse(150, 570, 420, 160);
+    g.fillEllipse(570, 590, 480, 180);
+
+    // 들판
+    g.fillStyle(GRASS, 1);
+    g.fillRect(0, 500, 720, 780);
+    g.fillStyle(GRASS_DARK, 1);
+    for (let i = 0; i < 46; i++) {
+      const x = (i * 137) % 720;
+      const y = 540 + ((i * 251) % 700);
+      g.fillEllipse(x, y, 34, 12);
+    }
+
+    // 카페 문 앞까지 이어지는 오솔길
+    g.fillStyle(PATH, 1);
+    g.beginPath();
+    g.moveTo(300, 1280);
+    g.lineTo(420, 1280);
+    g.lineTo(392, 900);
+    g.lineTo(328, 900);
+    g.closePath();
+    g.fillPath();
+
+    // 들꽃
+    const spots: [number, number][] = [
+      [80, 640], [640, 700], [110, 900], [610, 980],
+      [70, 1120], [650, 1150], [200, 1040], [520, 640],
+    ];
+    spots.forEach(([x, y], i) => {
+      disc(g, x, y, 9, FLOWERS[i % FLOWERS.length], 3);
+      disc(g, x, y, 3, 0xf5c542, 0);
+    });
+  });
+
+  // 카페 건물 — 360x480. 원점은 이미지를 놓을 때 문 앞 바닥(하단 중앙)에 맞춥니다.
+  tex(scene, "world-cafe", 360, 480, (g) => {
+    // 지붕
+    g.fillStyle(ROOF_DARK, 1);
+    g.beginPath();
+    g.moveTo(-10, 170);
+    g.lineTo(180, 30);
+    g.lineTo(370, 170);
+    g.closePath();
+    g.fillPath();
+    g.fillStyle(ROOF, 1);
+    g.beginPath();
+    g.moveTo(0, 160);
+    g.lineTo(180, 40);
+    g.lineTo(360, 160);
+    g.closePath();
+    g.fillPath();
+    g.lineStyle(6, INK, 1);
+    g.beginPath();
+    g.moveTo(0, 160);
+    g.lineTo(180, 40);
+    g.lineTo(360, 160);
+    g.closePath();
+    g.strokePath();
+
+    // 굴뚝
+    blob(g, 258, 55, 32, 65, 4, S.woodDark, 5);
+
+    // 2층 벽 + 창문
+    blob(g, 20, 150, 320, 150, 10, WALL, 6);
+    blob(g, 66, 190, 70, 70, 8, GLASS, 5);
+    blob(g, 224, 190, 70, 70, 8, GLASS, 5);
+    g.lineStyle(4, WALL_SHADE, 1);
+    g.lineBetween(101, 190, 101, 260);
+    g.lineBetween(66, 225, 136, 225);
+    g.lineBetween(259, 190, 259, 260);
+    g.lineBetween(224, 225, 294, 225);
+
+    // 1층 벽
+    blob(g, 10, 290, 340, 190, 10, WALL_SHADE, 6);
+    // 1층 창문 (문 양옆)
+    blob(g, 32, 330, 70, 70, 8, GLASS, 5);
+    blob(g, 258, 330, 70, 70, 8, GLASS, 5);
+    // 출입문 (가운데)
+    blob(g, 140, 340, 80, 140, 8, S.woodDark, 5);
+    blob(g, 150, 350, 60, 100, 6, GLASS, 4);
+    g.lineStyle(4, S.woodDark, 1);
+    g.lineBetween(180, 350, 180, 450);
+    disc(g, 195, 400, 5, S.steelDark, 0);
+
+    // 문 위 차양(어닝)
+    g.fillStyle(ROOF, 1);
+    g.fillRect(118, 316, 124, 22);
+    g.lineStyle(5, INK, 1);
+    g.strokeRect(118, 316, 124, 22);
+    for (let i = 0; i < 7; i++) {
+      g.fillStyle(i % 2 === 0 ? ROOF_DARK : 0xffffff, 1);
+      g.fillRect(118 + i * 18, 338, 9, 12);
+    }
+
+    // 간판 자리 (글자는 화면에서 텍스트로 따로 얹습니다)
+    blob(g, 110, 138, 140, 34, 10, S.paper, 5);
+  });
+}
+
 let built = false;
 
 /** 게임이 켜질 때 한 번만 부르면 됩니다. */
@@ -1145,6 +1288,7 @@ export function buildArt(scene: Phaser.Scene) {
   buildBubbles(scene);
   buildIcons(scene);
   buildUiIcons(scene);
+  buildWorldArt(scene);
   built = true;
 }
 

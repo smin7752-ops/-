@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { CafeScene, VIRTUAL_HEIGHT, VIRTUAL_WIDTH } from "./scenes/CafeScene";
+import { WorldScene } from "./scenes/WorldScene";
 import { gameState } from "./game/state";
 import { sim } from "./game/sim";
 import { bus, EVENTS } from "./game/bus";
@@ -36,13 +37,20 @@ const game = new Phaser.Game({
   input: {
     windowEvents: false,
   },
-  scene: [CafeScene],
+  scene: [WorldScene, CafeScene],
 });
 
 exposeGameForDebug(game);
 
 const uiRoot = document.getElementById("ui-root");
-if (uiRoot) mountUI(uiRoot);
+if (uiRoot) {
+  mountUI(uiRoot);
+  // 문을 열기 전(초원 화면)에는 위·아래 게임 버튼들을 감춰둡니다.
+  uiRoot.style.display = "none";
+  bus.on(EVENTS.ENTERED_CAFE, () => {
+    uiRoot.style.display = "";
+  });
+}
 
 // 폰에서는 앱을 왔다갔다 하는 일이 잦습니다. 화면을 벗어나면 저장하고,
 // 돌아왔을 때 그동안 벌어둔 돈이 있으면 정산해서 보여줍니다.
