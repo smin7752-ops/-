@@ -1262,14 +1262,15 @@ function buildWorldArt(scene: Phaser.Scene) {
   });
 
   // 카페 건물 — 아이소메트릭 박스(지붕 2면 + 벽 2면)로 그립니다.
+  // 낮고 넓게(오두막처럼) 잡아야 자연스러워서, 벽 높이를 지붕 폭보다 낮게 둡니다.
   // 원점(이미지를 놓을 기준점)은 건물이 서는 타일의 앞쪽 꼭짓점 바닥입니다.
   const BW = 300;
-  const BH = 400;
+  const BH = 380;
   const cx = BW / 2;
-  const gcy = 300; // 바닥 마름모의 세로 중심
-  const w2 = 90;
-  const h2 = 45;
-  const WALL_H = 180;
+  const gcy = 290; // 바닥 마름모의 세로 중심
+  const w2 = 105;
+  const h2 = 52;
+  const WALL_H = 120;
   tex(scene, "world-cafe-iso", BW, BH, (g) => {
     const T = { x: cx, y: gcy - h2 };
     const R = { x: cx + w2, y: gcy };
@@ -1293,31 +1294,38 @@ function buildWorldArt(scene: Phaser.Scene) {
       g.strokePath();
     };
 
+    // 바닥에 지는 그림자 — 건물이 땅에 붙어 있는 것처럼 보이게 합니다.
+    g.fillStyle(0x000000, 0.16);
+    g.fillEllipse(B.x, B.y + 6, w2 * 1.5, h2 * 1.1);
+
     // 벽 두 면 (오른쪽이 더 어둡게 — 그늘)
     poly([B, R, Rt, Bt], WALL_SHADE);
     poly([B, L, Lt, Bt], WALL);
 
-    // 지붕 두 면 (오른쪽 = 그늘)
+    // 지붕 두 면 (오른쪽 = 그늘) + 용마루 선
     poly([Tt, Bt, Rt], ROOF_DARK);
     poly([Tt, Lt, Bt], ROOF);
+    g.lineStyle(5, INK, 1);
+    g.lineBetween(Tt.x, Tt.y, Bt.x, Bt.y);
 
-    // 굴뚝
-    blob(g, Rt.x - 46, Rt.y - 60, 26, 60, 4, S.woodDark, 5);
+    // 굴뚝 — 지붕 경사면 위에 실제로 얹혀 있도록, 오른쪽 지붕면 위의 한 점에서 세웁니다.
+    const chimneyBase = { x: Tt.x + (Rt.x - Tt.x) * 0.4, y: Tt.y + (Rt.y - Tt.y) * 0.4 };
+    blob(g, chimneyBase.x - 11, chimneyBase.y - 46, 22, 48, 3, S.woodDark, 5);
 
-    // 문 (오른쪽 벽 — 안전하게 안쪽으로 넉넉히 들여서 그립니다)
-    blob(g, 165, 160, 50, 150, 6, S.woodDark, 5);
-    blob(g, 173, 172, 34, 100, 5, GLASS, 4);
-    disc(g, 200, 235, 4, S.steelDark, 0);
+    // 문 (오른쪽 벽) — 벽 위아래로 여백을 남겨 문틀처럼 보이게 합니다.
+    blob(g, 170, 213, 50, 94, 6, S.woodDark, 5);
+    blob(g, 178, 221, 34, 60, 5, GLASS, 4);
+    disc(g, 205, 260, 4, S.steelDark, 0);
 
     // 창문 (왼쪽 벽)
-    blob(g, 85, 160, 50, 150, 6, S.woodDark, 5);
-    blob(g, 93, 172, 34, 100, 5, GLASS, 4);
+    blob(g, 80, 213, 50, 94, 6, S.woodDark, 5);
+    blob(g, 88, 221, 34, 60, 5, GLASS, 4);
     g.lineStyle(3, S.woodDark, 1);
-    g.lineBetween(110, 172, 110, 272);
-    g.lineBetween(93, 222, 127, 222);
+    g.lineBetween(105, 221, 105, 281);
+    g.lineBetween(88, 251, 122, 251);
 
     // 간판 (글자는 화면에서 텍스트로 따로 얹습니다)
-    blob(g, Bt.x - 70, Bt.y - 30, 140, 32, 10, S.paper, 5);
+    blob(g, Bt.x - 70, Bt.y - 28, 140, 32, 10, S.paper, 5);
   });
 }
 

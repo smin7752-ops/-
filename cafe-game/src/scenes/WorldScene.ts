@@ -40,15 +40,16 @@ export class WorldScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     // 카페 건물을 격자 자리(0,0)에 맞춰 놓습니다.
+    // (world-cafe-iso 그림의 바닥 꼭짓점은 가로 가운데, 세로 90% 지점에 있습니다.)
     const tileScreen = isoToScreen(CAFE_TILE.gx, CAFE_TILE.gy);
     const buildingX = groundScreenX + tileScreen.x;
-    const buildingY = groundScreenY + tileScreen.y + 45; // 타일 앞쪽 꼭짓점(바닥)에 맞춤
+    const buildingY = groundScreenY + tileScreen.y + 25; // 타일 앞쪽 꼭짓점(바닥)에 맞춤
     const building = this.add
       .image(buildingX, buildingY, "world-cafe-iso")
-      .setOrigin(0.5, 0.75);
+      .setOrigin(0.5, 0.9);
 
     const signText = this.add
-      .text(buildingX, buildingY - 300, "카페", {
+      .text(buildingX, buildingY - 130, "카페", {
         fontSize: "24px",
         fontStyle: "bold",
         color: "#4a3226",
@@ -56,7 +57,7 @@ export class WorldScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     const hint = this.add
-      .text(buildingX, buildingY + 80, "카페를 눌러 들어가세요", {
+      .text(buildingX, buildingY + 40, "카페를 눌러 들어가세요", {
         fontSize: "22px",
         fontStyle: "bold",
         color: "#fffaf2",
@@ -73,7 +74,7 @@ export class WorldScene extends Phaser.Scene {
     });
 
     // 건물 전체를 누를 수 있게 넉넉한 범위로 잡습니다 (손가락으로 누르기 쉽게).
-    const hit = this.add.rectangle(buildingX, buildingY - 180, 260, 400, 0xffffff, 0);
+    const hit = this.add.rectangle(buildingX, buildingY - 140, 280, 300, 0xffffff, 0);
     hit.setInteractive({ useHandCursor: true });
 
     let entering = false;
