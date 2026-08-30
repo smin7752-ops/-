@@ -34,6 +34,7 @@ import {
   SAVE_KEY,
   SETS,
   STARTING_EQUIPMENT,
+  STARTING_LAUNCHED,
   STARTING_STOCK,
   STARTING_TABLES,
   baristaSpeed,
@@ -89,6 +90,8 @@ export interface SetProgress {
 export interface SaveData {
   coins: number;
   menu: Record<string, MenuProgress>;
+  /** 발주 탭에서 한 번 사서 열어둔 메뉴 id 목록 */
+  launched: string[];
   sets: Record<string, SetProgress>;
   floors: FloorData[];
   /** 가게 평점 (1.0 ~ 5.0). 손님 응대가 좋으면 오르고 소문이 납니다 */
@@ -149,6 +152,7 @@ function defaultSave(): SaveData {
   return {
     coins: 100,
     menu,
+    launched: [...STARTING_LAUNCHED],
     sets,
     floors: Array.from({ length: MAX_FLOORS }, (_, i) => defaultFloor(i)),
     rating: RATING_START,
@@ -238,6 +242,17 @@ class GameState {
       );
       return merger;
     });
+    // 메뉴 구매(발주 탭 한 번 사기)도 나중에 추가된 기능입니다. 이미 그
+    // 설비를 사둔 메뉴는 예전 규칙대로 바로 팔리고 있었을 테니, 다시 사라고
+    // 하지 않고 그대로 열어드립니다. 앞으로 새로 사는 설비부터 이 구매가
+    // 필요해요.
+    const ownedEquipmentIds = new Set(merged.floors.flatMap((f) => f.equipment));
+    const grandfathered = ALL_MENU.filter((m) => ownedEquipmentIds.has(m.equipmentId)).map(
+      (m) => m.id,
+    );
+    merged.launched = Array.from(
+      new Set([...STARTING_LAUNCHED, ...grandfathered, ...(parsed.launched ?? [])]),
+    );
     merged.rating = typeof parsed.rating === "number" ? parsed.rating : RATING_START;
     // 유니폼도 나중에 추가된 기능이라 예전 저장본에는 없습니다.
     merged.uniforms = Array.from(
@@ -445,40 +460,35 @@ class GameState {
     return this.data.floors.some((f) => f.unlocked && f.equipment.includes(id));
   }
 
-  /**
-   * "레시피"가 열렸는가 (설비를 실제로 갖고 있는지는 isSellable에서 별도로 봅니다).
-   *
-   * - 앞 메뉴와 같은 설비를 쓰는 메뉴는 예전처럼 앞 메뉴를 일정 레벨까지
-   *   키워야 열려요 (판매 성장으로 다음 메뉴를 여는 재미).
-   * - 앞 메뉴와 다른 새 설비가 필요한 메뉴는, 그 설비를 사는 순간 바로
-   *   열립니다. 레벨을 채웠는데도 설비가 없어서 못 파는 상황을 없애고,
-   *   설비 구매 자체가 확실한 다음 목표가 되게 하기 위해서예요.
-   */
-  isRecipeUnlocked(id: string): boolean {
-    const item = menuById(id);
-    const list = menuListOf(item.category);
-    const index = list.findIndex((m) => m.id === id);
-    if (index <= 0) return true;
-    const prev = list[index - 1];
-    if (item.equipmentId !== prev.equipmentId) {
-      return this.hasEquipmentAnywhere(item.equipmentId);
-    }
-    return this.progress(prev.id).level >= item.unlockPrevLevel;
+  /** 발주 탭에서 한 번 사서 열어둔 메뉴인가 */
+  isLaunched(id: string): boolean {
+    return this.data.launched.includes(id);
   }
 
-  /** 그 층에서 실제로 팔 수 있는 상태인가 (레시피 + 그 층의 설비) */
+  /**
+   * 설비를 산 뒤, 발주 탭에서 이 메뉴를 처음 구매합니다 (한 번만).
+   * 성공하면 그 뒤로는 계속 재고를 발주해서 팔 수 있어요.
+   */
+  launchMenu(id: string): boolean {
+    if (this.isLaunched(id)) return false;
+    const item = menuById(id);
+    if (!this.hasEquipmentAnywhere(item.equipmentId)) return false;
+    if (!this.spendCoins(item.launchCost)) return false;
+    this.data.launched.push(id);
+    return true;
+  }
+
+  /** 그 층에서 실제로 팔 수 있는 상태인가 (발주 탭에서 열어둔 메뉴 + 그 층의 설비) */
   isSellable(floorIndex: number, id: string): boolean {
     return (
-      this.isRecipeUnlocked(id) &&
-      this.hasEquipment(floorIndex, menuById(id).equipmentId)
+      this.isLaunched(id) && this.hasEquipment(floorIndex, menuById(id).equipmentId)
     );
   }
 
   /** 어느 층에서든 팔 수 있는가 (메뉴판·발주 화면처럼 가게 전체를 볼 때) */
   isSellableAnywhere(id: string): boolean {
     return (
-      this.isRecipeUnlocked(id) &&
-      this.hasEquipmentAnywhere(menuById(id).equipmentId)
+      this.isLaunched(id) && this.hasEquipmentAnywhere(menuById(id).equipmentId)
     );
   }
 
@@ -493,15 +503,12 @@ class GameState {
     return list.filter((m) => this.isSellableAnywhere(m.id));
   }
 
-  /** 다음에 열릴 메뉴와, 무엇이 필요한지 */
-  nextLockedItem(category: Category): { item: MenuDef; prev: MenuDef } | null {
-    const list = menuListOf(category);
-    for (let i = 1; i < list.length; i++) {
-      if (!this.isRecipeUnlocked(list[i].id)) {
-        return { item: list[i], prev: list[i - 1] };
-      }
-    }
-    return null;
+  /** 설비는 있지만 아직 발주 탭에서 안 산 메뉴 (발주 탭의 "구매" 목록용) */
+  awaitingLaunch(category?: Category): MenuDef[] {
+    const list = category ? menuListOf(category) : ALL_MENU;
+    return list.filter(
+      (m) => !this.isLaunched(m.id) && this.hasEquipmentAnywhere(m.equipmentId),
+    );
   }
 
   priceOf(id: string): number {

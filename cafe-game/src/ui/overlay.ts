@@ -77,18 +77,6 @@ function coin(amount: number, size = 20): string {
   return `${ic("icon-coin", size)} ${num(amount)}`;
 }
 
-/**
- * 한국어 조사 붙이기. 마지막 글자에 받침이 있으면 앞쪽,
- * 없으면 뒤쪽 조사를 씁니다. ("아메리카노를" / "크루아상을")
- */
-function withParticle(word: string, withBatchim: string, withoutBatchim: string): string {
-  const last = word.charCodeAt(word.length - 1);
-  const isHangul = last >= 0xac00 && last <= 0xd7a3;
-  if (!isHangul) return `${word}${withoutBatchim}`;
-  const hasBatchim = (last - 0xac00) % 28 !== 0;
-  return `${word}${hasBatchim ? withBatchim : withoutBatchim}`;
-}
-
 export function mountUI(root: HTMLElement) {
   injectStyles();
 
@@ -314,24 +302,29 @@ export function mountUI(root: HTMLElement) {
     const rows: string[] = [`<h3>${title}</h3>`];
     for (const item of category === "drink" ? DRINKS : DESSERTS) {
       const p = gameState.progress(item.id);
-      const recipe = gameState.isRecipeUnlocked(item.id);
+      const launched = gameState.isLaunched(item.id);
       const equipped = gameState.hasEquipmentAnywhere(item.equipmentId);
       const equipName = EQUIPMENT.find((e) => e.id === item.equipmentId)?.name ?? "";
 
-      if (!recipe) {
-        const list = category === "drink" ? DRINKS : DESSERTS;
-        const prev = list[list.findIndex((m) => m.id === item.id) - 1];
-        const needsNewEquipment = item.equipmentId !== prev.equipmentId;
-        const hint = needsNewEquipment
-          ? `${equipName} 설비를 사면 바로 열려요`
-          : `${withParticle(prev.name, "을", "를")} Lv.${item.unlockPrevLevel} 까지 키우면 열려요`;
-        rows.push(`
-          <div class="row locked">
-            <div class="row-main">
-              <div class="row-label">${ic(uiKey("lock"), 20)} ???</div>
-              <div class="row-sub">${hint}</div>
-            </div>
-          </div>`);
+      if (!launched) {
+        if (!equipped) {
+          rows.push(`
+            <div class="row locked">
+              <div class="row-main">
+                <div class="row-label">${ic(uiKey("lock"), 20)} ???</div>
+                <div class="row-sub">${equipName} 설비를 사면 발주 탭에서 살 수 있어요</div>
+              </div>
+            </div>`);
+        } else {
+          rows.push(`
+            <div class="row locked" data-jump-supply="1">
+              ${ic(itemKey(item.id), 40)}
+              <div class="row-main">
+                <div class="row-label">${item.name}</div>
+                <div class="row-sub">${ic(uiKey("warning"), 14)} 발주 탭에서 구매하면 팔 수 있어요</div>
+              </div>
+            </div>`);
+        }
         continue;
       }
 
@@ -389,7 +382,7 @@ export function mountUI(root: HTMLElement) {
 
     bodyEl.innerHTML = `
       <div class="note">메뉴는 팔 때마다 경험치가 쌓여 레벨이 오르고, 레벨이 오르면 판매가가 올라가요.
-      앞 메뉴를 일정 레벨까지 키우면 다음 메뉴가 열립니다.</div>
+      새 메뉴는 설비를 산 뒤 발주 탭에서 한 번 구매하면 열립니다.</div>
       ${menuSection("음료", "drink")}
       ${menuSection("디저트", "dessert")}
       <h3>세트 메뉴</h3>
@@ -397,6 +390,8 @@ export function mountUI(root: HTMLElement) {
       <div class="note">세트가 열리면 손님이 가끔 세트로 주문해요. 단품보다 비싸고,
       세트도 팔수록 레벨이 올라 값이 더 올라갑니다.</div>
     `;
+
+    wire("[data-jump-supply]", () => showPanel("supply"));
   }
 
   /* ---------------------------- 발주 패널 ---------------------------- */
@@ -425,6 +420,29 @@ export function mountUI(root: HTMLElement) {
       })
       .join("");
 
+    const launchItems = gameState.awaitingLaunch();
+    const launchSection =
+      launchItems.length === 0
+        ? ""
+        : `
+          <h3>새 메뉴 구매</h3>
+          ${launchItems
+            .map((item) => {
+              const cost = item.launchCost;
+              return `
+                <div class="row">
+                  ${ic(itemKey(item.id), 40)}
+                  <div class="row-main">
+                    <div class="row-label">${item.name} <span class="pill">신메뉴</span></div>
+                    <div class="row-sub">설비 준비 완료! 한 번 사면 계속 발주할 수 있어요</div>
+                  </div>
+                  <button class="buy-btn alt" data-launch="${item.id}"
+                    ${gameState.data.coins < cost ? "disabled" : ""}>${coin(cost)}</button>
+                </div>`;
+            })
+            .join("")}
+        `;
+
     const gmCost = GENERAL_MANAGER_COST;
     const gmRow = gm
       ? `<div class="row">
@@ -450,11 +468,20 @@ export function mountUI(root: HTMLElement) {
       }</div>
       <h3>점장</h3>
       ${gmRow}
+      ${launchSection}
       <h3>재고 발주</h3>
-      ${rows || `<p class="muted">아직 팔 수 있는 메뉴가 없어요.</p>`}
+      ${rows || `<p class="muted">아직 팔 수 있는 메뉴가 없어요. 설비를 사고 위에서 메뉴를 구매해보세요.</p>`}
       <div class="note">한 번 팔 때마다 재고가 1개씩 줄어요. 손님이 화내고 나가도 재고는 돌아오지 않습니다.</div>
     `;
 
+    wire("[data-launch]", (el) => {
+      const id = el.dataset.launch!;
+      if (gameState.launchMenu(id)) {
+        gameState.save();
+        bus.emit(EVENTS.COINS_CHANGED);
+        bus.emit(EVENTS.STOCK_CHANGED);
+      }
+    });
     wire("[data-restock]", (el) => {
       const id = el.dataset.restock!;
       if (gameState.restock(id, SUPPLY_BATCH)) {

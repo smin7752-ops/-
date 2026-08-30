@@ -58,8 +58,13 @@ const TABLE_TOP_DY = 20;
 const DIRTY_ITEM_DX = 34;
 const DIRTY_ITEM_DY = TABLE_TOP_DY - 22;
 
-/* 직원이 자리를 치우는 동안 세로로 채워지는 게이지 바. 의자 바깥쪽(테이블 반대쪽)에 세웁니다. */
-const CLEAN_GAUGE_DX = 46;
+/* 직원이 치울 때 서는 자리 — 의자(SEAT_DX=74)보다 훨씬 안쪽, 흔적 바로
+   옆이라 "다가가서 치우는" 것처럼 보입니다. */
+const CLEAN_STAND_DX = 40;
+
+/* 청소 게이지는 흔적과 겹치지 않도록, 직원이 서는 자리보다 더 바깥쪽 위에 띄웁니다. */
+const CLEAN_GAUGE_OUT = 30;
+const CLEAN_GAUGE_UP = 66;
 const CLEAN_GAUGE_W = 10;
 const CLEAN_GAUGE_H = 54;
 
@@ -382,13 +387,19 @@ export class CafeScene extends Phaser.Scene {
       img.setY(STAFF_BASE_Y + bob);
     });
 
-    // 홀 직원: 청소를 배정받았으면 그 자리로 고정해서 가고(다른 직원은 안 갑니다),
-    // 아니면 서빙할 손님에게 갔다가 통로로 돌아옵니다.
+    // 홀 직원: 청소를 배정받았으면 흔적 바로 옆에 붙어서 등을 돌리고 치우고
+    // (다른 직원은 안 갑니다), 아니면 서빙할 손님에게 갔다가 통로로 돌아옵니다.
     const seats = sim.tablesOn(this.activeFloor);
-    const cleaningTarget = new Map<number, { x: number; y: number }>();
+    const cleaningTarget = new Map<number, { x: number; y: number; side: number }>();
     seats.forEach((seat, i) => {
       if (seat.state === "dirty" && seat.assignedServer !== null) {
-        cleaningTarget.set(seat.assignedServer, seatPosition(i));
+        const side = i % SEATS_PER_TABLE === 0 ? -1 : 1;
+        const table = tablePosition(Math.floor(i / SEATS_PER_TABLE));
+        cleaningTarget.set(seat.assignedServer, {
+          x: table.x + side * CLEAN_STAND_DX,
+          y: table.y,
+          side,
+        });
       }
     });
     const serveJobs: { x: number; y: number }[] = [];
@@ -404,13 +415,27 @@ export class CafeScene extends Phaser.Scene {
 
       const home = this.serverHome(i);
       // 청소 배정이 최우선이고, 없으면 서빙 대기 중인 손님을 순서대로 맡습니다.
-      const job = cleaningTarget.get(i) ?? (serveJobIndex < serveJobs.length ? serveJobs[serveJobIndex++] : undefined);
-      // 손님 옆에 서야 하므로 자리보다 통로 쪽으로 조금 비켜섭니다.
-      const target = job
-        ? { x: job.x + (job.x < VIRTUAL_WIDTH / 2 ? 46 : -46), y: job.y + 34 }
-        : home;
+      const cleanJob = cleaningTarget.get(i);
+      const serveJob = !cleanJob && serveJobIndex < serveJobs.length ? serveJobs[serveJobIndex++] : undefined;
+
+      let target: { x: number; y: number };
+      if (cleanJob) {
+        // 흔적 바로 옆이라 손님 옆으로 비켜설 필요가 없습니다.
+        target = cleanJob;
+      } else if (serveJob) {
+        // 손님 옆에 서야 하므로 자리보다 통로 쪽으로 조금 비켜섭니다.
+        target = { x: serveJob.x + (serveJob.x < VIRTUAL_WIDTH / 2 ? 46 : -46), y: serveJob.y + 34 };
+      } else {
+        target = home;
+      }
+
       const nextX = Phaser.Math.Linear(img.x, target.x, 0.06);
-      img.setFlipX(nextX < img.x - 0.4);
+      if (cleanJob) {
+        // 치우는 동안은 걸음 방향으로 흔들리지 않도록, 테이블 쪽을 향해 고정합니다.
+        img.setFlipX(cleanJob.side > 0);
+      } else {
+        img.setFlipX(nextX < img.x - 0.4);
+      }
       img.setX(nextX);
       img.setY(Phaser.Math.Linear(img.y, target.y, 0.06));
     });
@@ -476,9 +501,11 @@ export class CafeScene extends Phaser.Scene {
           .setVisible(false);
         this.dirtyIcons.set(seatIndex, dirtyIcon);
 
-        // 청소 게이지 — 의자 바깥쪽(테이블 반대쪽)에 세로로 세우고, 치우는 동안 아래에서부터 채웁니다.
-        const gaugeX = seat.x - dirtySide * CLEAN_GAUGE_DX;
-        const gaugeY = seat.y + CHAIR_DY;
+        // 청소 게이지 — 직원이 서는 자리보다 더 바깥쪽 위에 세로로 세우고,
+        // 흔적(더러운 컵)과 겹치지 않게 합니다. 치우는 동안 아래에서부터 채웁니다.
+        const standX = pos.x + dirtySide * CLEAN_STAND_DX;
+        const gaugeX = standX + dirtySide * CLEAN_GAUGE_OUT;
+        const gaugeY = pos.y - CLEAN_GAUGE_UP;
         const gaugeBg = this.add
           .rectangle(gaugeX, gaugeY, CLEAN_GAUGE_W, CLEAN_GAUGE_H, 0x000000, 0.28)
           .setOrigin(0.5, 1)

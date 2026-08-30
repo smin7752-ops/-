@@ -18,8 +18,8 @@ export interface MenuDef {
   supplyCost: number;
   /** 만드는 데 걸리는 시간(ms) */
   makeTimeMs: number;
-  /** 같은 분류의 "앞 메뉴"가 이 레벨에 도달하면 해금 (첫 메뉴는 0) */
-  unlockPrevLevel: number;
+  /** 설비를 산 뒤, 발주 탭에서 이 메뉴를 처음 살 때 드는 비용 (한 번만) */
+  launchCost: number;
 }
 
 export interface EquipmentDef {
@@ -88,24 +88,25 @@ export function equipmentCost(def: EquipmentDef, floorIndex: number): number {
 }
 
 /* ----------------------------- 메뉴 ----------------------------- */
-/* 배열 순서 = 해금 순서입니다. 앞 메뉴를 일정 레벨까지 키우면 다음이 열려요. */
+/* 배열 순서는 표시 순서일 뿐입니다. 각 메뉴는 설비를 산 뒤 발주 탭에서
+   한 번 사야 팔 수 있게 열립니다 (state.ts의 launched 목록 참고). */
 
 export const DRINKS: MenuDef[] = [
-  { id: "americano", name: "아메리카노", emoji: "☕", category: "drink", equipmentId: "coffee_machine", basePrice: 22, supplyCost: 4, makeTimeMs: 1200, unlockPrevLevel: 0 },
-  { id: "latte", name: "카페라떼", emoji: "🥛", category: "drink", equipmentId: "coffee_machine", basePrice: 38, supplyCost: 8, makeTimeMs: 1600, unlockPrevLevel: 3 },
-  { id: "icetea", name: "아이스티", emoji: "🧊", category: "drink", equipmentId: "tea_station", basePrice: 58, supplyCost: 13, makeTimeMs: 1400, unlockPrevLevel: 5 },
-  { id: "ade", name: "레몬에이드", emoji: "🍋", category: "drink", equipmentId: "blender", basePrice: 84, supplyCost: 19, makeTimeMs: 1800, unlockPrevLevel: 7 },
-  { id: "smoothie", name: "딸기스무디", emoji: "🍓", category: "drink", equipmentId: "blender", basePrice: 124, supplyCost: 28, makeTimeMs: 2200, unlockPrevLevel: 9 },
-  { id: "matcha", name: "말차라떼", emoji: "🍵", category: "drink", equipmentId: "tea_station", basePrice: 180, supplyCost: 42, makeTimeMs: 2000, unlockPrevLevel: 11 },
+  { id: "americano", name: "아메리카노", emoji: "☕", category: "drink", equipmentId: "coffee_machine", basePrice: 22, supplyCost: 4, makeTimeMs: 1200, launchCost: 0 },
+  { id: "latte", name: "카페라떼", emoji: "🥛", category: "drink", equipmentId: "coffee_machine", basePrice: 38, supplyCost: 8, makeTimeMs: 1600, launchCost: 700 },
+  { id: "icetea", name: "아이스티", emoji: "🧊", category: "drink", equipmentId: "tea_station", basePrice: 58, supplyCost: 13, makeTimeMs: 1400, launchCost: 1000 },
+  { id: "ade", name: "레몬에이드", emoji: "🍋", category: "drink", equipmentId: "blender", basePrice: 84, supplyCost: 19, makeTimeMs: 1800, launchCost: 1500 },
+  { id: "smoothie", name: "딸기스무디", emoji: "🍓", category: "drink", equipmentId: "blender", basePrice: 124, supplyCost: 28, makeTimeMs: 2200, launchCost: 2200 },
+  { id: "matcha", name: "말차라떼", emoji: "🍵", category: "drink", equipmentId: "tea_station", basePrice: 180, supplyCost: 42, makeTimeMs: 2000, launchCost: 3200 },
 ];
 
 export const DESSERTS: MenuDef[] = [
-  { id: "cookie", name: "쿠키", emoji: "🍪", category: "dessert", equipmentId: "showcase", basePrice: 28, supplyCost: 6, makeTimeMs: 600, unlockPrevLevel: 0 },
-  { id: "croissant", name: "크루아상", emoji: "🥐", category: "dessert", equipmentId: "oven", basePrice: 48, supplyCost: 11, makeTimeMs: 900, unlockPrevLevel: 3 },
-  { id: "cheesecake", name: "치즈케이크", emoji: "🍰", category: "dessert", equipmentId: "showcase", basePrice: 74, supplyCost: 17, makeTimeMs: 800, unlockPrevLevel: 5 },
-  { id: "macaron", name: "마카롱", emoji: "🍬", category: "dessert", equipmentId: "showcase", basePrice: 110, supplyCost: 25, makeTimeMs: 700, unlockPrevLevel: 7 },
-  { id: "tiramisu", name: "티라미수", emoji: "🍮", category: "dessert", equipmentId: "showcase", basePrice: 160, supplyCost: 37, makeTimeMs: 1000, unlockPrevLevel: 9 },
-  { id: "tart", name: "딸기타르트", emoji: "🥧", category: "dessert", equipmentId: "oven", basePrice: 240, supplyCost: 56, makeTimeMs: 1100, unlockPrevLevel: 11 },
+  { id: "cookie", name: "쿠키", emoji: "🍪", category: "dessert", equipmentId: "showcase", basePrice: 28, supplyCost: 6, makeTimeMs: 600, launchCost: 500 },
+  { id: "croissant", name: "크루아상", emoji: "🥐", category: "dessert", equipmentId: "oven", basePrice: 48, supplyCost: 11, makeTimeMs: 900, launchCost: 850 },
+  { id: "cheesecake", name: "치즈케이크", emoji: "🍰", category: "dessert", equipmentId: "showcase", basePrice: 74, supplyCost: 17, makeTimeMs: 800, launchCost: 1300 },
+  { id: "macaron", name: "마카롱", emoji: "🍬", category: "dessert", equipmentId: "showcase", basePrice: 110, supplyCost: 25, makeTimeMs: 700, launchCost: 2000 },
+  { id: "tiramisu", name: "티라미수", emoji: "🍮", category: "dessert", equipmentId: "showcase", basePrice: 160, supplyCost: 37, makeTimeMs: 1000, launchCost: 2900 },
+  { id: "tart", name: "딸기타르트", emoji: "🥧", category: "dessert", equipmentId: "oven", basePrice: 240, supplyCost: 56, makeTimeMs: 1100, launchCost: 4300 },
 ];
 
 export const ALL_MENU: MenuDef[] = [...DRINKS, ...DESSERTS];
@@ -119,6 +120,9 @@ export function menuById(id: string): MenuDef {
 export function menuListOf(category: Category): MenuDef[] {
   return category === "drink" ? DRINKS : DESSERTS;
 }
+
+/** 처음부터 발주 없이 바로 팔 수 있는 메뉴 (커피머신이 기본 설비인 것과 짝) */
+export const STARTING_LAUNCHED = ["americano"];
 
 /* ---------------------------- 세트 메뉴 --------------------------- */
 
