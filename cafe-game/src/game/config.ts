@@ -166,7 +166,7 @@ export function starMultiplier(stars: number): number {
 
 /** 다음 별로 강화할 때 드는 비용 (메뉴 기본가 기준, 별이 높을수록 훨씬 비쌉니다) */
 export function enhanceCost(menu: MenuDef, currentStars: number): number {
-  return Math.round(menu.basePrice * 40 * Math.pow(3.2, currentStars));
+  return Math.round(menu.basePrice * 160 * Math.pow(3.8, currentStars));
 }
 
 /** 다음 별로 강화 성공할 확률 (별이 높을수록 어려워집니다) */
