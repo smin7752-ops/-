@@ -344,8 +344,11 @@ export const CLOSE_HOUR = 22;
 /** 실제 1초가 게임 속 몇 분인지 → 하루(12시간)가 실제 4분입니다 */
 export const GAME_MINUTES_PER_SECOND = 3;
 
-/** 매출표에 남겨두는 지난 날 기록 수 */
-export const LEDGER_HISTORY_MAX = 14;
+/** 매출표 한 주 단위 (주간 정리에도 씁니다) */
+export const LEDGER_WEEK_DAYS = 7;
+/** 대략 한 달(4주)이 넘어가면, 하루씩 조금씩이 아니라 가장 오래된 한 주를
+    통째로 지웁니다 — 그래서 지난 매출은 항상 21~28일치만 남아요. */
+export const LEDGER_HISTORY_MAX_DAYS = LEDGER_WEEK_DAYS * 4;
 
 /** 마감 정산을 안 눌러도 이 시간이 지나면 다음 날로 넘어갑니다 */
 export const DAY_CLOSE_AUTO_MS = 5000;

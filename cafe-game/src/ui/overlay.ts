@@ -75,6 +75,7 @@ type PanelId =
   | "supply"
   | "staff"
   | "store"
+  | "shop"
   | "equipment"
   | "sales"
   | "uniform"
@@ -86,6 +87,7 @@ const PANEL_TITLES: Record<PanelId, string> = {
   supply: "발주",
   staff: "직원",
   store: "매장",
+  shop: "상점",
   equipment: "설비",
   sales: "매출표",
   uniform: "유니폼",
@@ -169,6 +171,17 @@ export function mountUI(root: HTMLElement) {
         </div>
       </div>
     </div>
+
+    <div id="exit-modal" class="modal hidden ui-interactive">
+      <div class="modal-card">
+        <div class="modal-header"><h2>나가시겠어요?</h2></div>
+        <div class="modal-body"><p class="close-lead">지금까지 하신 건 자동으로 저장돼요.</p></div>
+        <div style="display:flex;gap:10px;margin-top:10px">
+          <button id="exit-cancel" class="buy-btn alt" style="flex:1;width:auto;margin-top:0">계속하기</button>
+          <button id="exit-confirm" class="primary-btn" style="flex:1;width:auto;margin-top:0">나가기</button>
+        </div>
+      </div>
+    </div>
   `;
 
   const coinEl = root.querySelector("#coin-count") as HTMLElement;
@@ -193,6 +206,8 @@ export function mountUI(root: HTMLElement) {
 
   let activeFloor = 0;
   let openPanel: PanelId | null = null;
+  /** 상점 탭 안의 서브 탭 (설비 · 유니폼 · 꾸미기) */
+  let shopSubTab: "equipment" | "uniform" | "decor" = "equipment";
 
   /* --------------------------- 공통 갱신 --------------------------- */
 
@@ -210,10 +225,7 @@ export function mountUI(root: HTMLElement) {
     { id: "supply", label: "발주", icon: uiKey("supply") },
     { id: "staff", label: "직원", icon: uiKey("staff") },
     { id: "store", label: "매장", icon: uiKey("store") },
-    { id: "equipment", label: "설비", icon: uiKey("equipment") },
-    { id: "sales", label: "매출표", icon: uiKey("sales") },
-    { id: "uniform", label: "유니폼", icon: uiKey("uniform") },
-    { id: "decor", label: "꾸미기", icon: uiKey("decor") },
+    { id: "shop", label: "상점", icon: uiKey("shop") },
     { id: "fame", label: "인지도", icon: uiKey("fame") },
   ];
 
@@ -325,6 +337,9 @@ export function mountUI(root: HTMLElement) {
         break;
       case "store":
         renderStorePanel();
+        break;
+      case "shop":
+        renderShopPanel();
         break;
       case "equipment":
         renderEquipmentPanel();
@@ -677,7 +692,7 @@ export function mountUI(root: HTMLElement) {
       </div>`;
   }
 
-  function renderUniformPanel() {
+  function renderUniformPanel(target: HTMLElement = bodyEl) {
     const bonus = gameState.ownedBonus();
     const progress = gameState.uniformProgress();
     const bonusLines = [
@@ -687,7 +702,7 @@ export function mountUI(root: HTMLElement) {
       bonus.supplyCut ? `발주 원가 −${Math.round(bonus.supplyCut * 100)}%` : "",
     ].filter(Boolean);
 
-    bodyEl.innerHTML = `
+    target.innerHTML = `
       <div class="note">유니폼은 <b>가게 전체</b> 공용이에요. 한 벌은 <b>입은 자리에만</b>
       효과가 붙고, <b>사두기만 해도</b> 가게 전체에 붙는 효과가 따로 있습니다.
       그래서 안 입는 옷도 모아둘 값어치가 있어요.</div>
@@ -768,10 +783,10 @@ export function mountUI(root: HTMLElement) {
       </div>`;
   }
 
-  function renderDecorPanel() {
+  function renderDecorPanel(target: HTMLElement = bodyEl) {
     const progress = gameState.decorProgress();
 
-    bodyEl.innerHTML = `
+    target.innerHTML = `
       <div class="note">바닥·벽지·테이블·의자·출입문을 다른 모양으로 꾸밀 수 있어요.
       <b>가게 전체</b> 공용이고, 지금 쓰고 있는 것만 효과가 붙어요.</div>
 
@@ -1231,12 +1246,42 @@ export function mountUI(root: HTMLElement) {
     });
   }
 
+  /* ---------------------------- 상점 패널 ---------------------------- */
+
+  const SHOP_TABS: { id: "equipment" | "uniform" | "decor"; label: string; icon: string }[] = [
+    { id: "equipment", label: "설비", icon: uiKey("equipment") },
+    { id: "uniform", label: "유니폼", icon: uiKey("uniform") },
+    { id: "decor", label: "꾸미기", icon: uiKey("decor") },
+  ];
+
+  function renderShopPanel() {
+    bodyEl.innerHTML = `
+      <div class="shop-subnav">
+        ${SHOP_TABS.map(
+          (t) => `
+          <button class="shop-tab ${t.id === shopSubTab ? "active" : ""}" data-shop-tab="${t.id}">
+            ${ic(t.icon, 22)}${t.label}
+          </button>`,
+        ).join("")}
+      </div>
+      <div id="shop-content"></div>
+    `;
+    wire("[data-shop-tab]", (el) => {
+      shopSubTab = el.dataset.shopTab as typeof shopSubTab;
+      renderShopPanel();
+    });
+    const content = bodyEl.querySelector("#shop-content") as HTMLElement;
+    if (shopSubTab === "equipment") renderEquipmentPanel(content);
+    else if (shopSubTab === "uniform") renderUniformPanel(content);
+    else renderDecorPanel(content);
+  }
+
   /* ---------------------------- 설비 패널 ---------------------------- */
 
-  function renderEquipmentPanel() {
+  function renderEquipmentPanel(target: HTMLElement = bodyEl) {
     const floorIndex = activeFloor;
     if (!gameState.floor(floorIndex).unlocked) {
-      bodyEl.innerHTML = `<p class="muted">아직 열지 않은 층이에요. 매장 탭에서 먼저 증축해주세요.</p>`;
+      target.innerHTML = `<p class="muted">아직 열지 않은 층이에요. 매장 탭에서 먼저 증축해주세요.</p>`;
       return;
     }
 
@@ -1268,7 +1313,7 @@ export function mountUI(root: HTMLElement) {
         </div>`;
     }).join("");
 
-    bodyEl.innerHTML = `
+    target.innerHTML = `
       <div class="note">설비는 <b>층마다 따로</b> 사야 해요. 지금 보고 있는 층은
       <b>${floorIndex + 1}층</b> 이고, 위층일수록 설비값이 비쌉니다
       (${floorIndex + 1}층은 1층의 <b>${floorPriceScale(floorIndex).toFixed(1)}배</b>).
@@ -1319,6 +1364,95 @@ export function mountUI(root: HTMLElement) {
   modal.addEventListener("click", (e) => {
     if (e.target === modal) closePanel();
   });
+
+  // 맨 위까지 스크롤한 상태에서 아래로 더 당기면, 바텀시트를 끌어내리듯 자연스럽게 닫힙니다.
+  {
+    const modalCard = modal.querySelector(".modal-card") as HTMLElement;
+    let dragStartY = 0;
+    let dragging = false;
+    let dragDelta = 0;
+
+    bodyEl.addEventListener(
+      "touchstart",
+      (e) => {
+        if (bodyEl.scrollTop > 0) {
+          dragging = false;
+          return;
+        }
+        dragStartY = e.touches[0].clientY;
+        dragging = true;
+        dragDelta = 0;
+        modalCard.style.transition = "none";
+      },
+      { passive: true },
+    );
+
+    bodyEl.addEventListener(
+      "touchmove",
+      (e) => {
+        if (!dragging) return;
+        const delta = e.touches[0].clientY - dragStartY;
+        if (delta <= 0) {
+          dragging = false;
+          modalCard.style.transform = "";
+          return;
+        }
+        dragDelta = delta;
+        modalCard.style.transform = `translateY(${delta}px)`;
+        e.preventDefault();
+      },
+      { passive: false },
+    );
+
+    const endDrag = () => {
+      if (!dragging) return;
+      dragging = false;
+      modalCard.style.transition = "transform 0.2s ease";
+      if (dragDelta > 90) {
+        modalCard.style.transform = "translateY(100%)";
+        window.setTimeout(() => {
+          closePanel();
+          modalCard.style.transition = "";
+          modalCard.style.transform = "";
+        }, 180);
+      } else {
+        modalCard.style.transform = "";
+      }
+    };
+    bodyEl.addEventListener("touchend", endDrag);
+    bodyEl.addEventListener("touchcancel", endDrag);
+  }
+
+  // 뒤로 가기(안드로이드 기본 동작)를 누르면 바로 앱이 꺼지지 않고, 먼저 확인을 받습니다.
+  // 열려있는 패널이 있으면 그것부터 닫고, 아무것도 안 열려있을 때만 나가기 확인창을 띄워요.
+  {
+    const exitModal = root.querySelector("#exit-modal") as HTMLElement;
+    let allowExit = false;
+
+    history.pushState(null, "", location.href);
+    window.addEventListener("popstate", () => {
+      if (allowExit) return;
+      history.pushState(null, "", location.href);
+      if (openPanel) {
+        closePanel();
+        return;
+      }
+      exitModal.classList.remove("hidden");
+    });
+
+    root.querySelector("#exit-cancel")?.addEventListener("click", () => {
+      exitModal.classList.add("hidden");
+    });
+    root.querySelector("#exit-confirm")?.addEventListener("click", () => {
+      allowExit = true;
+      gameState.save();
+      history.back();
+    });
+    exitModal.addEventListener("click", (e) => {
+      if (e.target === exitModal) exitModal.classList.add("hidden");
+    });
+  }
+
   clockPill.addEventListener("click", () => showPanel("sales"));
   famePill.addEventListener("click", () => showPanel("fame"));
   root.querySelector("#close-confirm")?.addEventListener("click", confirmDayClose);

@@ -319,6 +319,33 @@ export function injectStyles() {
   #ui-root .donation-fame { margin-top: 3px; font-size: 12px; color: #3f8f6a; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 3px; }
   #ui-root .hobby-emoji { font-size: 30px; width: 42px; text-align: center; flex: 0 0 auto; }
 
+  #ui-root .shop-subnav {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    position: sticky;
+    top: 0;
+    background: #fff8ec;
+    padding: 2px 0 8px;
+    z-index: 1;
+  }
+  #ui-root .shop-tab {
+    flex: 1 1 0;
+    background: #f0e3ca;
+    color: #7a5a33;
+    border: none;
+    padding: 9px 4px;
+    border-radius: 12px;
+    font-family: inherit;
+    font-weight: 800;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  #ui-root .shop-tab.active { background: #e8973a; color: #3b2410; }
+
   #ui-root .close-lead { font-size: 14px; line-height: 1.5; }
   #ui-root .warn-text {
     background: #fbe7e4;

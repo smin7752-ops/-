@@ -976,6 +976,26 @@ function buildUiIcons(scene: Phaser.Scene) {
     g.fillRoundedRect(23, 32, 18, 22, 5);
   });
 
+  U("shop", (g) => {
+    // 쇼핑백 — 설비·유니폼·꾸미기를 한데 모은 상점 탭 아이콘
+    g.fillStyle(0xf7d08a, 1); // 가방 몸통
+    g.beginPath();
+    g.moveTo(12, 20);
+    g.lineTo(52, 20);
+    g.lineTo(48, 56);
+    g.lineTo(16, 56);
+    g.closePath();
+    g.fillPath();
+    g.lineStyle(5, INK, 1);
+    g.strokePath();
+    g.lineStyle(5, INK, 1); // 손잡이
+    g.beginPath();
+    g.arc(32, 18, 12, Phaser.Math.DegToRad(200), Phaser.Math.DegToRad(-20), false);
+    g.strokePath();
+    g.fillStyle(0xe4595f, 1); // 리본
+    g.fillRect(28, 30, 8, 14);
+  });
+
   U("decor", (g) => {
     // 페인트 롤러
     g.fillStyle(0x86caa5, 1); // 롤러 원통
@@ -1158,6 +1178,7 @@ export function publishIconUrls(scene: Phaser.Scene) {
       "supply",
       "staff",
       "store",
+      "shop",
       "equipment",
       "sales",
       "uniform",

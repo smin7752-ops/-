@@ -14,7 +14,8 @@ import {
   MAX_FLOORS,
   MAX_MENU_LEVEL,
   MAX_MENU_STARS,
-  LEDGER_HISTORY_MAX,
+  LEDGER_HISTORY_MAX_DAYS,
+  LEDGER_WEEK_DAYS,
   MAX_STOCK,
   OPEN_HOUR,
   ROLE_ORDER,
@@ -595,8 +596,9 @@ class GameState {
 
     const closed = { ...this.data.today };
     this.data.history.unshift(closed);
-    if (this.data.history.length > LEDGER_HISTORY_MAX) {
-      this.data.history.length = LEDGER_HISTORY_MAX;
+    // 한 달 어치가 넘어가면, 하루씩 조금씩 줄이지 않고 가장 오래된 한 주를 통째로 지웁니다.
+    if (this.data.history.length > LEDGER_HISTORY_MAX_DAYS) {
+      this.data.history.length -= LEDGER_WEEK_DAYS;
     }
     return closed;
   }

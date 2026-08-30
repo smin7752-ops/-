@@ -43,11 +43,14 @@ const COUNTER_H = 66;
 const STAFF_BASE_Y = COUNTER_Y + 30;
 /** 설비를 늘어놓을 카운터 위 구간 */
 const EQUIP_ZONE = { left: 300, right: VIRTUAL_WIDTH - 30 };
-/** 캐셔 자리 — 주방 카운터에서 앞으로 나와, 오른쪽 벽 쪽에 따로 둡니다.
-    테이블 자리(특히 오른쪽 줄 말풍선)와 겹치지 않도록 카운터 바로 앞, 벽에 붙여 둡니다. */
-const CASHIER_POS = { x: VIRTUAL_WIDTH - 40, y: COUNTER_Y + COUNTER_H + 55 };
+/** 캐셔 자리 — 주방 카운터에서 앞으로 나오되, 카운터 가까이 안쪽으로 붙여 둡니다.
+    테이블 자리(특히 오른쪽 줄 말풍선)와는 겹치지 않을 만큼만 내립니다. */
+const CASHIER_POS = { x: VIRTUAL_WIDTH - 60, y: COUNTER_Y + COUNTER_H + 30 };
 /** 캐셔 포스기는 총괄 매니저 앞(더 앞쪽)에 놓입니다 */
-const REGISTER_POS = { x: CASHIER_POS.x, y: CASHIER_POS.y - 30 };
+const REGISTER_POS = { x: CASHIER_POS.x, y: CASHIER_POS.y - 25 };
+/** 캐셔가 서 있는 작은 받침대 크기 */
+const CASHIER_STAND_W = 118;
+const CASHIER_STAND_H = 20;
 
 const DOOR = { x: VIRTUAL_WIDTH / 2, y: 1000 + LAYOUT_SHIFT_Y };
 const ENTRANCE = { x: DOOR.x, y: DOOR.y - 30 };
@@ -165,6 +168,7 @@ export class CafeScene extends Phaser.Scene {
     this.drawRoom();
     this.drawCounter();
     this.drawStaff();
+    this.drawCashierStand();
     this.rebuildTables();
 
     this.time.addEvent({
@@ -252,6 +256,7 @@ export class CafeScene extends Phaser.Scene {
   private applyDecor() {
     this.drawRoom();
     this.drawCounterGraphic();
+    this.drawCashierStand();
     this.registerImage.setTexture(registerKey(gameState.equippedDecor("register")));
     this.rebuildTables();
   }
@@ -270,6 +275,24 @@ export class CafeScene extends Phaser.Scene {
     g.lineStyle(5, colors.accent, 1);
     g.strokeRoundedRect(30, COUNTER_Y, VIRTUAL_WIDTH - 60, COUNTER_H, 14);
     this.counterGraphics = g;
+  }
+
+  /** 캐셔가 서는 작은 받침대 — 카운터와 같은 색으로, 인테리어를 바꾸면 같이 다시 그립니다 */
+  private cashierStandGraphics?: Phaser.GameObjects.Graphics;
+
+  private drawCashierStand() {
+    this.cashierStandGraphics?.destroy();
+    const g = this.add.graphics().setDepth(4);
+    const colors = gameState.decorColors("counter");
+    const x = CASHIER_POS.x - CASHIER_STAND_W / 2;
+    const y = CASHIER_POS.y - 8;
+    g.fillStyle(colors.primary, 1);
+    g.fillRoundedRect(x, y, CASHIER_STAND_W, CASHIER_STAND_H, 8);
+    g.fillStyle(colors.secondary, 1);
+    g.fillRoundedRect(x, y, CASHIER_STAND_W, 8, 8);
+    g.lineStyle(4, colors.accent, 1);
+    g.strokeRoundedRect(x, y, CASHIER_STAND_W, CASHIER_STAND_H, 8);
+    this.cashierStandGraphics = g;
   }
 
   private drawCounter() {
