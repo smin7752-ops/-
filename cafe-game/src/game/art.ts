@@ -612,13 +612,6 @@ function buildFurniture(scene: Phaser.Scene) {
       g.fillStyle(S.woodDark, 1);
       g.fillRect(stepX, stepY + 12, stepW, 5);
     }
-    g.lineStyle(5, S.steelDark, 1); // 난간
-    g.lineBetween(38, 168, 128, 48);
-    g.lineStyle(4, S.steelDark, 0.7);
-    for (let x = 46; x < 128; x += 18) {
-      const t = (x - 38) / (128 - 38);
-      g.lineBetween(x, 168 - t * 120, x, 178 - t * 120);
-    }
     g.lineStyle(6, INK, 1);
     g.strokeRoundedRect(22, 38, 116, 146, 8);
     blob(g, 26, 2, 108, 26, 10, S.wood, 5); // 문 위 간판처럼 "계단" 표시

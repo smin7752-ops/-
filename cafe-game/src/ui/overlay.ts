@@ -1,5 +1,6 @@
 import { bus, EVENTS } from "../game/bus";
 import {
+  AUTO_RESTOCK_BATCH,
   AUTO_RESTOCK_THRESHOLD,
   CLOSE_HOUR,
   DAY_CLOSE_AUTO_MS,
@@ -490,9 +491,9 @@ export function mountUI(root: HTMLElement) {
             </div>
             <div class="row-sub">${drink.name} + ${dessert.name}
               · 보너스 +${Math.round((set.bonusRate - 1) * 100)}%</div>
+            <div class="row-sub">판매가 ${num(gameState.setPrice(set))}코인 · 원가 ${drink.supplyCost + dessert.supplyCost}</div>
             <div class="lv-bar"><i style="width:${levelProgressRatio(p) * 100}%"></i></div>
           </div>
-          <div class="buy-btn" style="background:#f0e3ca;color:#7a5a33">${coin(gameState.setPrice(set))}</div>
         </div>`;
     }).join("");
 
@@ -565,11 +566,13 @@ export function mountUI(root: HTMLElement) {
   function renderSupplyPanel() {
     const gm = gameState.data.generalManager;
     const items = gameState.sellableAnywhere();
+    // 점장을 고용하면 실제로 자동 발주되는 단위(더 큰 묶음)로 표시를 맞춥니다.
+    const batch = gm ? AUTO_RESTOCK_BATCH : SUPPLY_BATCH;
 
     const rows = items
       .map((item) => {
         const stock = gameState.stockOf(item.id);
-        const cost = gameState.restockCost(item.id, SUPPLY_BATCH);
+        const cost = gameState.restockCost(item.id, batch);
         const cls = stock === 0 ? "zero" : stock < AUTO_RESTOCK_THRESHOLD ? "low" : "";
         return `
           <div class="row">
@@ -578,7 +581,7 @@ export function mountUI(root: HTMLElement) {
               <div class="row-label">${item.name}
                 <span class="pill ${cls}">재고 ${stock}</span>
               </div>
-              <div class="row-sub">${SUPPLY_BATCH}개 발주 · 개당 원가 ${item.supplyCost}코인</div>
+              <div class="row-sub">${batch}개 발주 · 개당 원가 ${item.supplyCost}코인</div>
             </div>
             <button class="buy-btn" data-restock="${item.id}"
               ${gameState.data.coins < cost ? "disabled" : ""}>${coin(cost)}</button>
@@ -650,7 +653,7 @@ export function mountUI(root: HTMLElement) {
     });
     wire("[data-restock]", (el) => {
       const id = el.dataset.restock!;
-      if (gameState.restock(id, SUPPLY_BATCH)) {
+      if (gameState.restock(id, batch)) {
         gameState.save();
         bus.emit(EVENTS.COINS_CHANGED);
         bus.emit(EVENTS.STOCK_CHANGED);
