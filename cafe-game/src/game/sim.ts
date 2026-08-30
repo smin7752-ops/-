@@ -353,6 +353,17 @@ class Simulation {
   private leave(floor: SimFloor, c: SimCustomer, _reason: "done" | "angry") {
     c.leaving = true;
     c.phaseTimer = 600;
+
+    // 손님이 왔다 가면서 인지도를 남깁니다. 서빙될 때까지 인내심을 얼마나
+    // 남겼는지에 따라 1~10 사이로 달라져요 (화나서 나갔으면 거의 0).
+    const patienceRatio = c.patienceTotal > 0 ? c.patience / c.patienceTotal : 0;
+    const fameGained = gameState.awardFameForVisit(patienceRatio);
+    bus.emit(EVENTS.FAME_GAINED, {
+      floorIndex: c.floorIndex,
+      tableIndex: c.tableIndex,
+      amount: fameGained,
+    });
+
     const table = floor.tables[c.tableIndex];
     if (table) {
       table.state = "dirty";

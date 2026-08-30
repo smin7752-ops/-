@@ -24,6 +24,7 @@ import {
   publishIconUrls,
   registerKey,
   tableKey,
+  uiKey,
 } from "../game/art";
 
 export const VIRTUAL_WIDTH = 720;
@@ -178,6 +179,7 @@ export class CafeScene extends Phaser.Scene {
     bus.on(EVENTS.CUSTOMER_ANGRY, this.onAngry, this);
     bus.on(EVENTS.MADE_BY_HAND, this.onMadeByHand, this);
     bus.on(EVENTS.TABLE_CLEANED, this.onTableCleaned, this);
+    bus.on(EVENTS.FAME_GAINED, this.onFameGained, this);
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       bus.off(EVENTS.LAYOUT_CHANGED, this.onLayoutChanged, this);
@@ -188,6 +190,7 @@ export class CafeScene extends Phaser.Scene {
       bus.off(EVENTS.CUSTOMER_ANGRY, this.onAngry, this);
       bus.off(EVENTS.MADE_BY_HAND, this.onMadeByHand, this);
       bus.off(EVENTS.TABLE_CLEANED, this.onTableCleaned, this);
+      bus.off(EVENTS.FAME_GAINED, this.onFameGained, this);
     });
   }
 
@@ -826,6 +829,29 @@ export class CafeScene extends Phaser.Scene {
     if (payload.floorIndex !== this.activeFloor) return;
     const pos = seatPosition(payload.tableIndex);
     this.iconPopup(pos.x, pos.y - 30, "icon-spark");
+  }
+
+  private onFameGained(payload: { floorIndex: number; tableIndex: number; amount: number }) {
+    if (payload.floorIndex !== this.activeFloor) return;
+    const pos = seatPosition(payload.tableIndex);
+    this.famePopup(pos.x, pos.y - 30, payload.amount);
+  }
+
+  /** 메가폰 그림과 함께 "+인지도" 가 떠오릅니다 */
+  private famePopup(x: number, y: number, amount: number) {
+    const group = this.add.container(x, y).setDepth(20);
+    const icon = this.add.image(-20, 0, uiKey("fame")).setScale(ART_SCALE * 0.8);
+    const text = this.add
+      .text(0, 0, `+${amount}`, {
+        fontSize: "24px",
+        color: "#f5a623",
+        fontStyle: "bold",
+        stroke: "#5a3b22",
+        strokeThickness: 5,
+      })
+      .setOrigin(0, 0.5);
+    group.add([icon, text]);
+    this.floatUp(group, y);
   }
 
   /** 코인 그림과 함께 "+금액" 이 떠오릅니다 */

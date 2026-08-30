@@ -661,3 +661,103 @@ export function decorById(id: string): DecorDef | undefined {
 export function decorOfSlot(slot: DecorSlot): DecorDef[] {
   return DECOR.filter((d) => d.slot === slot);
 }
+
+/* ------------------------------ 인지도 ------------------------------ */
+/* 평점(별점)과는 별개로, 손님이 한 명 왔다 갈 때마다 "인지도"를 얻습니다.
+   서비스를 얼마나 여유 있게(인내심을 많이 남기고) 마쳤는지에 따라 1~10 사이로 달라져요.
+   인지도는 기부로도 모을 수 있고, 아래 취미 활동을 사는 데 씁니다. */
+
+export const FAME_MIN_PER_VISIT = 1;
+export const FAME_MAX_PER_VISIT = 10;
+
+/** 손님이 남긴 인내심 비율(0~1)에 따라 이번 방문에서 받는 인지도 */
+export function fameForVisit(patienceRatio: number): number {
+  const ratio = Math.min(1, Math.max(0, patienceRatio));
+  return FAME_MIN_PER_VISIT + Math.round(ratio * (FAME_MAX_PER_VISIT - FAME_MIN_PER_VISIT));
+}
+
+/** 기부 버튼에 보여줄 금액 목록 */
+export const DONATION_PRESETS = [500, 2000, 10000, 50000, 200000, 1000000];
+
+/** 기부한 코인 액수에 따라 받는 인지도. 많이 낼수록 코인당 받는 인지도가 조금씩 더 좋아집니다 */
+export function donationFame(amount: number): number {
+  if (amount < 100) return 0;
+  const bonus = 1 + Math.log10(amount / 100) * 0.15;
+  return Math.max(1, Math.round((amount / 100) * bonus));
+}
+
+/* ------------------------------ 취미 활동 ------------------------------ */
+/* 인지도로 살 수 있는 취미 활동입니다. 유니폼의 "보유 효과"처럼, 사두기만
+   하면(따로 장착 안 해도) 계속 효과가 붙습니다. 살수록 쌓입니다. */
+
+export interface HobbyEffect {
+  /** 모든 판매가 추가 비율 */
+  price?: number;
+  /** 손님 인내심 추가 비율 */
+  patience?: number;
+  /** 손님이 더 자주 들어오는 비율 */
+  spawnBoost?: number;
+  /** 화난 손님에게 깎이는 평점을 덜어주는 비율 */
+  ratingGuard?: number;
+  /** 인지도를 더 받는 비율 */
+  fameBoost?: number;
+}
+
+export interface HobbyDef {
+  id: string;
+  name: string;
+  emoji: string;
+  cost: number;
+  desc: string;
+  effect: HobbyEffect;
+}
+
+export const HOBBIES: HobbyDef[] = [
+  { id: "reading", name: "독서", emoji: "📚", cost: 80,
+    desc: "짬짬이 책을 읽으며 마음의 여유를 챙겨요.", effect: { ratingGuard: 0.02 } },
+  { id: "yoga", name: "요가", emoji: "🧘", cost: 150,
+    desc: "몸을 풀고 나면 손님을 대하는 여유도 늘어나요.", effect: { patience: 0.02 } },
+  { id: "running", name: "러닝", emoji: "🏃", cost: 250,
+    desc: "아침 조깅으로 하루를 시작하니 발걸음이 가벼워요.", effect: { spawnBoost: 0.02 } },
+  { id: "painting", name: "그림 그리기", emoji: "🎨", cost: 400,
+    desc: "가게 분위기에 어울리는 그림을 그려봐요.", effect: { price: 0.02 } },
+  { id: "photography", name: "사진", emoji: "📷", cost: 600,
+    desc: "예쁜 카페 사진을 SNS에 올리니 입소문이 나요.", effect: { fameBoost: 0.02 } },
+  { id: "cooking", name: "요리", emoji: "🍳", cost: 900,
+    desc: "새 레시피를 연구하며 실력을 갈고닦아요.", effect: { ratingGuard: 0.03 } },
+  { id: "gardening", name: "가드닝", emoji: "🌱", cost: 1300,
+    desc: "작은 화분을 가꾸니 가게에도 생기가 돌아요.", effect: { patience: 0.03 } },
+  { id: "pet", name: "반려동물", emoji: "🐶", cost: 1800,
+    desc: "퇴근하면 반겨주는 존재가 있어 힘이 나요.", effect: { spawnBoost: 0.03 } },
+  { id: "instrument", name: "악기 연주", emoji: "🎸", cost: 2500,
+    desc: "연주 실력이 늘어서 가끔 가게에서 들려드려요.", effect: { price: 0.03 } },
+  { id: "meditation", name: "명상", emoji: "🧘‍♀️", cost: 3400,
+    desc: "차분히 명상하며 마음을 다잡아요.", effect: { fameBoost: 0.03 } },
+  { id: "cycling", name: "자전거", emoji: "🚴", cost: 4600,
+    desc: "주말마다 라이딩을 다니며 체력을 길러요.", effect: { ratingGuard: 0.04 } },
+  { id: "wine", name: "와인 테이스팅", emoji: "🍷", cost: 6200,
+    desc: "취향이 고급스러워지면서 가게 안목도 늘어요.", effect: { price: 0.04 } },
+  { id: "pottery", name: "도자기 공예", emoji: "🏺", cost: 8200,
+    desc: "직접 빚은 그릇에 디저트를 담아보고 싶어져요.", effect: { patience: 0.04 } },
+  { id: "golf", name: "골프", emoji: "⛳", cost: 11000,
+    desc: "인맥이 넓어지면서 단골도 하나둘 늘어나요.", effect: { spawnBoost: 0.04 } },
+  { id: "travel", name: "여행", emoji: "✈️", cost: 15000,
+    desc: "여행에서 본 이야기가 손님들과의 대화거리가 돼요.", effect: { fameBoost: 0.04 } },
+  { id: "sailing", name: "요트 세일링", emoji: "⛵", cost: 20000,
+    desc: "성공한 사장님의 여유, 바다 위에서 즐겨요.", effect: { price: 0.05 } },
+];
+
+export function hobbyById(id: string): HobbyDef | undefined {
+  return HOBBIES.find((h) => h.id === id);
+}
+
+/** 사람이 읽을 수 있는 취미 효과 설명 */
+export function hobbyEffectText(e: HobbyEffect): string {
+  const parts: string[] = [];
+  if (e.price) parts.push(`판매가 +${Math.round(e.price * 100)}%`);
+  if (e.patience) parts.push(`손님 인내심 +${Math.round(e.patience * 100)}%`);
+  if (e.spawnBoost) parts.push(`손님 방문 +${Math.round(e.spawnBoost * 100)}%`);
+  if (e.ratingGuard) parts.push(`평점 하락 −${Math.round(e.ratingGuard * 100)}%`);
+  if (e.fameBoost) parts.push(`인지도 +${Math.round(e.fameBoost * 100)}%`);
+  return parts.length ? parts.join(" · ") : "없음";
+}

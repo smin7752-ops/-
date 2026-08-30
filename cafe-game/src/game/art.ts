@@ -959,6 +959,30 @@ function buildUiIcons(scene: Phaser.Scene) {
     disc(g, 14, 50, 6, 0xf5c542, 3); // 페인트 방울
   });
 
+  U("fame", (g) => {
+    // 메가폰 — 입소문(인지도)을 상징합니다
+    g.fillStyle(0xf5a623, 1);
+    g.beginPath();
+    g.moveTo(10, 30);
+    g.lineTo(28, 16);
+    g.lineTo(28, 48);
+    g.closePath();
+    g.fillPath();
+    g.lineStyle(4, INK, 1);
+    g.strokePath();
+    blob(g, 26, 20, 20, 20, 6, 0xf5a623, 4); // 나팔 몸통
+    blob(g, 40, 12, 18, 36, 9, 0xffcf6b, 4); // 나팔 입구
+    g.fillStyle(INK, 1);
+    g.fillRoundedRect(8, 26, 6, 8, 3); // 손잡이
+    g.lineStyle(3, 0xffffff, 0.8); // 퍼지는 소리
+    g.beginPath();
+    g.arc(58, 30, 7, Phaser.Math.DegToRad(200), Phaser.Math.DegToRad(340));
+    g.strokePath();
+    g.beginPath();
+    g.arc(58, 30, 13, Phaser.Math.DegToRad(210), Phaser.Math.DegToRad(330));
+    g.strokePath();
+  });
+
   U("lock", (g) => {
     // 자물쇠 고리
     g.lineStyle(6, S.steelDark, 1);
@@ -1108,6 +1132,7 @@ export function publishIconUrls(scene: Phaser.Scene) {
       "sales",
       "uniform",
       "decor",
+      "fame",
       "lock",
       "warning",
     ].map(uiKey),

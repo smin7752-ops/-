@@ -7,10 +7,14 @@ import {
   DECOR_SLOTS,
   decorOfSlot,
   decorEffectText,
+  donationFame,
+  DONATION_PRESETS,
   EQUIPMENT,
   equipmentCost,
   floorPriceScale,
   GENERAL_MANAGER_COST,
+  HOBBIES,
+  hobbyEffectText,
   MAX_FLOORS,
   MAX_MENU_STARS,
   roleMax,
@@ -35,6 +39,7 @@ import {
   tableCost,
   type Category,
   type DecorDef,
+  type HobbyDef,
   type MenuDef,
   type Role,
 } from "../game/config";
@@ -72,7 +77,8 @@ type PanelId =
   | "equipment"
   | "sales"
   | "uniform"
-  | "decor";
+  | "decor"
+  | "fame";
 
 const PANEL_TITLES: Record<PanelId, string> = {
   menu: "메뉴",
@@ -83,6 +89,7 @@ const PANEL_TITLES: Record<PanelId, string> = {
   sales: "매출표",
   uniform: "유니폼",
   decor: "꾸미기",
+  fame: "인지도",
 };
 
 function num(n: number): string {
@@ -117,6 +124,9 @@ export function mountUI(root: HTMLElement) {
         </button>
         <button class="rating-pill" id="rating-pill">
           <span class="star">★</span><span id="rating-value">3.0</span>
+        </button>
+        <button class="fame-pill" id="fame-pill">
+          <span id="fame-icon"></span><span id="fame-value">0</span>
         </button>
       </div>
       <div class="floor-tabs" id="floor-tabs"></div>
@@ -172,6 +182,9 @@ export function mountUI(root: HTMLElement) {
   const clockPill = root.querySelector("#clock-pill") as HTMLElement;
   const ratingPill = root.querySelector("#rating-pill") as HTMLElement;
   const ratingValue = root.querySelector("#rating-value") as HTMLElement;
+  const famePill = root.querySelector("#fame-pill") as HTMLElement;
+  const fameIcon = root.querySelector("#fame-icon") as HTMLElement;
+  const fameValue = root.querySelector("#fame-value") as HTMLElement;
   const closeModal = root.querySelector("#close-modal") as HTMLElement;
   const closeBody = root.querySelector("#close-body") as HTMLElement;
   const tabsEl = root.querySelector("#floor-tabs") as HTMLElement;
@@ -205,6 +218,7 @@ export function mountUI(root: HTMLElement) {
     { id: "sales", label: "매출표", icon: uiKey("sales") },
     { id: "uniform", label: "유니폼", icon: uiKey("uniform") },
     { id: "decor", label: "꾸미기", icon: uiKey("decor") },
+    { id: "fame", label: "인지도", icon: uiKey("fame") },
   ];
 
   function refreshNav() {
@@ -229,6 +243,12 @@ export function mountUI(root: HTMLElement) {
     ratingValue.textContent = r.toFixed(1);
     ratingPill.classList.toggle("low", r < 2.5);
     ratingPill.classList.toggle("high", r >= 4.5);
+  }
+
+  /** 인지도 — 손님이 왔다 갈 때마다 조금씩 쌓입니다 */
+  function refreshFame() {
+    fameValue.textContent = num(gameState.data.fame);
+    fameIcon.innerHTML = ic(uiKey("fame"), 20);
   }
 
   /** 게임 속 시계와 며칠째인지 */
@@ -284,6 +304,7 @@ export function mountUI(root: HTMLElement) {
     refreshCoins();
     refreshClock();
     refreshRating();
+    refreshFame();
     refreshWarnings();
     refreshTabs();
     if (openPanel) renderPanel();
@@ -329,6 +350,9 @@ export function mountUI(root: HTMLElement) {
         break;
       case "decor":
         renderDecorPanel();
+        break;
+      case "fame":
+        renderFamePanel();
         break;
     }
   }
@@ -652,7 +676,7 @@ export function mountUI(root: HTMLElement) {
         : `<button class="buy-btn" data-buy-uniform="${u.id}"
              ${affordable ? "" : "disabled"}>${coin(u.cost)}</button>`;
     return `
-      <div class="row ${owned ? "" : "locked"}">
+      <div class="row ${owned || affordable ? "" : "locked"}">
         ${ic(personKey(u.id), 46)}
         <div class="row-main">
           <div class="row-label">${u.name}
@@ -744,7 +768,7 @@ export function mountUI(root: HTMLElement) {
         : `<button class="buy-btn" data-buy-decor="${d.id}"
              ${affordable ? "" : "disabled"}>${coin(d.cost)}</button>`;
     return `
-      <div class="row ${owned ? "" : "locked"}">
+      <div class="row ${owned || affordable ? "" : "locked"}">
         ${decorIcon(d)}
         <div class="row-main">
           <div class="row-label">${d.name}
@@ -788,6 +812,75 @@ export function mountUI(root: HTMLElement) {
       if (!gameState.wearDecor(el.dataset.wearDecor!)) return;
       gameState.save();
       bus.emit(EVENTS.DECOR_CHANGED);
+      refreshAll();
+    });
+  }
+
+  /* ---------------------------- 인지도 패널 ---------------------------- */
+
+  function hobbyRow(h: HobbyDef): string {
+    const owned = gameState.ownsHobby(h.id);
+    const affordable = gameState.data.fame >= h.cost;
+    const button = owned
+      ? `<div class="buy-btn" style="background:#f0e3ca;color:#7a5a33">보유중</div>`
+      : `<button class="buy-btn" data-buy-hobby="${h.id}"
+           ${affordable ? "" : "disabled"}>${ic(uiKey("fame"), 15)} ${num(h.cost)}</button>`;
+    return `
+      <div class="row ${owned || affordable ? "" : "locked"}">
+        <span class="hobby-emoji">${h.emoji}</span>
+        <div class="row-main">
+          <div class="row-label">${h.name}
+            ${owned ? `<span class="pill">보유중</span>` : ""}</div>
+          <div class="row-sub">${h.desc}<br>
+            <span class="eff-own">보유 효과</span> ${hobbyEffectText(h.effect)}
+          </div>
+        </div>
+        ${button}
+      </div>`;
+  }
+
+  function renderFamePanel() {
+    const progress = gameState.hobbyProgress();
+
+    bodyEl.innerHTML = `
+      <div class="note">평점과는 별개로, 손님이 왔다 갈 때마다 <b>인지도</b>가 쌓여요.
+      서비스가 빠를수록(손님이 인내심을 많이 남긴 채 응대받을수록) 한 번에 최대 10까지 받습니다.</div>
+
+      <div class="rating-box">
+        <div class="rating-big">${ic(uiKey("fame"), 26)} ${num(gameState.data.fame)}</div>
+        <div class="rating-note"><b>지금 인지도</b></div>
+      </div>
+
+      <h3>기부하기</h3>
+      <div class="note">코인을 기부하면 인지도를 받아요. 많이 낼수록 코인당 받는 인지도가 더 좋아집니다.</div>
+      <div class="donation-grid">
+        ${DONATION_PRESETS.map(
+          (amount) => `
+          <button class="donation-btn" data-donate="${amount}"
+            ${gameState.data.coins < amount ? "disabled" : ""}>
+            <div class="donation-amt">${coin(amount, 16)}</div>
+            <div class="donation-fame">${ic(uiKey("fame"), 14)} +${num(donationFame(amount))}</div>
+          </button>`,
+        ).join("")}
+      </div>
+
+      <h3>취미 활동 <span class="muted" style="font-size:12px">${progress.owned}/${progress.total}</span></h3>
+      <div class="note">인지도로 취미를 하나씩 배워보세요. 따로 장착할 필요 없이, 사두기만 하면 계속 효과가 붙어요.</div>
+      ${HOBBIES.map(hobbyRow).join("")}
+    `;
+
+    wire("[data-donate]", (el) => {
+      const amount = Number(el.dataset.donate);
+      if (gameState.data.coins < amount) return;
+      const fame = gameState.donate(amount);
+      if (fame <= 0) return;
+      gameState.save();
+      bus.emit(EVENTS.COINS_CHANGED);
+      refreshAll();
+    });
+    wire("[data-buy-hobby]", (el) => {
+      if (!gameState.buyHobby(el.dataset.buyHobby!)) return;
+      gameState.save();
       refreshAll();
     });
   }
@@ -1226,6 +1319,7 @@ export function mountUI(root: HTMLElement) {
   });
   clockPill.addEventListener("click", () => showPanel("sales"));
   ratingPill.addEventListener("click", () => showPanel("sales"));
+  famePill.addEventListener("click", () => showPanel("fame"));
   root.querySelector("#close-confirm")?.addEventListener("click", confirmDayClose);
   root.querySelector("#enhance-confirm")?.addEventListener("click", confirmEnhance);
   root.querySelector("#enhance-cancel")?.addEventListener("click", closeEnhanceModal);
@@ -1252,6 +1346,10 @@ export function mountUI(root: HTMLElement) {
     if (openPanel === "menu") renderPanel();
   });
   bus.on(EVENTS.STAFF_CHANGED, () => bus.emit(EVENTS.LAYOUT_CHANGED));
+  bus.on(EVENTS.FAME_GAINED, () => {
+    refreshFame();
+    if (openPanel === "fame") renderPanel();
+  });
   bus.on(EVENTS.OFFLINE_REWARD, () => {
     showOfflineIfAny();
     refreshAll();

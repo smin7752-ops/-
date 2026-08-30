@@ -38,4 +38,6 @@ export const EVENTS = {
   UNIFORM_CHANGED: "uniform-changed",
   /** 인테리어를 사거나 바꿔 씀 (화면의 바닥·벽지·가구·문을 바꿉니다) */
   DECOR_CHANGED: "decor-changed",
+  /** 손님이 왔다 가면서 인지도를 얻음 (팝업용) */
+  FAME_GAINED: "fame-gained",
 } as const;

@@ -14,7 +14,9 @@ export function injectStyles() {
   }
   #ui-root .pill-row {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
+    justify-content: center;
     gap: 8px;
   }
   #ui-root .coin-pill {
@@ -63,6 +65,21 @@ export function injectStyles() {
   #ui-root .rating-pill .star { color: #f5c542; }
   #ui-root .rating-pill.low { background: #8a3b3b; }
   #ui-root .rating-pill.high { background: #3f6b47; }
+  /* 인지도. 누르면 인지도 탭이 열립니다. */
+  #ui-root .fame-pill {
+    background: rgba(0,0,0,0.6);
+    color: #fff;
+    border: none;
+    padding: 6px 13px;
+    border-radius: 999px;
+    font-weight: 800;
+    font-family: inherit;
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-variant-numeric: tabular-nums;
+  }
 
   #ui-root .rating-box {
     display: flex;
@@ -299,6 +316,25 @@ export function injectStyles() {
   #ui-root .week-summary .row-label { font-size: 16px; }
   #ui-root .week-days .row:last-child { border-bottom: none; }
   #ui-root .week-days .row { padding-left: 4px; }
+
+  #ui-root .donation-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin: 10px 0 16px;
+  }
+  #ui-root .donation-btn {
+    background: #eaf6f2;
+    border: 2px solid #bfe3d6;
+    border-radius: 12px;
+    padding: 8px 6px;
+    font-family: inherit;
+    text-align: center;
+  }
+  #ui-root .donation-btn:disabled { opacity: 0.5; }
+  #ui-root .donation-amt { font-weight: 800; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 4px; }
+  #ui-root .donation-fame { margin-top: 3px; font-size: 12px; color: #3f8f6a; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 3px; }
+  #ui-root .hobby-emoji { font-size: 30px; width: 42px; text-align: center; flex: 0 0 auto; }
 
   #ui-root .close-lead { font-size: 14px; line-height: 1.5; }
   #ui-root .warn-text {
