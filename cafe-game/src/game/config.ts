@@ -152,6 +152,29 @@ export function priceMultiplier(level: number): number {
   return 1 + (level - 1) * 0.1;
 }
 
+/* --------------------------- 메뉴 강화(별) --------------------------- */
+/* 레벨과는 별개로, 메뉴마다 최대 5성까지 "강화"로 올릴 수 있습니다.
+   강화는 돈을 내고 도전하는 확률성 뽑기이고, 실패해도 별이 깎이진 않습니다.
+   별이 오를수록 그 메뉴 판매가가 더 붙습니다. */
+
+export const MAX_MENU_STARS = 5;
+
+/** 별 등급에 따른 판매가 배수 (0성 = 1.0) */
+export function starMultiplier(stars: number): number {
+  return 1 + stars * 0.15;
+}
+
+/** 다음 별로 강화할 때 드는 비용 (메뉴 기본가 기준, 별이 높을수록 훨씬 비쌉니다) */
+export function enhanceCost(menu: MenuDef, currentStars: number): number {
+  return Math.round(menu.basePrice * 40 * Math.pow(3.2, currentStars));
+}
+
+/** 다음 별로 강화 성공할 확률 (별이 높을수록 어려워집니다) */
+export function enhanceChance(currentStars: number): number {
+  const chances = [0.8, 0.6, 0.45, 0.3, 0.18];
+  return chances[currentStars] ?? 0.1;
+}
+
 /* ------------------------------ 매장 ------------------------------ */
 
 export const MAX_FLOORS = 4;
@@ -472,7 +495,7 @@ export function ownEffectText(e: UniformOwnEffect): string {
 /* ------------------------------ 인테리어 ------------------------------ */
 /* 바닥·벽지·테이블·의자·출입문을 다른 모양으로 꾸밀 수 있습니다.
    유니폼처럼 가게 전체 공용이고, 자리마다 한 번에 하나씩만 씁니다.
-   효과는 없고 순전히 꾸미기용이에요. */
+   지금 쓰고 있는(장착한) 인테리어에서만 효과가 붙습니다. */
 
 export type DecorSlot = "floor" | "wallpaper" | "table" | "chair" | "door";
 
@@ -493,65 +516,88 @@ export interface DecorColors {
   accent: number;
 }
 
+/** 지금 장착 중일 때만 붙는 효과 (여러 자리를 합쳐서 더해집니다) */
+export interface DecorEffect {
+  /** 모든 판매가 추가 비율 */
+  price?: number;
+  /** 손님 인내심 추가 비율 */
+  patience?: number;
+  /** 손님이 더 자주 들어오는 비율 */
+  spawnBoost?: number;
+  /** 화난 손님에게 깎이는 평점을 덜어주는 비율 */
+  ratingGuard?: number;
+}
+
 export interface DecorDef {
   id: string;
   name: string;
   slot: DecorSlot;
   cost: number;
   colors: DecorColors;
+  effect: DecorEffect;
 }
 
 export const DECOR: DecorDef[] = [
-  // 바닥 — primary: 밝은 타일, secondary: 어두운 타일, accent: 문 앞 매트
+  // 바닥 — primary: 밝은 타일, secondary: 어두운 타일, accent: 문 앞 매트 / 효과: 평점 하락 완화
   { id: "floor_classic", name: "클래식 타일", slot: "floor", cost: 0,
-    colors: { primary: 0xe4d0ad, secondary: 0xd8c096, accent: 0xc9a97a } },
+    colors: { primary: 0xe4d0ad, secondary: 0xd8c096, accent: 0xc9a97a }, effect: {} },
   { id: "floor_mono", name: "모노 타일", slot: "floor", cost: 2000,
-    colors: { primary: 0xe9e6df, secondary: 0xd2cdc0, accent: 0xb7b0a0 } },
+    colors: { primary: 0xe9e6df, secondary: 0xd2cdc0, accent: 0xb7b0a0 }, effect: { ratingGuard: 0.05 } },
   { id: "floor_mint", name: "민트 타일", slot: "floor", cost: 6000,
-    colors: { primary: 0xdcefe4, secondary: 0xb7ddc9, accent: 0x8fc7ac } },
+    colors: { primary: 0xdcefe4, secondary: 0xb7ddc9, accent: 0x8fc7ac }, effect: { ratingGuard: 0.1 } },
   { id: "floor_slate", name: "다크 슬레이트", slot: "floor", cost: 15000,
-    colors: { primary: 0x6b6f76, secondary: 0x53565c, accent: 0x3f4146 } },
+    colors: { primary: 0x6b6f76, secondary: 0x53565c, accent: 0x3f4146 }, effect: { ratingGuard: 0.18 } },
 
-  // 벽지 — primary: 벽 색 (하나뿐이라 세 값 다 같습니다)
+  // 벽지 — primary: 벽 색 (하나뿐이라 세 값 다 같습니다) / 효과: 판매가
   { id: "wall_classic", name: "클래식 벽지", slot: "wallpaper", cost: 0,
-    colors: { primary: 0xd9c3a0, secondary: 0xd9c3a0, accent: 0xd9c3a0 } },
+    colors: { primary: 0xd9c3a0, secondary: 0xd9c3a0, accent: 0xd9c3a0 }, effect: {} },
   { id: "wall_sky", name: "하늘색 벽지", slot: "wallpaper", cost: 2000,
-    colors: { primary: 0xd3e8f0, secondary: 0xd3e8f0, accent: 0xd3e8f0 } },
+    colors: { primary: 0xd3e8f0, secondary: 0xd3e8f0, accent: 0xd3e8f0 }, effect: { price: 0.03 } },
   { id: "wall_rose", name: "로즈 벽지", slot: "wallpaper", cost: 6000,
-    colors: { primary: 0xf1dbe0, secondary: 0xf1dbe0, accent: 0xf1dbe0 } },
+    colors: { primary: 0xf1dbe0, secondary: 0xf1dbe0, accent: 0xf1dbe0 }, effect: { price: 0.06 } },
   { id: "wall_night", name: "미드나잇 벽지", slot: "wallpaper", cost: 15000,
-    colors: { primary: 0x3a3550, secondary: 0x3a3550, accent: 0x3a3550 } },
+    colors: { primary: 0x3a3550, secondary: 0x3a3550, accent: 0x3a3550 }, effect: { price: 0.1 } },
 
-  // 테이블 — primary: 상판, secondary: 다리·받침, accent: 나뭇결
+  // 테이블 — primary: 상판, secondary: 다리·받침, accent: 나뭇결 / 효과: 판매가
   { id: "table_classic", name: "클래식 테이블", slot: "table", cost: 0,
-    colors: { primary: 0xb98350, secondary: 0x5a3b22, accent: 0x8a5a34 } },
+    colors: { primary: 0xb98350, secondary: 0x5a3b22, accent: 0x8a5a34 }, effect: {} },
   { id: "table_white", name: "화이트 테이블", slot: "table", cost: 2500,
-    colors: { primary: 0xf3ede1, secondary: 0xcac0ac, accent: 0xd8cdb8 } },
+    colors: { primary: 0xf3ede1, secondary: 0xcac0ac, accent: 0xd8cdb8 }, effect: { price: 0.04 } },
   { id: "table_marble", name: "마블 테이블", slot: "table", cost: 7000,
-    colors: { primary: 0xe4e1e6, secondary: 0x8f96a3, accent: 0xc3c7cf } },
+    colors: { primary: 0xe4e1e6, secondary: 0x8f96a3, accent: 0xc3c7cf }, effect: { price: 0.08 } },
   { id: "table_walnut", name: "월넛 테이블", slot: "table", cost: 16000,
-    colors: { primary: 0x6b4630, secondary: 0x3a2617, accent: 0x8a5a34 } },
+    colors: { primary: 0x6b4630, secondary: 0x3a2617, accent: 0x8a5a34 }, effect: { price: 0.14 } },
 
-  // 의자 — primary: 기둥·좌판, secondary: 등받이
+  // 의자 — primary: 기둥·좌판, secondary: 등받이 / 효과: 손님 인내심
   { id: "chair_classic", name: "클래식 의자", slot: "chair", cost: 0,
-    colors: { primary: 0x5a3b22, secondary: 0x8a5a34, accent: 0x8a5a34 } },
+    colors: { primary: 0x5a3b22, secondary: 0x8a5a34, accent: 0x8a5a34 }, effect: {} },
   { id: "chair_white", name: "화이트 의자", slot: "chair", cost: 2500,
-    colors: { primary: 0xcac0ac, secondary: 0xf3ede1, accent: 0xf3ede1 } },
+    colors: { primary: 0xcac0ac, secondary: 0xf3ede1, accent: 0xf3ede1 }, effect: { patience: 0.05 } },
   { id: "chair_teal", name: "틸 의자", slot: "chair", cost: 7000,
-    colors: { primary: 0x2f6f6a, secondary: 0x4a9d94, accent: 0x4a9d94 } },
+    colors: { primary: 0x2f6f6a, secondary: 0x4a9d94, accent: 0x4a9d94 }, effect: { patience: 0.1 } },
   { id: "chair_walnut", name: "월넛 의자", slot: "chair", cost: 16000,
-    colors: { primary: 0x3a2617, secondary: 0x6b4630, accent: 0x6b4630 } },
+    colors: { primary: 0x3a2617, secondary: 0x6b4630, accent: 0x6b4630 }, effect: { patience: 0.16 } },
 
-  // 출입문 — primary: 문틀, secondary: 유리, accent: 간판
+  // 출입문 — primary: 문틀, secondary: 유리, accent: 간판 / 효과: 손님 등장 속도
   { id: "door_classic", name: "클래식 문", slot: "door", cost: 0,
-    colors: { primary: 0x5a3b22, secondary: 0xdff0f5, accent: 0x86caa5 } },
+    colors: { primary: 0x5a3b22, secondary: 0xdff0f5, accent: 0x86caa5 }, effect: {} },
   { id: "door_black", name: "블랙 프레임 문", slot: "door", cost: 3000,
-    colors: { primary: 0x2b2b2f, secondary: 0xe7f2f5, accent: 0xc0a062 } },
+    colors: { primary: 0x2b2b2f, secondary: 0xe7f2f5, accent: 0xc0a062 }, effect: { spawnBoost: 0.05 } },
   { id: "door_red", name: "레드 도어", slot: "door", cost: 8000,
-    colors: { primary: 0x8a3b34, secondary: 0xf5e6d8, accent: 0xf5c542 } },
+    colors: { primary: 0x8a3b34, secondary: 0xf5e6d8, accent: 0xf5c542 }, effect: { spawnBoost: 0.1 } },
   { id: "door_glass", name: "올글라스 도어", slot: "door", cost: 18000,
-    colors: { primary: 0x9fb4bd, secondary: 0xeaf6f8, accent: 0x4a9d94 } },
+    colors: { primary: 0x9fb4bd, secondary: 0xeaf6f8, accent: 0x4a9d94 }, effect: { spawnBoost: 0.16 } },
 ];
+
+/** 사람이 읽을 수 있는 인테리어 효과 설명 */
+export function decorEffectText(e: DecorEffect): string {
+  const parts: string[] = [];
+  if (e.price) parts.push(`판매가 +${Math.round(e.price * 100)}%`);
+  if (e.patience) parts.push(`손님 인내심 +${Math.round(e.patience * 100)}%`);
+  if (e.spawnBoost) parts.push(`손님 방문 +${Math.round(e.spawnBoost * 100)}%`);
+  if (e.ratingGuard) parts.push(`평점 하락 −${Math.round(e.ratingGuard * 100)}%`);
+  return parts.length ? parts.join(" · ") : "없음";
+}
 
 /** 처음부터 갖고 있는 기본 인테리어 (자리마다 하나씩) */
 export const STARTING_DECOR = DECOR.filter((d) => d.cost === 0).map((d) => d.id);

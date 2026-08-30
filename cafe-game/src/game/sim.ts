@@ -203,7 +203,8 @@ class Simulation {
     floor.spawnTimer -= dt;
     if (floor.spawnTimer > 0) return;
     floor.spawnTimer =
-      spawnIntervalMs(data.manager) * ratingSpawnScale(gameState.data.rating);
+      (spawnIntervalMs(data.manager) * ratingSpawnScale(gameState.data.rating)) /
+      (1 + gameState.totalBonus().spawnBoost);
 
     // 마감한 뒤에는 새 손님을 받지 않습니다 (앉아 있던 손님은 마저 처리해요)
     if (this.closed) return;
@@ -220,9 +221,9 @@ class Simulation {
     }
     bus.emit(EVENTS.STOCK_CHANGED);
 
-    // 옷장에 쌓인 보유 효과만큼 손님이 더 너그러워집니다.
+    // 옷장·인테리어에 쌓인 보유 효과만큼 손님이 더 너그러워집니다.
     const patienceTotal =
-      CUSTOMER_PATIENCE_MS * (1 + gameState.ownedBonus().patience);
+      CUSTOMER_PATIENCE_MS * (1 + gameState.totalBonus().patience);
 
     floor.tables[tableIndex].state = "occupied";
     floor.customers.push({

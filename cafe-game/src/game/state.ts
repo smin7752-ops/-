@@ -10,6 +10,7 @@ import {
   EQUIPMENT,
   MAX_FLOORS,
   MAX_MENU_LEVEL,
+  MAX_MENU_STARS,
   LEDGER_HISTORY_MAX,
   MAX_STOCK,
   OPEN_HOUR,
@@ -24,6 +25,7 @@ import {
   UNIFORM_SLOTS,
   uniformById,
   uniformsOfSlot,
+  type DecorEffect,
   type UniformEquipEffect,
   type UniformOwnEffect,
   type UniformSlot,
@@ -44,12 +46,15 @@ import {
   cleanDelayMs,
   decorById,
   decorOfSlot,
+  enhanceChance,
+  enhanceCost,
   expToNext,
   menuById,
   menuListOf,
   priceMultiplier,
   serveDelayMs,
   spawnIntervalMs,
+  starMultiplier,
   type Category,
   type DecorSlot,
   type MenuDef,
@@ -61,6 +66,8 @@ export interface MenuProgress {
   level: number;
   exp: number;
   stock: number;
+  /** 강화로 올린 별 (0~MAX_MENU_STARS) */
+  stars: number;
 }
 
 export interface FloorData {
@@ -151,7 +158,7 @@ function defaultFloor(index: number): FloorData {
 function defaultSave(): SaveData {
   const menu: Record<string, MenuProgress> = {};
   for (const item of ALL_MENU) {
-    menu[item.id] = { level: 1, exp: 0, stock: 0 };
+    menu[item.id] = { level: 1, exp: 0, stock: 0, stars: 0 };
   }
   // 첫 메뉴는 재고를 조금 채워서 시작합니다.
   menu[DRINKS[0].id].stock = STARTING_STOCK;
@@ -401,6 +408,19 @@ class GameState {
     return { owned: this.data.uniforms.length, total: UNIFORMS.length };
   }
 
+  /** 유니폼 + 인테리어 효과를 합친 값. 실제 계산은 다 이걸 씁니다 */
+  totalBonus(): Required<UniformOwnEffect> & { spawnBoost: number } {
+    const u = this.ownedBonus();
+    const d = this.decorBonus();
+    return {
+      price: u.price + d.price,
+      patience: u.patience + d.patience,
+      ratingGuard: u.ratingGuard + d.ratingGuard,
+      supplyCut: u.supplyCut,
+      spawnBoost: d.spawnBoost,
+    };
+  }
+
   /* ----------------------------- 인테리어 ----------------------------- */
 
   ownsDecor(id: string): boolean {
@@ -437,6 +457,20 @@ class GameState {
     return { owned: this.data.decor.length, total: DECOR.length };
   }
 
+  /** 지금 자리마다 장착 중인 인테리어의 효과를 더한 값 (안 쓰는 건 효과 없음) */
+  decorBonus(): Required<DecorEffect> {
+    const total = { price: 0, patience: 0, spawnBoost: 0, ratingGuard: 0 };
+    for (const slot of DECOR_SLOTS) {
+      const eff = decorById(this.equippedDecor(slot))?.effect;
+      if (!eff) continue;
+      total.price += eff.price ?? 0;
+      total.patience += eff.patience ?? 0;
+      total.spawnBoost += eff.spawnBoost ?? 0;
+      total.ratingGuard += eff.ratingGuard ?? 0;
+    }
+    return total;
+  }
+
   /* ------------------------------ 평점 ------------------------------ */
 
   /** 손님을 잘 응대했을 때 */
@@ -446,8 +480,8 @@ class GameState {
 
   /** 손님이 화나서 그냥 나갔을 때 */
   dropRating() {
-    // 옷장을 채워두면 손님이 조금 너그러워져서 평점이 덜 깎입니다.
-    const guard = Math.min(0.8, this.ownedBonus().ratingGuard);
+    // 옷장을 채워두거나 인테리어를 잘 꾸며두면 손님이 조금 너그러워져서 평점이 덜 깎입니다.
+    const guard = Math.min(0.8, this.totalBonus().ratingGuard);
     const drop = RATING_DOWN_PER_ANGRY * (1 - guard);
     this.data.rating = Math.max(RATING_MIN, this.data.rating - drop);
   }
@@ -587,8 +621,37 @@ class GameState {
 
   priceOf(id: string): number {
     const item = menuById(id);
-    const base = item.basePrice * priceMultiplier(this.progress(id).level);
-    return Math.round(base * (1 + this.ownedBonus().price));
+    const p = this.progress(id);
+    const base = item.basePrice * priceMultiplier(p.level) * starMultiplier(p.stars);
+    return Math.round(base * (1 + this.totalBonus().price));
+  }
+
+  /** 지금 별에서 다음 별로 강화하는 데 드는 비용 (이미 만렙이면 0) */
+  enhanceCostOf(id: string): number {
+    const p = this.progress(id);
+    if (p.stars >= MAX_MENU_STARS) return 0;
+    return enhanceCost(menuById(id), p.stars);
+  }
+
+  /** 지금 별에서 다음 별로 강화 성공할 확률 (이미 만렙이면 0) */
+  enhanceChanceOf(id: string): number {
+    const p = this.progress(id);
+    if (p.stars >= MAX_MENU_STARS) return 0;
+    return enhanceChance(p.stars);
+  }
+
+  /**
+   * 돈을 내고 별 강화에 도전합니다. 확률에 따라 성공/실패가 갈리고,
+   * 실패해도 낸 돈만 사라질 뿐 별은 그대로예요 (등급이 깎이지 않습니다).
+   */
+  enhanceMenu(id: string): "success" | "fail" | "maxed" | "no-coins" {
+    const p = this.progress(id);
+    if (p.stars >= MAX_MENU_STARS) return "maxed";
+    const cost = enhanceCost(menuById(id), p.stars);
+    if (!this.spendCoins(cost)) return "no-coins";
+    const success = Math.random() < enhanceChance(p.stars);
+    if (success) p.stars += 1;
+    return success ? "success" : "fail";
   }
 
   /** 판매 경험치를 주고, 레벨이 올랐으면 true */

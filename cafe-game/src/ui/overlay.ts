@@ -6,11 +6,13 @@ import {
   DECOR_SLOT_NAME,
   DECOR_SLOTS,
   decorOfSlot,
+  decorEffectText,
   EQUIPMENT,
   equipmentCost,
   floorPriceScale,
   GENERAL_MANAGER_COST,
   MAX_FLOORS,
+  MAX_MENU_STARS,
   roleMax,
   OPEN_HOUR,
   ROLE_INFO,
@@ -33,6 +35,7 @@ import {
   tableCost,
   type Category,
   type DecorDef,
+  type MenuDef,
   type Role,
 } from "../game/config";
 import {
@@ -325,6 +328,42 @@ export function mountUI(root: HTMLElement) {
 
   /* ---------------------------- 메뉴 패널 ---------------------------- */
 
+  /** 강화 결과를 잠깐 보여주기 위한 상태 (메뉴 id -> 결과) */
+  const enhanceFlash: Record<string, "success" | "fail" | null> = {};
+
+  function starsText(stars: number): string {
+    let out = "";
+    for (let i = 0; i < MAX_MENU_STARS; i++) {
+      out += i < stars
+        ? `<span class="star">★</span>`
+        : `<span class="muted" style="font-size:13px">★</span>`;
+    }
+    return out;
+  }
+
+  function enhanceBox(item: MenuDef): string {
+    const stars = gameState.progress(item.id).stars;
+    const flash = enhanceFlash[item.id];
+    if (stars >= MAX_MENU_STARS) {
+      return `<div class="row-sub" style="margin-top:4px">${starsText(stars)} <span class="muted">별 강화 완료!</span></div>`;
+    }
+    const cost = gameState.enhanceCostOf(item.id);
+    const chance = Math.round(gameState.enhanceChanceOf(item.id) * 100);
+    const affordable = gameState.data.coins >= cost;
+    const flashText =
+      flash === "success" ? `<span style="color:#3a9d5c">강화 성공! ✨</span>`
+      : flash === "fail" ? `<span style="color:#c0463a">강화 실패...</span>`
+      : "";
+    return `
+      <div class="row-sub" style="margin-top:4px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+        ${starsText(stars)}
+        <span class="muted" style="font-size:11px">성공확률 ${chance}%</span>
+        ${flashText}
+      </div>
+      <button class="buy-btn alt" style="margin-top:4px" data-enhance="${item.id}"
+        ${affordable ? "" : "disabled"}>강화 ${coin(cost)}</button>`;
+  }
+
   function menuSection(title: string, category: Category): string {
     const rows: string[] = [`<h3>${title}</h3>`];
     for (const item of category === "drink" ? DRINKS : DESSERTS) {
@@ -368,6 +407,7 @@ export function mountUI(root: HTMLElement) {
             </div>
             <div class="row-sub">${sub}</div>
             <div class="lv-bar"><i style="width:${levelProgressRatio(p) * 100}%"></i></div>
+            ${equipped ? enhanceBox(item) : ""}
           </div>
         </div>`);
     }
@@ -419,6 +459,19 @@ export function mountUI(root: HTMLElement) {
     `;
 
     wire("[data-jump-supply]", () => showPanel("supply"));
+    wire("[data-enhance]", (el) => {
+      const id = el.dataset.enhance!;
+      const result = gameState.enhanceMenu(id);
+      if (result === "no-coins" || result === "maxed") return;
+      enhanceFlash[id] = result;
+      gameState.save();
+      bus.emit(EVENTS.COINS_CHANGED);
+      refreshAll();
+      window.setTimeout(() => {
+        enhanceFlash[id] = null;
+        if (openPanel === "menu") renderMenuPanel();
+      }, 1400);
+    });
   }
 
   /* ---------------------------- 발주 패널 ---------------------------- */
@@ -634,6 +687,9 @@ export function mountUI(root: HTMLElement) {
         <div class="row-main">
           <div class="row-label">${d.name}
             ${worn ? `<span class="pill">착용중</span>` : ""}</div>
+          <div class="row-sub">
+            <span class="eff-own">쓰는 동안</span> ${decorEffectText(d.effect)}
+          </div>
         </div>
         ${button}
       </div>`;
@@ -644,7 +700,7 @@ export function mountUI(root: HTMLElement) {
 
     bodyEl.innerHTML = `
       <div class="note">바닥·벽지·테이블·의자·출입문을 다른 모양으로 꾸밀 수 있어요.
-      <b>가게 전체</b> 공용이고, 효과는 없이 순전히 꾸미기용이에요.</div>
+      <b>가게 전체</b> 공용이고, 지금 쓰고 있는 것만 효과가 붙어요.</div>
 
       <div class="rating-box">
         <div class="rating-big">${progress.owned}<span class="muted" style="font-size:16px">/${progress.total}</span></div>
