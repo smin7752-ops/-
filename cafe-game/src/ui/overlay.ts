@@ -776,7 +776,8 @@ export function mountUI(root: HTMLElement) {
           <div class="row-label">${d.name}
             ${worn ? `<span class="pill">착용중</span>` : ""}</div>
           <div class="row-sub">
-            <span class="eff-own">쓰는 동안</span> ${decorEffectText(d.effect)}
+            <span class="eff-equip">쓰는 동안</span> ${decorEffectText(d.equipEffect)}<br>
+            <span class="eff-own">갖고만 있어도</span> ${decorEffectText(d.ownEffect)}
           </div>
         </div>
         ${button}
@@ -785,14 +786,25 @@ export function mountUI(root: HTMLElement) {
 
   function renderDecorPanel(target: HTMLElement = bodyEl) {
     const progress = gameState.decorProgress();
+    const bonus = gameState.decorOwnedBonus();
+    const bonusLines = [
+      bonus.price ? `판매가 +${Math.round(bonus.price * 100)}%` : "",
+      bonus.patience ? `손님 인내심 +${Math.round(bonus.patience * 100)}%` : "",
+      bonus.spawnBoost ? `손님 방문 +${Math.round(bonus.spawnBoost * 100)}%` : "",
+      bonus.fameBoost ? `인지도 +${Math.round(bonus.fameBoost * 100)}%` : "",
+    ].filter(Boolean);
 
     target.innerHTML = `
       <div class="note">바닥·벽지·테이블·의자·출입문을 다른 모양으로 꾸밀 수 있어요.
-      <b>가게 전체</b> 공용이고, 지금 쓰고 있는 것만 효과가 붙어요.</div>
+      <b>가게 전체</b> 공용이에요. 지금 <b>쓰고 있는 것</b>의 효과가 붙고,
+      <b>사두기만 해도</b> 가게 전체에 붙는 효과가 따로 있습니다.</div>
 
       <div class="rating-box">
         <div class="rating-big">${progress.owned}<span class="muted" style="font-size:16px">/${progress.total}</span></div>
-        <div class="rating-note"><b>모은 인테리어</b></div>
+        <div class="rating-note">
+          <b>모은 인테리어 · 지금 보유 효과</b><br>
+          ${bonusLines.length ? bonusLines.join(" · ") : "아직 없어요. 사면 여기에 쌓입니다."}
+        </div>
       </div>
 
       ${DECOR_SLOTS.map(

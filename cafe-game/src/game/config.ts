@@ -561,79 +561,110 @@ export interface DecorDef {
   slot: DecorSlot;
   cost: number;
   colors: DecorColors;
-  effect: DecorEffect;
+  /** 지금 그 자리에 쓰고 있을 때만 붙는 효과 */
+  equipEffect: DecorEffect;
+  /** 사두기만 해도(안 쓰고 있어도) 가게 전체에 붙는 효과 */
+  ownEffect: DecorEffect;
 }
 
 export const DECOR: DecorDef[] = [
-  // 바닥 — primary: 밝은 타일, secondary: 어두운 타일, accent: 문 앞 매트 / 효과: 평점 하락 완화
+  // 바닥 — primary: 밝은 타일, secondary: 어두운 타일, accent: 문 앞 매트
+  // 쓰는 동안: 인지도 / 갖고만 있어도: 손님 인내심
   { id: "floor_classic", name: "클래식 타일", slot: "floor", cost: 0,
-    colors: { primary: 0xe4d0ad, secondary: 0xd8c096, accent: 0xc9a97a }, effect: {} },
+    colors: { primary: 0xe4d0ad, secondary: 0xd8c096, accent: 0xc9a97a }, equipEffect: {}, ownEffect: {} },
   { id: "floor_mono", name: "모노 타일", slot: "floor", cost: 2000,
-    colors: { primary: 0xe9e6df, secondary: 0xd2cdc0, accent: 0xb7b0a0 }, effect: { fameBoost: 0.05 } },
+    colors: { primary: 0xe9e6df, secondary: 0xd2cdc0, accent: 0xb7b0a0 },
+    equipEffect: { fameBoost: 0.05 }, ownEffect: { patience: 0.03 } },
   { id: "floor_mint", name: "민트 타일", slot: "floor", cost: 6000,
-    colors: { primary: 0xdcefe4, secondary: 0xb7ddc9, accent: 0x8fc7ac }, effect: { fameBoost: 0.1 } },
+    colors: { primary: 0xdcefe4, secondary: 0xb7ddc9, accent: 0x8fc7ac },
+    equipEffect: { fameBoost: 0.1 }, ownEffect: { patience: 0.06 } },
   { id: "floor_slate", name: "다크 슬레이트", slot: "floor", cost: 15000,
-    colors: { primary: 0x6b6f76, secondary: 0x53565c, accent: 0x3f4146 }, effect: { fameBoost: 0.18 } },
+    colors: { primary: 0x6b6f76, secondary: 0x53565c, accent: 0x3f4146 },
+    equipEffect: { fameBoost: 0.18 }, ownEffect: { patience: 0.1 } },
 
-  // 벽지 — primary: 벽 색 (하나뿐이라 세 값 다 같습니다) / 효과: 판매가
+  // 벽지 — primary: 벽 색 (하나뿐이라 세 값 다 같습니다)
+  // 쓰는 동안: 판매가 / 갖고만 있어도: 인지도
   { id: "wall_classic", name: "클래식 벽지", slot: "wallpaper", cost: 0,
-    colors: { primary: 0xd9c3a0, secondary: 0xd9c3a0, accent: 0xd9c3a0 }, effect: {} },
+    colors: { primary: 0xd9c3a0, secondary: 0xd9c3a0, accent: 0xd9c3a0 }, equipEffect: {}, ownEffect: {} },
   { id: "wall_sky", name: "하늘색 벽지", slot: "wallpaper", cost: 2000,
-    colors: { primary: 0xd3e8f0, secondary: 0xd3e8f0, accent: 0xd3e8f0 }, effect: { price: 0.03 } },
+    colors: { primary: 0xd3e8f0, secondary: 0xd3e8f0, accent: 0xd3e8f0 },
+    equipEffect: { price: 0.03 }, ownEffect: { fameBoost: 0.02 } },
   { id: "wall_rose", name: "로즈 벽지", slot: "wallpaper", cost: 6000,
-    colors: { primary: 0xf1dbe0, secondary: 0xf1dbe0, accent: 0xf1dbe0 }, effect: { price: 0.06 } },
+    colors: { primary: 0xf1dbe0, secondary: 0xf1dbe0, accent: 0xf1dbe0 },
+    equipEffect: { price: 0.06 }, ownEffect: { fameBoost: 0.04 } },
   { id: "wall_night", name: "미드나잇 벽지", slot: "wallpaper", cost: 15000,
-    colors: { primary: 0x3a3550, secondary: 0x3a3550, accent: 0x3a3550 }, effect: { price: 0.1 } },
+    colors: { primary: 0x3a3550, secondary: 0x3a3550, accent: 0x3a3550 },
+    equipEffect: { price: 0.1 }, ownEffect: { fameBoost: 0.06 } },
 
-  // 테이블 — primary: 상판, secondary: 다리·받침, accent: 나뭇결 / 효과: 판매가
+  // 테이블 — primary: 상판, secondary: 다리·받침, accent: 나뭇결
+  // 쓰는 동안: 판매가 / 갖고만 있어도: 손님 방문
   { id: "table_classic", name: "클래식 테이블", slot: "table", cost: 0,
-    colors: { primary: 0xb98350, secondary: 0x5a3b22, accent: 0x8a5a34 }, effect: {} },
+    colors: { primary: 0xb98350, secondary: 0x5a3b22, accent: 0x8a5a34 }, equipEffect: {}, ownEffect: {} },
   { id: "table_white", name: "화이트 테이블", slot: "table", cost: 2500,
-    colors: { primary: 0xf3ede1, secondary: 0xcac0ac, accent: 0xd8cdb8 }, effect: { price: 0.04 } },
+    colors: { primary: 0xf3ede1, secondary: 0xcac0ac, accent: 0xd8cdb8 },
+    equipEffect: { price: 0.04 }, ownEffect: { spawnBoost: 0.02 } },
   { id: "table_marble", name: "마블 테이블", slot: "table", cost: 7000,
-    colors: { primary: 0xe4e1e6, secondary: 0x8f96a3, accent: 0xc3c7cf }, effect: { price: 0.08 } },
+    colors: { primary: 0xe4e1e6, secondary: 0x8f96a3, accent: 0xc3c7cf },
+    equipEffect: { price: 0.08 }, ownEffect: { spawnBoost: 0.05 } },
   { id: "table_walnut", name: "월넛 테이블", slot: "table", cost: 16000,
-    colors: { primary: 0x6b4630, secondary: 0x3a2617, accent: 0x8a5a34 }, effect: { price: 0.14 } },
+    colors: { primary: 0x6b4630, secondary: 0x3a2617, accent: 0x8a5a34 },
+    equipEffect: { price: 0.14 }, ownEffect: { spawnBoost: 0.08 } },
 
-  // 의자 — primary: 기둥·좌판, secondary: 등받이 / 효과: 손님 인내심
+  // 의자 — primary: 기둥·좌판, secondary: 등받이
+  // 쓰는 동안: 손님 인내심 / 갖고만 있어도: 판매가
   { id: "chair_classic", name: "클래식 의자", slot: "chair", cost: 0,
-    colors: { primary: 0x5a3b22, secondary: 0x8a5a34, accent: 0x8a5a34 }, effect: {} },
+    colors: { primary: 0x5a3b22, secondary: 0x8a5a34, accent: 0x8a5a34 }, equipEffect: {}, ownEffect: {} },
   { id: "chair_white", name: "화이트 의자", slot: "chair", cost: 2500,
-    colors: { primary: 0xcac0ac, secondary: 0xf3ede1, accent: 0xf3ede1 }, effect: { patience: 0.05 } },
+    colors: { primary: 0xcac0ac, secondary: 0xf3ede1, accent: 0xf3ede1 },
+    equipEffect: { patience: 0.05 }, ownEffect: { price: 0.03 } },
   { id: "chair_teal", name: "틸 의자", slot: "chair", cost: 7000,
-    colors: { primary: 0x2f6f6a, secondary: 0x4a9d94, accent: 0x4a9d94 }, effect: { patience: 0.1 } },
+    colors: { primary: 0x2f6f6a, secondary: 0x4a9d94, accent: 0x4a9d94 },
+    equipEffect: { patience: 0.1 }, ownEffect: { price: 0.06 } },
   { id: "chair_walnut", name: "월넛 의자", slot: "chair", cost: 16000,
-    colors: { primary: 0x3a2617, secondary: 0x6b4630, accent: 0x6b4630 }, effect: { patience: 0.16 } },
+    colors: { primary: 0x3a2617, secondary: 0x6b4630, accent: 0x6b4630 },
+    equipEffect: { patience: 0.16 }, ownEffect: { price: 0.1 } },
 
-  // 출입문 — primary: 문틀, secondary: 유리, accent: 간판 / 효과: 손님 등장 속도
+  // 출입문 — primary: 문틀, secondary: 유리, accent: 간판
+  // 쓰는 동안: 손님 등장 속도 / 갖고만 있어도: 판매가
   { id: "door_classic", name: "클래식 문", slot: "door", cost: 0,
-    colors: { primary: 0x5a3b22, secondary: 0xdff0f5, accent: 0x86caa5 }, effect: {} },
+    colors: { primary: 0x5a3b22, secondary: 0xdff0f5, accent: 0x86caa5 }, equipEffect: {}, ownEffect: {} },
   { id: "door_black", name: "블랙 프레임 문", slot: "door", cost: 3000,
-    colors: { primary: 0x2b2b2f, secondary: 0xe7f2f5, accent: 0xc0a062 }, effect: { spawnBoost: 0.05 } },
+    colors: { primary: 0x2b2b2f, secondary: 0xe7f2f5, accent: 0xc0a062 },
+    equipEffect: { spawnBoost: 0.05 }, ownEffect: { price: 0.03 } },
   { id: "door_red", name: "레드 도어", slot: "door", cost: 8000,
-    colors: { primary: 0x8a3b34, secondary: 0xf5e6d8, accent: 0xf5c542 }, effect: { spawnBoost: 0.1 } },
+    colors: { primary: 0x8a3b34, secondary: 0xf5e6d8, accent: 0xf5c542 },
+    equipEffect: { spawnBoost: 0.1 }, ownEffect: { price: 0.06 } },
   { id: "door_glass", name: "올글라스 도어", slot: "door", cost: 18000,
-    colors: { primary: 0x9fb4bd, secondary: 0xeaf6f8, accent: 0x4a9d94 }, effect: { spawnBoost: 0.16 } },
+    colors: { primary: 0x9fb4bd, secondary: 0xeaf6f8, accent: 0x4a9d94 },
+    equipEffect: { spawnBoost: 0.16 }, ownEffect: { price: 0.1 } },
 
-  // 주방 테이블(카운터) — primary: 몸통, secondary: 위쪽 상판, accent: 테두리 장식 / 효과: 손님 인내심
+  // 주방 테이블(카운터) — primary: 몸통, secondary: 위쪽 상판, accent: 테두리 장식
+  // 쓰는 동안: 손님 인내심 / 갖고만 있어도: 인지도
   { id: "counter_classic", name: "클래식 주방 테이블", slot: "counter", cost: 0,
-    colors: { primary: 0x8a5a34, secondary: 0xb98350, accent: 0x5a3b22 }, effect: {} },
+    colors: { primary: 0x8a5a34, secondary: 0xb98350, accent: 0x5a3b22 }, equipEffect: {}, ownEffect: {} },
   { id: "counter_white", name: "화이트 주방 테이블", slot: "counter", cost: 3500,
-    colors: { primary: 0xd8cdb8, secondary: 0xf3ede1, accent: 0xcac0ac }, effect: { patience: 0.05 } },
+    colors: { primary: 0xd8cdb8, secondary: 0xf3ede1, accent: 0xcac0ac },
+    equipEffect: { patience: 0.05 }, ownEffect: { fameBoost: 0.03 } },
   { id: "counter_marble", name: "마블 주방 테이블", slot: "counter", cost: 9500,
-    colors: { primary: 0x8f96a3, secondary: 0xe4e1e6, accent: 0xc3c7cf }, effect: { patience: 0.1 } },
+    colors: { primary: 0x8f96a3, secondary: 0xe4e1e6, accent: 0xc3c7cf },
+    equipEffect: { patience: 0.1 }, ownEffect: { fameBoost: 0.06 } },
   { id: "counter_slate", name: "다크 슬레이트 주방 테이블", slot: "counter", cost: 22000,
-    colors: { primary: 0x53565c, secondary: 0x6b6f76, accent: 0x3f4146 }, effect: { patience: 0.18 } },
+    colors: { primary: 0x53565c, secondary: 0x6b6f76, accent: 0x3f4146 },
+    equipEffect: { patience: 0.18 }, ownEffect: { fameBoost: 0.1 } },
 
-  // 캐셔 포스기 — primary: 몸통, secondary: 화면, accent: 버튼·테두리 / 효과: 판매가
+  // 캐셔 포스기 — primary: 몸통, secondary: 화면, accent: 버튼·테두리
+  // 쓰는 동안: 판매가 / 갖고만 있어도: 손님 인내심
   { id: "register_classic", name: "클래식 포스기", slot: "register", cost: 0,
-    colors: { primary: 0xc9ccd4, secondary: 0x3f4146, accent: 0x8f96a3 }, effect: {} },
+    colors: { primary: 0xc9ccd4, secondary: 0x3f4146, accent: 0x8f96a3 }, equipEffect: {}, ownEffect: {} },
   { id: "register_silver", name: "실버 포스기", slot: "register", cost: 1800,
-    colors: { primary: 0xe4e1e6, secondary: 0x2b2b2f, accent: 0x4a9d94 }, effect: { price: 0.04 } },
+    colors: { primary: 0xe4e1e6, secondary: 0x2b2b2f, accent: 0x4a9d94 },
+    equipEffect: { price: 0.04 }, ownEffect: { patience: 0.02 } },
   { id: "register_gold", name: "골드 포스기", slot: "register", cost: 5000,
-    colors: { primary: 0xf5c542, secondary: 0x2b2b2f, accent: 0xffe08a }, effect: { price: 0.08 } },
+    colors: { primary: 0xf5c542, secondary: 0x2b2b2f, accent: 0xffe08a },
+    equipEffect: { price: 0.08 }, ownEffect: { patience: 0.05 } },
   { id: "register_deluxe", name: "디럭스 포스기", slot: "register", cost: 12000,
-    colors: { primary: 0x1f2733, secondary: 0x4a9d94, accent: 0xc0a062 }, effect: { price: 0.14 } },
+    colors: { primary: 0x1f2733, secondary: 0x4a9d94, accent: 0xc0a062 },
+    equipEffect: { price: 0.14 }, ownEffect: { patience: 0.08 } },
 ];
 
 /** 사람이 읽을 수 있는 인테리어 효과 설명 */

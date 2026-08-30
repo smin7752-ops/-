@@ -46,8 +46,9 @@ const EQUIP_ZONE = { left: 300, right: VIRTUAL_WIDTH - 30 };
 /** 캐셔 자리 — 주방 카운터에서 앞으로 나오되, 카운터 가까이 안쪽으로 붙여 둡니다.
     테이블 자리(특히 오른쪽 줄 말풍선)와는 겹치지 않을 만큼만 내립니다. */
 const CASHIER_POS = { x: VIRTUAL_WIDTH - 60, y: COUNTER_Y + COUNTER_H + 30 };
-/** 캐셔 포스기는 총괄 매니저 앞(더 앞쪽)에 놓입니다 */
-const REGISTER_POS = { x: CASHIER_POS.x, y: CASHIER_POS.y - 25 };
+/** 캐셔 포스기는 총괄 매니저 앞(더 앞쪽)에 놓입니다 — 받침대 위에 자연스럽게 놓이도록,
+    받침대 윗면 높이(CASHIER_POS.y - 8)에 살짝 걸치게 둡니다 */
+const REGISTER_POS = { x: CASHIER_POS.x, y: CASHIER_POS.y - 2 };
 /** 캐셔가 서 있는 작은 받침대 크기 */
 const CASHIER_STAND_W = 118;
 const CASHIER_STAND_H = 20;

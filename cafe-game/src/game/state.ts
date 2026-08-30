@@ -420,17 +420,18 @@ class GameState {
     return { owned: this.data.uniforms.length, total: UNIFORMS.length };
   }
 
-  /** 유니폼 + 인테리어 + 취미 효과를 합친 값. 실제 계산은 다 이걸 씁니다 */
+  /** 유니폼 + 인테리어(장착·보유) + 취미 효과를 합친 값. 실제 계산은 다 이걸 씁니다 */
   totalBonus(): Required<UniformOwnEffect> & { spawnBoost: number } {
     const u = this.ownedBonus();
     const d = this.decorBonus();
+    const dOwn = this.decorOwnedBonus();
     const h = this.hobbyBonus();
     return {
-      price: u.price + d.price + h.price,
-      patience: u.patience + d.patience + h.patience,
-      fameBoost: u.fameBoost + d.fameBoost + h.fameBoost,
+      price: u.price + d.price + dOwn.price + h.price,
+      patience: u.patience + d.patience + dOwn.patience + h.patience,
+      fameBoost: u.fameBoost + d.fameBoost + dOwn.fameBoost + h.fameBoost,
       supplyCut: u.supplyCut,
-      spawnBoost: d.spawnBoost + h.spawnBoost,
+      spawnBoost: d.spawnBoost + dOwn.spawnBoost + h.spawnBoost,
     };
   }
 
@@ -474,7 +475,21 @@ class GameState {
   decorBonus(): Required<DecorEffect> {
     const total = { price: 0, patience: 0, spawnBoost: 0, fameBoost: 0 };
     for (const slot of DECOR_SLOTS) {
-      const eff = decorById(this.equippedDecor(slot))?.effect;
+      const eff = decorById(this.equippedDecor(slot))?.equipEffect;
+      if (!eff) continue;
+      total.price += eff.price ?? 0;
+      total.patience += eff.patience ?? 0;
+      total.spawnBoost += eff.spawnBoost ?? 0;
+      total.fameBoost += eff.fameBoost ?? 0;
+    }
+    return total;
+  }
+
+  /** 사둔 인테리어 전부의 보유 효과를 더한 값 (안 쓰고 있어도 붙어요) */
+  decorOwnedBonus(): Required<DecorEffect> {
+    const total = { price: 0, patience: 0, spawnBoost: 0, fameBoost: 0 };
+    for (const id of this.data.decor) {
+      const eff = decorById(id)?.ownEffect;
       if (!eff) continue;
       total.price += eff.price ?? 0;
       total.patience += eff.patience ?? 0;
