@@ -54,28 +54,28 @@ export const EQUIPMENT: EquipmentDef[] = [
     id: "showcase",
     name: "쇼케이스",
     emoji: "🧁",
-    cost: 250,
+    cost: 900,
     desc: "디저트를 진열해서 팔 수 있어요",
   },
   {
     id: "tea_station",
     name: "티 스테이션",
     emoji: "🫖",
-    cost: 1800,
+    cost: 7000,
     desc: "차 종류를 만들 수 있어요",
   },
   {
     id: "blender",
     name: "블렌더",
     emoji: "🥤",
-    cost: 6000,
+    cost: 26000,
     desc: "에이드·스무디를 만들 수 있어요",
   },
   {
     id: "oven",
     name: "오븐",
     emoji: "🥖",
-    cost: 18000,
+    cost: 80000,
     desc: "갓 구운 베이커리를 만들 수 있어요",
   },
 ];
@@ -166,13 +166,13 @@ export function floorPriceScale(floorIndex: number): number {
 
 /** floorIndex 층(0부터)을 여는 데 드는 비용 */
 export function floorUnlockCost(floorIndex: number): number {
-  return Math.round(5000 * Math.pow(4, floorIndex - 1));
+  return Math.round(20000 * Math.pow(6, floorIndex - 1));
 }
 
 /** 그 층에 테이블을 하나 더 놓는 비용. 놓을수록 훨씬 가파르게 비싸집니다 */
 export function tableCost(tablesOnFloor: number, floorIndex: number): number {
   return Math.round(
-    150 * Math.pow(2.6, tablesOnFloor - STARTING_TABLES) * (1 + floorIndex * 0.6),
+    500 * Math.pow(3.4, tablesOnFloor - STARTING_TABLES) * (1 + floorIndex * 0.6),
   );
 }
 
@@ -206,7 +206,7 @@ export const ROLE_INFO: Record<
     name: "바리스타",
     emoji: "👩‍🍳",
     desc: "주문을 자동으로 만들어줘요 (없으면 손님을 눌러 직접 만들어야 해요)",
-    baseCost: 400,
+    baseCost: 1400,
     wage: 150,
     maxCount: 4,
   },
@@ -214,7 +214,7 @@ export const ROLE_INFO: Record<
     name: "홀 직원",
     emoji: "🧑‍💼",
     desc: "자동으로 서빙하고 테이블을 치워요 (없으면 직접 눌러야 해요)",
-    baseCost: 300,
+    baseCost: 1000,
     wage: 110,
     maxCount: 4,
   },
@@ -222,7 +222,7 @@ export const ROLE_INFO: Record<
     name: "매니저",
     emoji: "🕴️",
     desc: "문 앞에서 손님을 맞아요. 강화할수록 손님이 더 자주 오고 팁도 더 받습니다",
-    baseCost: 1200,
+    baseCost: 4000,
     wage: 300,
     maxCount: 5,
     upgradable: true,
@@ -233,7 +233,7 @@ export const ROLE_INFO: Record<
 export function roleCost(role: Role, currentCount: number, floorIndex: number): number {
   const base = ROLE_INFO[role].baseCost;
   return Math.round(
-    base * Math.pow(2.2, currentCount) * floorPriceScale(floorIndex),
+    base * Math.pow(2.8, currentCount) * floorPriceScale(floorIndex),
   );
 }
 
@@ -314,7 +314,7 @@ export const DAY_CLOSE_AUTO_MS = 5000;
 
 /* --------------------------- 총괄 매니저 --------------------------- */
 
-export const GENERAL_MANAGER_COST = 40000;
+export const GENERAL_MANAGER_COST = 150000;
 /** 총괄 매니저가 자동 발주를 넣는 재고 기준선 */
 export const AUTO_RESTOCK_THRESHOLD = 8;
 export const AUTO_RESTOCK_BATCH = 20;
@@ -333,7 +333,7 @@ export const EAT_TIME_MS = 3500;
 
 /* ------------------------------ 저장 ------------------------------ */
 
-export const SAVE_KEY = "cafe-idle-save-v2";
+export const SAVE_KEY = "cafe-idle-save-v3";
 
 export const OFFLINE_EARNINGS_CAP_MS = 8 * 60 * 60 * 1000;
 /** 이만큼은 자리를 비워야 "다시 오셨네요" 정산을 합니다 (잠깐 나갔다 온 건 제외) */
@@ -401,33 +401,33 @@ export const UNIFORMS: UniformDef[] = [
   // 바리스타 — 만드는 속도
   { id: "barista_basic", name: "기본 앞치마", slot: "barista", cost: 0,
     shirt: 0x6f9ec4, accent: 0xfffaf2, equip: {}, own: {} },
-  { id: "barista_roaster", name: "로스터 앞치마", slot: "barista", cost: 3000,
+  { id: "barista_roaster", name: "로스터 앞치마", slot: "barista", cost: 10000,
     shirt: 0x8a5a34, accent: 0xe0c9a6, equip: { makeSpeed: 0.3 }, own: { price: 0.05 } },
-  { id: "barista_master", name: "마스터 셰프복", slot: "barista", cost: 15000,
+  { id: "barista_master", name: "마스터 셰프복", slot: "barista", cost: 60000,
     shirt: 0x3f4a5c, accent: 0xf5c542, equip: { makeSpeed: 0.7 }, own: { price: 0.12 } },
 
   // 홀 직원 — 서빙 속도
   { id: "server_basic", name: "기본 유니폼", slot: "server", cost: 0,
     shirt: 0x86caa5, accent: 0xfffaf2, equip: {}, own: {} },
-  { id: "server_runner", name: "러너 유니폼", slot: "server", cost: 2500,
+  { id: "server_runner", name: "러너 유니폼", slot: "server", cost: 8000,
     shirt: 0x4fa3d1, accent: 0xfffaf2, equip: { serveSpeed: 0.35 }, own: { patience: 0.05 } },
-  { id: "server_veteran", name: "베테랑 조끼", slot: "server", cost: 12000,
+  { id: "server_veteran", name: "베테랑 조끼", slot: "server", cost: 45000,
     shirt: 0x7b4a86, accent: 0xf5c542, equip: { serveSpeed: 0.8 }, own: { patience: 0.1 } },
 
   // 매니저 — 팁
   { id: "manager_basic", name: "기본 정장", slot: "manager", cost: 0,
     shirt: 0x4a4756, accent: 0xe4595f, equip: {}, own: {} },
-  { id: "manager_concierge", name: "컨시어지 정장", slot: "manager", cost: 8000,
+  { id: "manager_concierge", name: "컨시어지 정장", slot: "manager", cost: 28000,
     shirt: 0x2f3a52, accent: 0xf5c542, equip: { tip: 0.08 }, own: { ratingGuard: 0.15 } },
-  { id: "manager_director", name: "디렉터 수트", slot: "manager", cost: 30000,
+  { id: "manager_director", name: "디렉터 수트", slot: "manager", cost: 130000,
     shirt: 0x1f2733, accent: 0xc0a062, equip: { tip: 0.18 }, own: { ratingGuard: 0.3 } },
 
   // 총괄 매니저 — 인건비
   { id: "gm_basic", name: "기본 수트", slot: "gm", cost: 0,
     shirt: 0x5b5f6e, accent: 0xdfe3ea, equip: {}, own: {} },
-  { id: "gm_chief", name: "총괄 수트", slot: "gm", cost: 40000,
+  { id: "gm_chief", name: "총괄 수트", slot: "gm", cost: 150000,
     shirt: 0x37506b, accent: 0xdfe3ea, equip: { wageCut: 0.1 }, own: { supplyCut: 0.05 } },
-  { id: "gm_founder", name: "창업자 코트", slot: "gm", cost: 120000,
+  { id: "gm_founder", name: "창업자 코트", slot: "gm", cost: 500000,
     shirt: 0x5c2f3a, accent: 0xf5c542, equip: { wageCut: 0.22 }, own: { supplyCut: 0.12 } },
 ];
 

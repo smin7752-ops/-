@@ -321,11 +321,15 @@ export function mountUI(root: HTMLElement) {
       if (!recipe) {
         const list = category === "drink" ? DRINKS : DESSERTS;
         const prev = list[list.findIndex((m) => m.id === item.id) - 1];
+        const needsNewEquipment = item.equipmentId !== prev.equipmentId;
+        const hint = needsNewEquipment
+          ? `${equipName} 설비를 사면 바로 열려요`
+          : `${withParticle(prev.name, "을", "를")} Lv.${item.unlockPrevLevel} 까지 키우면 열려요`;
         rows.push(`
           <div class="row locked">
             <div class="row-main">
               <div class="row-label">${ic(uiKey("lock"), 20)} ???</div>
-              <div class="row-sub">${withParticle(prev.name, "을", "를")} Lv.${item.unlockPrevLevel} 까지 키우면 열려요</div>
+              <div class="row-sub">${hint}</div>
             </div>
           </div>`);
         continue;

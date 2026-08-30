@@ -445,13 +445,24 @@ class GameState {
     return this.data.floors.some((f) => f.unlocked && f.equipment.includes(id));
   }
 
-  /** 앞 메뉴를 충분히 키워서 "레시피"가 열렸는가 (설비는 별개) */
+  /**
+   * "레시피"가 열렸는가 (설비를 실제로 갖고 있는지는 isSellable에서 별도로 봅니다).
+   *
+   * - 앞 메뉴와 같은 설비를 쓰는 메뉴는 예전처럼 앞 메뉴를 일정 레벨까지
+   *   키워야 열려요 (판매 성장으로 다음 메뉴를 여는 재미).
+   * - 앞 메뉴와 다른 새 설비가 필요한 메뉴는, 그 설비를 사는 순간 바로
+   *   열립니다. 레벨을 채웠는데도 설비가 없어서 못 파는 상황을 없애고,
+   *   설비 구매 자체가 확실한 다음 목표가 되게 하기 위해서예요.
+   */
   isRecipeUnlocked(id: string): boolean {
     const item = menuById(id);
     const list = menuListOf(item.category);
     const index = list.findIndex((m) => m.id === id);
     if (index <= 0) return true;
     const prev = list[index - 1];
+    if (item.equipmentId !== prev.equipmentId) {
+      return this.hasEquipmentAnywhere(item.equipmentId);
+    }
     return this.progress(prev.id).level >= item.unlockPrevLevel;
   }
 
