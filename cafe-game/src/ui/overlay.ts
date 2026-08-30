@@ -11,9 +11,11 @@ import {
   DONATION_PRESETS,
   EQUIPMENT,
   equipmentCost,
+  fameSpawnScale,
   floorPriceScale,
   GENERAL_MANAGER_COST,
   HOBBIES,
+  hobbyCoinCost,
   hobbyEffectText,
   MAX_FLOORS,
   MAX_MENU_STARS,
@@ -27,7 +29,6 @@ import {
   floorUnlockCost,
   menuById,
   managerTipRate,
-  ratingSpawnScale,
   roleCost,
   SLOT_NAME,
   UNIFORMS,
@@ -122,9 +123,6 @@ export function mountUI(root: HTMLElement) {
           <span id="day-label">1일차</span>
           <span id="clock-label">10:00</span>
         </button>
-        <button class="rating-pill" id="rating-pill">
-          <span class="star">★</span><span id="rating-value">3.0</span>
-        </button>
         <button class="fame-pill" id="fame-pill">
           <span id="fame-icon"></span><span id="fame-value">0</span>
         </button>
@@ -180,8 +178,6 @@ export function mountUI(root: HTMLElement) {
   const dayLabel = root.querySelector("#day-label") as HTMLElement;
   const clockLabel = root.querySelector("#clock-label") as HTMLElement;
   const clockPill = root.querySelector("#clock-pill") as HTMLElement;
-  const ratingPill = root.querySelector("#rating-pill") as HTMLElement;
-  const ratingValue = root.querySelector("#rating-value") as HTMLElement;
   const famePill = root.querySelector("#fame-pill") as HTMLElement;
   const fameIcon = root.querySelector("#fame-icon") as HTMLElement;
   const fameValue = root.querySelector("#fame-value") as HTMLElement;
@@ -235,14 +231,6 @@ export function mountUI(root: HTMLElement) {
       btn.addEventListener("click", () => showPanel(btn.dataset.panel as PanelId));
     });
     refreshWarnings();
-  }
-
-  /** 가게 평점 — 응대가 좋으면 오르고, 화내며 나간 손님이 있으면 떨어집니다 */
-  function refreshRating() {
-    const r = gameState.data.rating;
-    ratingValue.textContent = r.toFixed(1);
-    ratingPill.classList.toggle("low", r < 2.5);
-    ratingPill.classList.toggle("high", r >= 4.5);
   }
 
   /** 인지도 — 손님이 왔다 갈 때마다 조금씩 쌓입니다 */
@@ -303,7 +291,6 @@ export function mountUI(root: HTMLElement) {
   function refreshAll() {
     refreshCoins();
     refreshClock();
-    refreshRating();
     refreshFame();
     refreshWarnings();
     refreshTabs();
@@ -696,7 +683,7 @@ export function mountUI(root: HTMLElement) {
     const bonusLines = [
       bonus.price ? `판매가 +${Math.round(bonus.price * 100)}%` : "",
       bonus.patience ? `손님 인내심 +${Math.round(bonus.patience * 100)}%` : "",
-      bonus.ratingGuard ? `평점 하락 −${Math.round(bonus.ratingGuard * 100)}%` : "",
+      bonus.fameBoost ? `인지도 +${Math.round(bonus.fameBoost * 100)}%` : "",
       bonus.supplyCut ? `발주 원가 −${Math.round(bonus.supplyCut * 100)}%` : "",
     ].filter(Boolean);
 
@@ -820,20 +807,32 @@ export function mountUI(root: HTMLElement) {
 
   function hobbyRow(h: HobbyDef): string {
     const owned = gameState.ownsHobby(h.id);
-    const affordable = gameState.data.fame >= h.cost;
-    const button = owned
-      ? `<div class="buy-btn" style="background:#f0e3ca;color:#7a5a33">보유중</div>`
-      : `<button class="buy-btn" data-buy-hobby="${h.id}"
-           ${affordable ? "" : "disabled"}>${ic(uiKey("fame"), 15)} ${num(h.cost)}</button>`;
+    const unlocked = gameState.hobbyUnlocked(h.id);
+    const price = hobbyCoinCost(h);
+    const affordable = gameState.data.coins >= price;
+
+    let button: string;
+    if (owned) {
+      button = `<div class="buy-btn" style="background:#f0e3ca;color:#7a5a33">보유중</div>`;
+    } else if (!unlocked) {
+      button = `<div class="buy-btn" style="background:#ddd3bf;color:#9a8b74">
+        ${ic(uiKey("fame"), 14)} ${num(h.fameRequired)}</div>`;
+    } else {
+      button = `<button class="buy-btn" data-buy-hobby="${h.id}"
+           ${affordable ? "" : "disabled"}>${coin(price, 15)}</button>`;
+    }
+
+    const sub = !owned && !unlocked
+      ? `${h.desc}<br><span class="muted">인지도 ${num(h.fameRequired)} 모이면 코인으로 살 수 있어요 (지금 ${num(gameState.data.fame)})</span>`
+      : `${h.desc}<br><span class="eff-own">보유 효과</span> ${hobbyEffectText(h.effect)}`;
+
     return `
-      <div class="row ${owned || affordable ? "" : "locked"}">
+      <div class="row ${owned || (unlocked && affordable) ? "" : "locked"}">
         <span class="hobby-emoji">${h.emoji}</span>
         <div class="row-main">
           <div class="row-label">${h.name}
             ${owned ? `<span class="pill">보유중</span>` : ""}</div>
-          <div class="row-sub">${h.desc}<br>
-            <span class="eff-own">보유 효과</span> ${hobbyEffectText(h.effect)}
-          </div>
+          <div class="row-sub">${sub}</div>
         </div>
         ${button}
       </div>`;
@@ -843,8 +842,9 @@ export function mountUI(root: HTMLElement) {
     const progress = gameState.hobbyProgress();
 
     bodyEl.innerHTML = `
-      <div class="note">평점과는 별개로, 손님이 왔다 갈 때마다 <b>인지도</b>가 쌓여요.
-      서비스가 빠를수록(손님이 인내심을 많이 남긴 채 응대받을수록) 한 번에 최대 10까지 받습니다.</div>
+      <div class="note">손님이 왔다 갈 때마다 <b>인지도</b>가 쌓여요. 서비스가 빠를수록
+      (손님이 인내심을 많이 남긴 채 응대받을수록) 한 번에 최대 10까지 받습니다.
+      인지도가 쌓일수록 소문이 나서 손님도 <b>더 자주</b> 옵니다.</div>
 
       <div class="rating-box">
         <div class="rating-big">${ic(uiKey("fame"), 26)} ${num(gameState.data.fame)}</div>
@@ -852,7 +852,8 @@ export function mountUI(root: HTMLElement) {
       </div>
 
       <h3>기부하기</h3>
-      <div class="note">코인을 기부하면 인지도를 받아요. 많이 낼수록 코인당 받는 인지도가 더 좋아집니다.</div>
+      <div class="note">코인을 기부하면 인지도를 받아요. 많이 낼수록 코인당 받는 인지도가 더 좋아집니다.
+      지금까지 총 <b>${num(gameState.data.totalDonated)}코인</b>을 기부했어요.</div>
       <div class="donation-grid">
         ${DONATION_PRESETS.map(
           (amount) => `
@@ -865,7 +866,8 @@ export function mountUI(root: HTMLElement) {
       </div>
 
       <h3>취미 활동 <span class="muted" style="font-size:12px">${progress.owned}/${progress.total}</span></h3>
-      <div class="note">인지도로 취미를 하나씩 배워보세요. 따로 장착할 필요 없이, 사두기만 하면 계속 효과가 붙어요.</div>
+      <div class="note">인지도가 일정 이상 쌓이면 그 취미를 <b>코인으로</b> 살 수 있어요
+      (인지도 자체는 줄지 않아요). 장착할 필요 없이, 사두기만 하면 계속 효과가 붙습니다.</div>
       ${HOBBIES.map(hobbyRow).join("")}
     `;
 
@@ -974,14 +976,14 @@ export function mountUI(root: HTMLElement) {
         인건비는 <b>마감할 때 하루치가 한 번에</b> 나갑니다.
       </div>
 
-      <h3>가게 평점</h3>
+      <h3>인지도</h3>
       <div class="rating-box">
-        <div class="rating-big"><span class="star">★</span>${gameState.data.rating.toFixed(1)}</div>
+        <div class="rating-big">${ic(uiKey("fame"), 24)} ${num(gameState.data.fame)}</div>
         <div class="rating-note">
-          손님을 제때 응대하면 조금씩 오르고, 못 참고 나간 손님이 있으면 떨어져요.
-          평점이 높을수록 소문이 나서 손님이 <b>더 자주</b> 옵니다.
-          지금은 손님 오는 속도가 별 3.0 기준의
-          <b>${Math.round((1 / ratingSpawnScale(gameState.data.rating)) * 100)}%</b> 예요.
+          손님이 왔다 갈 때마다 서비스가 빠를수록(인내심을 많이 남길수록) 더 많이 쌓여요.
+          인지도가 쌓일수록 소문이 나서 손님이 <b>더 자주</b> 옵니다.
+          지금은 손님 오는 속도가 처음보다
+          <b>${Math.round((1 / fameSpawnScale(gameState.data.fame)) * 100)}%</b> 예요.
         </div>
       </div>
 
@@ -1039,7 +1041,7 @@ export function mountUI(root: HTMLElement) {
     closeBody.innerHTML = `
       <p class="close-lead">${ledger.day}일차 영업을 마쳤어요.
         오늘 ${ledger.served}명의 손님을 받았고,
-        가게 평점은 <b>★ ${gameState.data.rating.toFixed(1)}</b> 입니다.</p>
+        지금까지 쌓은 인지도는 <b>${num(gameState.data.fame)}</b> 예요.</p>
       ${ledgerTable(ledger)}
       ${
         profit < 0
@@ -1318,7 +1320,6 @@ export function mountUI(root: HTMLElement) {
     if (e.target === modal) closePanel();
   });
   clockPill.addEventListener("click", () => showPanel("sales"));
-  ratingPill.addEventListener("click", () => showPanel("sales"));
   famePill.addEventListener("click", () => showPanel("fame"));
   root.querySelector("#close-confirm")?.addEventListener("click", confirmDayClose);
   root.querySelector("#enhance-confirm")?.addEventListener("click", confirmEnhance);
@@ -1359,7 +1360,6 @@ export function mountUI(root: HTMLElement) {
   setInterval(refreshTabs, 700);
   // 게임 속 시계는 계속 흐르므로 짧은 간격으로 표시만 갱신합니다
   setInterval(refreshClock, 250);
-  setInterval(refreshRating, 700);
 
   refreshNav();
   refreshAll();

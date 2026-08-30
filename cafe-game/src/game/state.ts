@@ -10,17 +10,13 @@ import {
   EAT_TIME_MS,
   EQUIPMENT,
   HOBBIES,
+  hobbyCoinCost,
   MAX_FLOORS,
   MAX_MENU_LEVEL,
   MAX_MENU_STARS,
   LEDGER_HISTORY_MAX,
   MAX_STOCK,
   OPEN_HOUR,
-  RATING_DOWN_PER_ANGRY,
-  RATING_MAX,
-  RATING_MIN,
-  RATING_START,
-  RATING_UP_PER_SERVE,
   ROLE_ORDER,
   STARTING_UNIFORMS,
   UNIFORMS,
@@ -113,8 +109,6 @@ export interface SaveData {
   launched: string[];
   sets: Record<string, SetProgress>;
   floors: FloorData[];
-  /** 가게 평점 (1.0 ~ 5.0). 손님 응대가 좋으면 오르고 소문이 납니다 */
-  rating: number;
   /** 사둔 유니폼 (옷장). 안 입어도 보유 효과가 붙습니다 */
   uniforms: string[];
   /** 자리별로 지금 입고 있는 유니폼 */
@@ -123,10 +117,12 @@ export interface SaveData {
   decor: string[];
   /** 자리별로 지금 쓰고 있는 인테리어 */
   decorEquipped: Record<DecorSlot, string>;
-  /** 인지도 — 평점과 별개로, 손님이 왔다 갈 때마다 쌓입니다 */
+  /** 인지도 — 손님이 왔다 갈 때마다 쌓이고, 소문이 나서 손님이 더 자주 오게 만듭니다 */
   fame: number;
-  /** 인지도로 산 취미 활동 (사두기만 해도 효과가 붙습니다) */
+  /** 인지도가 일정 이상 쌓이면 돈으로 살 수 있게 열리는 취미 활동 */
   hobbies: string[];
+  /** 지금까지 기부한 코인 총액 */
+  totalDonated: number;
   generalManager: boolean;
   lastSavedAt: number;
   totalEarned: number;
@@ -182,13 +178,13 @@ function defaultSave(): SaveData {
     launched: [...STARTING_LAUNCHED],
     sets,
     floors: Array.from({ length: MAX_FLOORS }, (_, i) => defaultFloor(i)),
-    rating: RATING_START,
     uniforms: [...STARTING_UNIFORMS],
     equipped: defaultEquipped(),
     decor: [...STARTING_DECOR],
     decorEquipped: defaultDecorEquipped(),
     fame: 0,
     hobbies: [],
+    totalDonated: 0,
     generalManager: false,
     lastSavedAt: Date.now(),
     totalEarned: 0,
@@ -299,7 +295,6 @@ class GameState {
     merged.launched = Array.from(
       new Set([...STARTING_LAUNCHED, ...grandfathered, ...(parsed.launched ?? [])]),
     );
-    merged.rating = typeof parsed.rating === "number" ? parsed.rating : RATING_START;
     // 유니폼도 나중에 추가된 기능이라 예전 저장본에는 없습니다.
     merged.uniforms = Array.from(
       new Set([...STARTING_UNIFORMS, ...(parsed.uniforms ?? [])]),
@@ -322,9 +317,10 @@ class GameState {
         merged.decorEquipped[slot] = decorOfSlot(slot)[0].id;
       }
     }
-    // 인지도 · 취미 활동도 나중에 추가된 기능이라 예전 저장본에는 없습니다.
+    // 인지도 · 취미 활동 · 기부 총액도 나중에 추가된 기능이라 예전 저장본에는 없습니다.
     merged.fame = typeof parsed.fame === "number" ? parsed.fame : 0;
     merged.hobbies = Array.isArray(parsed.hobbies) ? parsed.hobbies : [];
+    merged.totalDonated = typeof parsed.totalDonated === "number" ? parsed.totalDonated : 0;
     // 세트 레벨도 나중에 추가된 기능이라 예전 저장본에는 없습니다.
     merged.sets = { ...base.sets };
     for (const [id, progress] of Object.entries(parsed.sets ?? {})) {
@@ -406,13 +402,13 @@ class GameState {
 
   /** 옷장에 있는 모든 옷의 보유 효과를 더한 값 */
   ownedBonus(): Required<UniformOwnEffect> {
-    const total = { price: 0, patience: 0, ratingGuard: 0, supplyCut: 0 };
+    const total = { price: 0, patience: 0, fameBoost: 0, supplyCut: 0 };
     for (const id of this.data.uniforms) {
       const own = uniformById(id)?.own;
       if (!own) continue;
       total.price += own.price ?? 0;
       total.patience += own.patience ?? 0;
-      total.ratingGuard += own.ratingGuard ?? 0;
+      total.fameBoost += own.fameBoost ?? 0;
       total.supplyCut += own.supplyCut ?? 0;
     }
     return total;
@@ -424,17 +420,16 @@ class GameState {
   }
 
   /** 유니폼 + 인테리어 + 취미 효과를 합친 값. 실제 계산은 다 이걸 씁니다 */
-  totalBonus(): Required<UniformOwnEffect> & { spawnBoost: number; fameBoost: number } {
+  totalBonus(): Required<UniformOwnEffect> & { spawnBoost: number } {
     const u = this.ownedBonus();
     const d = this.decorBonus();
     const h = this.hobbyBonus();
     return {
       price: u.price + d.price + h.price,
       patience: u.patience + d.patience + h.patience,
-      ratingGuard: u.ratingGuard + d.ratingGuard + h.ratingGuard,
+      fameBoost: u.fameBoost + d.fameBoost + h.fameBoost,
       supplyCut: u.supplyCut,
       spawnBoost: d.spawnBoost + h.spawnBoost,
-      fameBoost: h.fameBoost,
     };
   }
 
@@ -476,14 +471,14 @@ class GameState {
 
   /** 지금 자리마다 장착 중인 인테리어의 효과를 더한 값 (안 쓰는 건 효과 없음) */
   decorBonus(): Required<DecorEffect> {
-    const total = { price: 0, patience: 0, spawnBoost: 0, ratingGuard: 0 };
+    const total = { price: 0, patience: 0, spawnBoost: 0, fameBoost: 0 };
     for (const slot of DECOR_SLOTS) {
       const eff = decorById(this.equippedDecor(slot))?.effect;
       if (!eff) continue;
       total.price += eff.price ?? 0;
       total.patience += eff.patience ?? 0;
       total.spawnBoost += eff.spawnBoost ?? 0;
-      total.ratingGuard += eff.ratingGuard ?? 0;
+      total.fameBoost += eff.fameBoost ?? 0;
     }
     return total;
   }
@@ -493,7 +488,7 @@ class GameState {
   /** 손님이 남긴 인내심 비율(0~1)만큼 이번 방문의 인지도를 계산해서 더해줍니다. 실제로 받은 양을 돌려줍니다 */
   awardFameForVisit(patienceRatio: number): number {
     const base = fameForVisit(patienceRatio);
-    const amount = Math.max(1, Math.round(base * (1 + this.hobbyBonus().fameBoost)));
+    const amount = Math.max(1, Math.round(base * (1 + this.totalBonus().fameBoost)));
     this.data.fame += amount;
     return amount;
   }
@@ -502,12 +497,18 @@ class GameState {
     return this.data.hobbies.includes(id);
   }
 
-  /** 인지도를 내고 취미 활동을 하나 삽니다 (장착 개념 없이, 사두기만 하면 계속 효과가 붙어요) */
+  /** 이 취미 활동을 살 수 있을 만큼 인지도가 쌓였는가 (인지도 자체는 쓰지 않습니다) */
+  hobbyUnlocked(id: string): boolean {
+    const def = hobbyById(id);
+    return !!def && this.data.fame >= def.fameRequired;
+  }
+
+  /** 인지도가 일정 이상 쌓이면, 그때부터 코인을 내고 취미 활동을 살 수 있습니다 */
   buyHobby(id: string): boolean {
     const def = hobbyById(id);
     if (!def || this.ownsHobby(id)) return false;
-    if (this.data.fame < def.cost) return false;
-    this.data.fame -= def.cost;
+    if (!this.hobbyUnlocked(id)) return false;
+    if (!this.spendCoins(hobbyCoinCost(def))) return false;
     this.data.hobbies.push(id);
     return true;
   }
@@ -519,14 +520,13 @@ class GameState {
 
   /** 사둔 취미 활동의 효과를 모두 더한 값 */
   hobbyBonus(): Required<HobbyEffect> {
-    const total = { price: 0, patience: 0, spawnBoost: 0, ratingGuard: 0, fameBoost: 0 };
+    const total = { price: 0, patience: 0, spawnBoost: 0, fameBoost: 0 };
     for (const id of this.data.hobbies) {
       const eff = hobbyById(id)?.effect;
       if (!eff) continue;
       total.price += eff.price ?? 0;
       total.patience += eff.patience ?? 0;
       total.spawnBoost += eff.spawnBoost ?? 0;
-      total.ratingGuard += eff.ratingGuard ?? 0;
       total.fameBoost += eff.fameBoost ?? 0;
     }
     return total;
@@ -538,22 +538,8 @@ class GameState {
     if (fame <= 0) return 0;
     if (!this.spendCoins(amount)) return 0;
     this.data.fame += fame;
+    this.data.totalDonated += amount;
     return fame;
-  }
-
-  /* ------------------------------ 평점 ------------------------------ */
-
-  /** 손님을 잘 응대했을 때 */
-  raiseRating() {
-    this.data.rating = Math.min(RATING_MAX, this.data.rating + RATING_UP_PER_SERVE);
-  }
-
-  /** 손님이 화나서 그냥 나갔을 때 */
-  dropRating() {
-    // 옷장을 채워두거나 인테리어를 잘 꾸며두면 손님이 조금 너그러워져서 평점이 덜 깎입니다.
-    const guard = Math.min(0.8, this.totalBonus().ratingGuard);
-    const drop = RATING_DOWN_PER_ANGRY * (1 - guard);
-    this.data.rating = Math.max(RATING_MIN, this.data.rating - drop);
   }
 
   /** 발주에 쓴 돈을 오늘 재료비에 적습니다 */

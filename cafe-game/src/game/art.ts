@@ -596,6 +596,36 @@ function buildFurniture(scene: Phaser.Scene) {
     });
   }
 
+  // 계단 — 2층부터는 문 대신 이 자리로 손님이 오르내립니다. 문과 같은 160x200
+  // 이라 자리를 그대로 바꿔 끼울 수 있습니다. 인테리어로 안 바꾸는 고정 그림이에요.
+  tex(scene, "stairs", 160, 200, (g) => {
+    blob(g, 8, 24, 144, 172, 12, S.wood, 6); // 계단실 벽감
+    blob(g, 22, 38, 116, 146, 8, 0xd8c096, 5); // 안쪽 배경
+    g.lineStyle(6, S.wood, 1);
+    // 아래에서 위로 올라갈수록 좁아지는 계단 다섯 칸
+    for (let i = 0; i < 5; i++) {
+      const stepY = 172 - i * 24;
+      const stepW = 100 - i * 12;
+      const stepX = 32 + i * 6;
+      g.fillStyle(i % 2 === 0 ? S.woodLight : S.wood, 1);
+      g.fillRect(stepX, stepY, stepW, 12);
+      g.fillStyle(S.woodDark, 1);
+      g.fillRect(stepX, stepY + 12, stepW, 5);
+    }
+    g.lineStyle(5, S.steelDark, 1); // 난간
+    g.lineBetween(38, 168, 128, 48);
+    g.lineStyle(4, S.steelDark, 0.7);
+    for (let x = 46; x < 128; x += 18) {
+      const t = (x - 38) / (128 - 38);
+      g.lineBetween(x, 168 - t * 120, x, 178 - t * 120);
+    }
+    g.lineStyle(6, INK, 1);
+    g.strokeRoundedRect(22, 38, 116, 146, 8);
+    blob(g, 26, 2, 108, 26, 10, S.wood, 5); // 문 위 간판처럼 "계단" 표시
+    g.fillStyle(S.paper, 1);
+    g.fillRoundedRect(40, 9, 80, 12, 6);
+  });
+
   // 캐셔 포스기 — 카운터 위에 놓이는 작은 소품입니다. 100x100
   // primary: 몸통·받침, secondary: 화면, accent: 화면 불빛·영수증 슬롯
   for (const d of decorOfSlot("register")) {

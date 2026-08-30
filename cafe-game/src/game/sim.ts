@@ -1,8 +1,8 @@
 import Phaser from "phaser";
 import {
   CLOSE_HOUR,
+  fameSpawnScale,
   managerTipRate,
-  ratingSpawnScale,
   CLEAN_STAY_MAX_MS,
   CLEAN_STAY_MIN_MS,
   CLEAN_TRAVEL_MS,
@@ -203,7 +203,7 @@ class Simulation {
     floor.spawnTimer -= dt;
     if (floor.spawnTimer > 0) return;
     floor.spawnTimer =
-      (spawnIntervalMs(data.manager) * ratingSpawnScale(gameState.data.rating)) /
+      (spawnIntervalMs(data.manager) * fameSpawnScale(gameState.data.fame)) /
       (1 + gameState.totalBonus().spawnBoost);
 
     // 마감한 뒤에는 새 손님을 받지 않습니다 (앉아 있던 손님은 마저 처리해요)
@@ -341,11 +341,10 @@ class Simulation {
 
   /**
    * 인내심이 다 떨어져 손님이 화내며 나갑니다.
-   * 재고는 이미 썼으니 손해이고, 가게 평점도 떨어집니다.
+   * 재고는 이미 썼으니 손해이고, 인지도도 거의 못 받습니다.
    */
   private giveUp(floor: SimFloor, index: number) {
     const c = floor.customers[index];
-    gameState.dropRating();
     bus.emit(EVENTS.CUSTOMER_ANGRY, c);
     this.leave(floor, c, "angry");
   }
@@ -386,7 +385,6 @@ class Simulation {
     const paid = Math.round(c.order.price * (1 + tipRate));
     gameState.addCoins(paid);
     gameState.recordSale(paid);
-    gameState.raiseRating();
 
     let leveledUp = false;
     for (const id of c.order.itemIds) {

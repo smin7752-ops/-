@@ -326,21 +326,13 @@ export function managerTipRate(managerLevel: number): number {
   return managerLevel * 0.06;
 }
 
-/* ------------------------------ 평점 ------------------------------ */
-/* 손님을 제때 응대하면 오르고, 화나서 나가면 떨어집니다.
-   평점이 높으면 소문이 나서 손님이 더 자주 옵니다. */
+/* ------------------------------ 인지도 등장 배수 ------------------------------ */
+/* 인지도가 쌓일수록 소문이 나서 손님이 더 자주 옵니다. 인지도가 없으면 1배,
+   많이 쌓일수록 점점 빨라져서 최대 2배(0.5배 간격)까지 빨라집니다. */
 
-export const RATING_MIN = 1;
-export const RATING_MAX = 5;
-export const RATING_START = 3;
-/** 한 명 잘 응대했을 때 오르는 폭 */
-export const RATING_UP_PER_SERVE = 0.02;
-/** 한 명 화나서 나갔을 때 떨어지는 폭 */
-export const RATING_DOWN_PER_ANGRY = 0.15;
-
-/** 평점에 따른 손님 등장 간격 배수 (별 5 = 0.8배로 더 자주) */
-export function ratingSpawnScale(rating: number): number {
-  return 1.3 - rating * 0.1;
+/** 인지도에 따른 손님 등장 간격 배수 (인지도 0 = 1배, 많이 쌓일수록 0.5배까지) */
+export function fameSpawnScale(fame: number): number {
+  return 1 - 0.5 * (fame / (fame + 500));
 }
 
 /* ------------------------- 영업시간 / 하루 ------------------------- */
@@ -425,8 +417,8 @@ export interface UniformOwnEffect {
   price?: number;
   /** 손님 인내심 추가 비율 */
   patience?: number;
-  /** 화난 손님에게 깎이는 평점을 덜어주는 비율 */
-  ratingGuard?: number;
+  /** 인지도를 더 받는 비율 */
+  fameBoost?: number;
   /** 발주 원가 절감 비율 */
   supplyCut?: number;
 }
@@ -464,9 +456,9 @@ export const UNIFORMS: UniformDef[] = [
   { id: "manager_basic", name: "기본 정장", slot: "manager", cost: 0,
     shirt: 0x4a4756, accent: 0xe4595f, equip: {}, own: {} },
   { id: "manager_concierge", name: "컨시어지 정장", slot: "manager", cost: 28000,
-    shirt: 0x2f3a52, accent: 0xf5c542, equip: { tip: 0.08 }, own: { ratingGuard: 0.15 } },
+    shirt: 0x2f3a52, accent: 0xf5c542, equip: { tip: 0.08 }, own: { fameBoost: 0.15 } },
   { id: "manager_director", name: "디렉터 수트", slot: "manager", cost: 130000,
-    shirt: 0x1f2733, accent: 0xc0a062, equip: { tip: 0.18 }, own: { ratingGuard: 0.3 } },
+    shirt: 0x1f2733, accent: 0xc0a062, equip: { tip: 0.18 }, own: { fameBoost: 0.3 } },
 
   // 총괄 매니저 — 인건비
   { id: "gm_basic", name: "기본 수트", slot: "gm", cost: 0,
@@ -502,7 +494,7 @@ export function ownEffectText(e: UniformOwnEffect): string {
   const parts: string[] = [];
   if (e.price) parts.push(`판매가 +${Math.round(e.price * 100)}%`);
   if (e.patience) parts.push(`손님 인내심 +${Math.round(e.patience * 100)}%`);
-  if (e.ratingGuard) parts.push(`평점 하락 −${Math.round(e.ratingGuard * 100)}%`);
+  if (e.fameBoost) parts.push(`인지도 +${Math.round(e.fameBoost * 100)}%`);
   if (e.supplyCut) parts.push(`발주 원가 −${Math.round(e.supplyCut * 100)}%`);
   return parts.length ? parts.join(" · ") : "없음";
 }
@@ -556,8 +548,8 @@ export interface DecorEffect {
   patience?: number;
   /** 손님이 더 자주 들어오는 비율 */
   spawnBoost?: number;
-  /** 화난 손님에게 깎이는 평점을 덜어주는 비율 */
-  ratingGuard?: number;
+  /** 인지도를 더 받는 비율 */
+  fameBoost?: number;
 }
 
 export interface DecorDef {
@@ -574,11 +566,11 @@ export const DECOR: DecorDef[] = [
   { id: "floor_classic", name: "클래식 타일", slot: "floor", cost: 0,
     colors: { primary: 0xe4d0ad, secondary: 0xd8c096, accent: 0xc9a97a }, effect: {} },
   { id: "floor_mono", name: "모노 타일", slot: "floor", cost: 2000,
-    colors: { primary: 0xe9e6df, secondary: 0xd2cdc0, accent: 0xb7b0a0 }, effect: { ratingGuard: 0.05 } },
+    colors: { primary: 0xe9e6df, secondary: 0xd2cdc0, accent: 0xb7b0a0 }, effect: { fameBoost: 0.05 } },
   { id: "floor_mint", name: "민트 타일", slot: "floor", cost: 6000,
-    colors: { primary: 0xdcefe4, secondary: 0xb7ddc9, accent: 0x8fc7ac }, effect: { ratingGuard: 0.1 } },
+    colors: { primary: 0xdcefe4, secondary: 0xb7ddc9, accent: 0x8fc7ac }, effect: { fameBoost: 0.1 } },
   { id: "floor_slate", name: "다크 슬레이트", slot: "floor", cost: 15000,
-    colors: { primary: 0x6b6f76, secondary: 0x53565c, accent: 0x3f4146 }, effect: { ratingGuard: 0.18 } },
+    colors: { primary: 0x6b6f76, secondary: 0x53565c, accent: 0x3f4146 }, effect: { fameBoost: 0.18 } },
 
   // 벽지 — primary: 벽 색 (하나뿐이라 세 값 다 같습니다) / 효과: 판매가
   { id: "wall_classic", name: "클래식 벽지", slot: "wallpaper", cost: 0,
@@ -647,7 +639,7 @@ export function decorEffectText(e: DecorEffect): string {
   if (e.price) parts.push(`판매가 +${Math.round(e.price * 100)}%`);
   if (e.patience) parts.push(`손님 인내심 +${Math.round(e.patience * 100)}%`);
   if (e.spawnBoost) parts.push(`손님 방문 +${Math.round(e.spawnBoost * 100)}%`);
-  if (e.ratingGuard) parts.push(`평점 하락 −${Math.round(e.ratingGuard * 100)}%`);
+  if (e.fameBoost) parts.push(`인지도 +${Math.round(e.fameBoost * 100)}%`);
   return parts.length ? parts.join(" · ") : "없음";
 }
 
@@ -697,8 +689,6 @@ export interface HobbyEffect {
   patience?: number;
   /** 손님이 더 자주 들어오는 비율 */
   spawnBoost?: number;
-  /** 화난 손님에게 깎이는 평점을 덜어주는 비율 */
-  ratingGuard?: number;
   /** 인지도를 더 받는 비율 */
   fameBoost?: number;
 }
@@ -707,48 +697,54 @@ export interface HobbyDef {
   id: string;
   name: string;
   emoji: string;
-  cost: number;
+  /** 이만큼 인지도가 쌓여야 돈으로 살 수 있게 열립니다 (인지도 자체를 쓰는 건 아니에요) */
+  fameRequired: number;
   desc: string;
   effect: HobbyEffect;
 }
 
 export const HOBBIES: HobbyDef[] = [
-  { id: "reading", name: "독서", emoji: "📚", cost: 80,
-    desc: "짬짬이 책을 읽으며 마음의 여유를 챙겨요.", effect: { ratingGuard: 0.02 } },
-  { id: "yoga", name: "요가", emoji: "🧘", cost: 150,
+  { id: "reading", name: "독서", emoji: "📚", fameRequired: 80,
+    desc: "짬짬이 책을 읽으며 마음의 여유를 챙겨요.", effect: { fameBoost: 0.02 } },
+  { id: "yoga", name: "요가", emoji: "🧘", fameRequired: 150,
     desc: "몸을 풀고 나면 손님을 대하는 여유도 늘어나요.", effect: { patience: 0.02 } },
-  { id: "running", name: "러닝", emoji: "🏃", cost: 250,
+  { id: "running", name: "러닝", emoji: "🏃", fameRequired: 250,
     desc: "아침 조깅으로 하루를 시작하니 발걸음이 가벼워요.", effect: { spawnBoost: 0.02 } },
-  { id: "painting", name: "그림 그리기", emoji: "🎨", cost: 400,
+  { id: "painting", name: "그림 그리기", emoji: "🎨", fameRequired: 400,
     desc: "가게 분위기에 어울리는 그림을 그려봐요.", effect: { price: 0.02 } },
-  { id: "photography", name: "사진", emoji: "📷", cost: 600,
+  { id: "photography", name: "사진", emoji: "📷", fameRequired: 600,
     desc: "예쁜 카페 사진을 SNS에 올리니 입소문이 나요.", effect: { fameBoost: 0.02 } },
-  { id: "cooking", name: "요리", emoji: "🍳", cost: 900,
-    desc: "새 레시피를 연구하며 실력을 갈고닦아요.", effect: { ratingGuard: 0.03 } },
-  { id: "gardening", name: "가드닝", emoji: "🌱", cost: 1300,
+  { id: "cooking", name: "요리", emoji: "🍳", fameRequired: 900,
+    desc: "새 레시피를 연구하며 실력을 갈고닦아요.", effect: { fameBoost: 0.03 } },
+  { id: "gardening", name: "가드닝", emoji: "🌱", fameRequired: 1300,
     desc: "작은 화분을 가꾸니 가게에도 생기가 돌아요.", effect: { patience: 0.03 } },
-  { id: "pet", name: "반려동물", emoji: "🐶", cost: 1800,
+  { id: "pet", name: "반려동물", emoji: "🐶", fameRequired: 1800,
     desc: "퇴근하면 반겨주는 존재가 있어 힘이 나요.", effect: { spawnBoost: 0.03 } },
-  { id: "instrument", name: "악기 연주", emoji: "🎸", cost: 2500,
+  { id: "instrument", name: "악기 연주", emoji: "🎸", fameRequired: 2500,
     desc: "연주 실력이 늘어서 가끔 가게에서 들려드려요.", effect: { price: 0.03 } },
-  { id: "meditation", name: "명상", emoji: "🧘‍♀️", cost: 3400,
+  { id: "meditation", name: "명상", emoji: "🧘‍♀️", fameRequired: 3400,
     desc: "차분히 명상하며 마음을 다잡아요.", effect: { fameBoost: 0.03 } },
-  { id: "cycling", name: "자전거", emoji: "🚴", cost: 4600,
-    desc: "주말마다 라이딩을 다니며 체력을 길러요.", effect: { ratingGuard: 0.04 } },
-  { id: "wine", name: "와인 테이스팅", emoji: "🍷", cost: 6200,
+  { id: "cycling", name: "자전거", emoji: "🚴", fameRequired: 4600,
+    desc: "주말마다 라이딩을 다니며 체력을 길러요.", effect: { fameBoost: 0.04 } },
+  { id: "wine", name: "와인 테이스팅", emoji: "🍷", fameRequired: 6200,
     desc: "취향이 고급스러워지면서 가게 안목도 늘어요.", effect: { price: 0.04 } },
-  { id: "pottery", name: "도자기 공예", emoji: "🏺", cost: 8200,
+  { id: "pottery", name: "도자기 공예", emoji: "🏺", fameRequired: 8200,
     desc: "직접 빚은 그릇에 디저트를 담아보고 싶어져요.", effect: { patience: 0.04 } },
-  { id: "golf", name: "골프", emoji: "⛳", cost: 11000,
+  { id: "golf", name: "골프", emoji: "⛳", fameRequired: 11000,
     desc: "인맥이 넓어지면서 단골도 하나둘 늘어나요.", effect: { spawnBoost: 0.04 } },
-  { id: "travel", name: "여행", emoji: "✈️", cost: 15000,
+  { id: "travel", name: "여행", emoji: "✈️", fameRequired: 15000,
     desc: "여행에서 본 이야기가 손님들과의 대화거리가 돼요.", effect: { fameBoost: 0.04 } },
-  { id: "sailing", name: "요트 세일링", emoji: "⛵", cost: 20000,
+  { id: "sailing", name: "요트 세일링", emoji: "⛵", fameRequired: 20000,
     desc: "성공한 사장님의 여유, 바다 위에서 즐겨요.", effect: { price: 0.05 } },
 ];
 
 export function hobbyById(id: string): HobbyDef | undefined {
   return HOBBIES.find((h) => h.id === id);
+}
+
+/** 취미 활동을 실제로 살 때 드는 코인 값 (필요 인지도에 비례합니다) */
+export function hobbyCoinCost(h: HobbyDef): number {
+  return h.fameRequired * 15;
 }
 
 /** 사람이 읽을 수 있는 취미 효과 설명 */
@@ -757,7 +753,6 @@ export function hobbyEffectText(e: HobbyEffect): string {
   if (e.price) parts.push(`판매가 +${Math.round(e.price * 100)}%`);
   if (e.patience) parts.push(`손님 인내심 +${Math.round(e.patience * 100)}%`);
   if (e.spawnBoost) parts.push(`손님 방문 +${Math.round(e.spawnBoost * 100)}%`);
-  if (e.ratingGuard) parts.push(`평점 하락 −${Math.round(e.ratingGuard * 100)}%`);
   if (e.fameBoost) parts.push(`인지도 +${Math.round(e.fameBoost * 100)}%`);
   return parts.length ? parts.join(" · ") : "없음";
 }

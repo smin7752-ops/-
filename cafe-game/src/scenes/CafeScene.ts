@@ -33,27 +33,29 @@ export const VIRTUAL_HEIGHT = 1280;
 /* 화면 위아래는 HTML 버튼(코인/시계, 층 탭, 아래 메뉴바)이 덮고 있습니다.
    게임 그림은 대략 y = 200 ~ 1100 사이에 그려야 가려지지 않습니다. */
 
-/* 가게 구조: 위쪽이 카운터(안쪽), 아래쪽이 손님이 들어오는 문(입구)입니다. */
-const COUNTER_Y = 262;
+/* 가게 구조: 위쪽이 카운터(안쪽), 아래쪽이 손님이 들어오는 문(입구)입니다.
+   전체적으로 조금 더 아래로 내려서, 위쪽 HTML 바와 카운터 사이에 여유를 둡니다. */
+const LAYOUT_SHIFT_Y = 30;
+
+const COUNTER_Y = 262 + LAYOUT_SHIFT_Y;
 const COUNTER_H = 66;
 /** 카운터 뒤 직원이 서 있는 바닥선 (그림의 발끝이 닿는 높이) */
 const STAFF_BASE_Y = COUNTER_Y + 30;
-/** 캐셔(포스기 + 총괄 매니저)가 차지하는, 카운터 오른쪽 끝 구역 */
-const CASHIER_ZONE_LEFT = VIRTUAL_WIDTH - 150;
-/** 설비를 늘어놓을 카운터 위 구간 — 오른쪽 끝은 캐셔 자리를 침범하지 않게 남겨둡니다 */
-const EQUIP_ZONE = { left: 300, right: CASHIER_ZONE_LEFT - 16 };
-/** 캐셔 포스기가 놓이는 자리 (주방 오른쪽) */
-const REGISTER_POS = { x: VIRTUAL_WIDTH - 78, y: COUNTER_Y + 6 };
-/** 총괄 매니저는 캐셔를 맡아 포스기 바로 뒤, 주방 오른쪽에 섭니다 */
-const CASHIER_POS = { x: VIRTUAL_WIDTH - 78, y: STAFF_BASE_Y };
+/** 설비를 늘어놓을 카운터 위 구간 */
+const EQUIP_ZONE = { left: 300, right: VIRTUAL_WIDTH - 30 };
+/** 캐셔 자리 — 주방 카운터에서 앞으로 나와, 오른쪽 벽 쪽에 따로 둡니다.
+    테이블 자리(특히 오른쪽 줄 말풍선)와 겹치지 않도록 카운터 바로 앞, 벽에 붙여 둡니다. */
+const CASHIER_POS = { x: VIRTUAL_WIDTH - 40, y: COUNTER_Y + COUNTER_H + 55 };
+/** 캐셔 포스기는 총괄 매니저 앞(더 앞쪽)에 놓입니다 */
+const REGISTER_POS = { x: CASHIER_POS.x, y: CASHIER_POS.y - 30 };
 
-const DOOR = { x: VIRTUAL_WIDTH / 2, y: 1000 };
+const DOOR = { x: VIRTUAL_WIDTH / 2, y: 1000 + LAYOUT_SHIFT_Y };
 const ENTRANCE = { x: DOOR.x, y: DOOR.y - 30 };
 /** 매니저는 문 옆에 서서 손님을 맞습니다 */
 const MANAGER_POS = { x: DOOR.x - 108, y: DOOR.y + 30 };
 
 const COLS = 2;
-const TOP_MARGIN = 480;
+const TOP_MARGIN = 480 + LAYOUT_SHIFT_Y;
 const ROW_GAP = 190;
 /** 테이블 가운데에서 좌·우 자리까지의 거리 */
 const SEAT_DX = 74;
@@ -237,9 +239,11 @@ export class CafeScene extends Phaser.Scene {
     g.fillStyle(floorColors.accent, 1);
     g.fillRoundedRect(DOOR.x - 90, DOOR.y + 58, 180, 32, 12);
 
-    // 손님이 드나드는 문 (가게 앞쪽). 입구답게 조금 크게 그립니다.
+    // 손님이 드나드는 자리 (가게 앞쪽). 1층은 문, 2층부터는 계단입니다.
+    const entranceKey =
+      this.activeFloor === 0 ? doorKey(gameState.equippedDecor("door")) : "stairs";
     this.doorImage = this.add
-      .image(DOOR.x, DOOR.y, doorKey(gameState.equippedDecor("door")))
+      .image(DOOR.x, DOOR.y, entranceKey)
       .setScale(ART_SCALE * 1.4)
       .setDepth(-5);
   }
@@ -315,19 +319,19 @@ export class CafeScene extends Phaser.Scene {
       .setDepth(5)
       .setVisible(false);
 
-    // 총괄 매니저는 캐셔를 맡아 포스기 뒤, 주방 오른쪽에서 어느 층에서든 가게를 지켜봅니다.
+    // 총괄 매니저는 캐셔를 맡아, 주방에서 앞으로 나온 자리에서 어느 층에서든 가게를 지켜봅니다.
     this.generalManager = this.add
       .image(CASHIER_POS.x, CASHIER_POS.y, personKey(gameState.equippedUniform("gm")))
       .setOrigin(0.5, 1)
       .setScale(ART_SCALE)
-      .setDepth(0)
+      .setDepth(5)
       .setVisible(false);
 
     this.registerImage = this.add
       .image(REGISTER_POS.x, REGISTER_POS.y, registerKey(gameState.equippedDecor("register")))
       .setOrigin(0.5, 1)
       .setScale(ART_SCALE)
-      .setDepth(0.5);
+      .setDepth(5.5);
   }
 
   /** 유니폼을 갈아입으면 화면의 직원 그림도 그 옷으로 바꿉니다 */
@@ -798,6 +802,8 @@ export class CafeScene extends Phaser.Scene {
     this.activeFloor = floorIndex;
     this.customerViews.forEach((v) => v.root.destroy());
     this.customerViews.clear();
+    // 1층은 문, 2층부터는 계단이라 층을 옮기면 입구 그림도 다시 그립니다.
+    this.drawRoom();
     this.rebuildTables();
     this.refreshEquipmentRow();
     this.updateFloorLabel();

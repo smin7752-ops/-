@@ -47,24 +47,7 @@ export function injectStyles() {
   #ui-root .clock-pill #day-label { font-size: 11px; opacity: 0.75; }
   #ui-root .clock-pill #clock-label { font-size: 17px; font-variant-numeric: tabular-nums; }
   #ui-root .coin-pill.debt { background: #8a3b3b; }
-  /* 가게 평점. 누르면 매출표가 열립니다. */
-  #ui-root .rating-pill {
-    background: rgba(0,0,0,0.6);
-    color: #fff;
-    border: none;
-    padding: 6px 13px;
-    border-radius: 999px;
-    font-weight: 800;
-    font-family: inherit;
-    font-size: 15px;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-variant-numeric: tabular-nums;
-  }
-  #ui-root .rating-pill .star { color: #f5c542; }
-  #ui-root .rating-pill.low { background: #8a3b3b; }
-  #ui-root .rating-pill.high { background: #3f6b47; }
+  #ui-root .star { color: #f5c542; }
   /* 인지도. 누르면 인지도 탭이 열립니다. */
   #ui-root .fame-pill {
     background: rgba(0,0,0,0.6);
