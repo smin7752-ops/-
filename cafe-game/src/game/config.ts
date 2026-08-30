@@ -379,7 +379,7 @@ export const EAT_TIME_MS = 3500;
 
 /* ------------------------------ 저장 ------------------------------ */
 
-export const SAVE_KEY = "cafe-idle-save-v3";
+export const SAVE_KEY = "cafe-idle-save-v4";
 
 export const OFFLINE_EARNINGS_CAP_MS = 8 * 60 * 60 * 1000;
 /** 이만큼은 자리를 비워야 "다시 오셨네요" 정산을 합니다 (잠깐 나갔다 온 건 제외) */
