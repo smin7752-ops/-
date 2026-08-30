@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { bus, EVENTS } from "../game/bus";
-import { buildArt, isoGroundOrigin, isoToScreen } from "../game/art";
+import { buildArt, isoGroundOrigin, isoToScreen, ISO_TILE_H } from "../game/art";
 import { VIRTUAL_WIDTH } from "./CafeScene";
 
 /** 카페 건물이 놓인 격자 자리. 나중에 건물을 더 추가할 땐 이 배열에
@@ -43,7 +43,7 @@ export class WorldScene extends Phaser.Scene {
     // (world-cafe-iso 그림의 바닥 꼭짓점은 가로 가운데, 세로 90% 지점에 있습니다.)
     const tileScreen = isoToScreen(CAFE_TILE.gx, CAFE_TILE.gy);
     const buildingX = groundScreenX + tileScreen.x;
-    const buildingY = groundScreenY + tileScreen.y + 25; // 타일 앞쪽 꼭짓점(바닥)에 맞춤
+    const buildingY = groundScreenY + tileScreen.y + ISO_TILE_H / 2; // 타일 앞쪽 꼭짓점(바닥)에 맞춤
     const building = this.add
       .image(buildingX, buildingY, "world-cafe-iso")
       .setOrigin(0.5, 0.9);

@@ -15,9 +15,11 @@ import { ALL_MENU, decorOfSlot, EQUIPMENT, UNIFORMS, type UniformSlot } from "./
 /** 2배로 그린 그림을 화면에 올릴 때 줄이는 비율 */
 export const ART_SCALE = 0.5;
 
-/** 바깥 초원(아이소메트릭 월드맵)의 타일 한 칸 크기 — 폭:높이 = 2:1 */
-export const ISO_TILE_W = 100;
-export const ISO_TILE_H = 50;
+/** 바깥 초원(아이소메트릭 월드맵)의 칸(구역) 한 개 크기 — 폭:높이 = 2:1.
+ * 건물 하나가 이 칸 하나를 차지합니다 (칸이 건물보다 넉넉히 커서, 건물
+ * 둘레에 작은 마당처럼 여백이 남습니다). */
+export const ISO_TILE_W = 340;
+export const ISO_TILE_H = 170;
 
 /** 격자 좌표(gx, gy) → 화면 좌표. 건물을 놓을 자리를 계산할 때 그림을 그릴 때와
  * 똑같은 식을 써야 타일과 건물이 정확히 맞물립니다. */
@@ -28,8 +30,8 @@ export function isoToScreen(gx: number, gy: number) {
   };
 }
 
-/** 들판 타일이 몇 칸까지 깔리는지 (가운데에서 사방으로). */
-export const ISO_GRID_RADIUS = 3;
+/** 들판 칸이 몇 개까지 깔리는지 (가운데에서 사방으로). */
+export const ISO_GRID_RADIUS = 2;
 
 /** "world-ground" 그림의 왼쪽 위 기준으로, 격자 원점(0,0)이 놓이는 자리.
  * 건물을 화면에 놓을 때도 이 값을 더해야 타일과 자리가 맞습니다. */
@@ -1167,6 +1169,7 @@ function isoTile(
   w: number,
   h: number,
   fill: number,
+  border?: { color: number; width: number },
 ) {
   g.fillStyle(fill, 1);
   g.beginPath();
@@ -1176,6 +1179,10 @@ function isoTile(
   g.lineTo(cx - w / 2, cy);
   g.closePath();
   g.fillPath();
+  if (border) {
+    g.lineStyle(border.width, border.color, 1);
+    g.strokePath();
+  }
 }
 
 function buildWorldArt(scene: Phaser.Scene) {
@@ -1227,32 +1234,45 @@ function buildWorldArt(scene: Phaser.Scene) {
     g.fillRect(0, 500, 720, 780);
   });
 
-  // 아이소메트릭 들판 타일 — 건물이 서는 격자. -3~3 칸(7x7)을 위에서
-  // 비스듬히 내려다보는 마름모 타일로 깔아, 나중에 건물을 더 추가할 때도
+  // 아이소메트릭 들판 구역 — 건물 하나가 칸 하나를 차지하는 큼직한 마름모
+  // 구역을 깔고, 구역 사이는 굵은 흙길 테두리로 나눕니다(구역 테두리가
+  // 그대로 이웃 구역과 이어지는 길이 됩니다). 나중에 건물을 더 추가할 때도
   // 같은 격자(isoToScreen)에 자리만 잡아주면 됩니다.
   const GRID = ISO_GRID_RADIUS;
   const { x: ox, y: oy } = isoGroundOrigin();
   const gw = ox * 2;
   const gh = oy * 2;
   tex(scene, "world-ground", gw, gh, (g) => {
-    // 카페 문 앞(0,1)~(0,3)까지 이어지는 오솔길
-    const isPathTile = (gx: number, gy: number) => gx === 0 && gy >= 1 && gy <= GRID;
-
     for (let gy = -GRID; gy <= GRID; gy++) {
       for (let gx = -GRID; gx <= GRID; gx++) {
         const p = isoToScreen(gx, gy);
-        const color = isPathTile(gx, gy)
-          ? PATH
-          : (gx + gy) % 2 === 0
-            ? GRASS_LIGHT
-            : GRASS;
-        isoTile(g, p.x + ox, p.y + oy, ISO_TILE_W, ISO_TILE_H, color);
+        isoTile(g, p.x + ox, p.y + oy, ISO_TILE_W, ISO_TILE_H, GRASS, {
+          color: PATH,
+          width: 26,
+        });
       }
     }
 
-    // 들꽃 — 카페 자리(0,0)와 오솔길은 피해서 몇 칸에만 놓습니다.
+    // 잔디 질감 — 구역마다 옅은 반점을 몇 개씩 흩뿌립니다.
+    for (let gy = -GRID; gy <= GRID; gy++) {
+      for (let gx = -GRID; gx <= GRID; gx++) {
+        if (gx === 0 && gy === 0) continue; // 카페 자리는 건물 그림에 가려지니 생략
+        const p = isoToScreen(gx, gy);
+        const seed = (gx + GRID) * 7 + (gy + GRID) * 13;
+        for (let i = 0; i < 5; i++) {
+          const t = ((seed + i * 31) % 97) / 97;
+          const u = ((seed + i * 53) % 89) / 89;
+          const dx = (t - 0.5) * ISO_TILE_W * 0.6;
+          const dy = (u - 0.5) * ISO_TILE_H * 0.6;
+          g.fillStyle(GRASS_LIGHT, 0.55);
+          g.fillEllipse(p.x + ox + dx, p.y + oy + dy, 20, 9);
+        }
+      }
+    }
+
+    // 들꽃 — 카페 자리(0,0)는 피해서 몇 칸에만 놓습니다.
     const flowerTiles: [number, number][] = [
-      [-2, -1], [2, -2], [-3, 1], [3, 1], [-1, 3], [2, 3], [-2, 2], [1, -3],
+      [-2, -1], [2, -2], [-1, 2], [1, -2],
     ];
     flowerTiles.forEach(([gx, gy], i) => {
       const p = isoToScreen(gx, gy);
