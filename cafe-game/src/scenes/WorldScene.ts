@@ -1,11 +1,15 @@
 import Phaser from "phaser";
 import { bus, EVENTS } from "../game/bus";
-import { buildArt } from "../game/art";
+import { buildArt, isoGroundOrigin, isoToScreen } from "../game/art";
 import { VIRTUAL_WIDTH } from "./CafeScene";
 
+/** 카페 건물이 놓인 격자 자리. 나중에 건물을 더 추가할 땐 이 배열에
+ * {gx, gy, textureKey, label, onEnter} 형태로 하나씩 더하면 됩니다. */
+const CAFE_TILE = { gx: 0, gy: 0 };
+
 /**
- * 게임을 열면 가장 먼저 보이는 화면. 넓은 초원에 카페 건물이 서 있고,
- * 건물을 누르면 안(CafeScene)으로 들어갑니다.
+ * 게임을 열면 가장 먼저 보이는 화면. 넓은 초원(아이소메트릭 격자)에 카페
+ * 건물이 서 있고, 건물을 누르면 안(CafeScene)으로 들어갑니다.
  */
 export class WorldScene extends Phaser.Scene {
   constructor() {
@@ -17,6 +21,14 @@ export class WorldScene extends Phaser.Scene {
 
     this.add.image(0, 0, "world-bg").setOrigin(0, 0);
 
+    // 들판 타일 그림 — 화면 가로 가운데, 세로 중간쯤에 격자 원점이 오도록 놓습니다.
+    const groundOrigin = isoGroundOrigin();
+    const groundScreenX = VIRTUAL_WIDTH / 2;
+    const groundScreenY = 760;
+    this.add
+      .image(groundScreenX - groundOrigin.x, groundScreenY - groundOrigin.y, "world-ground")
+      .setOrigin(0, 0);
+
     this.add
       .text(VIRTUAL_WIDTH / 2, 90, "나의 작은 카페", {
         fontSize: "40px",
@@ -27,22 +39,24 @@ export class WorldScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    const buildingX = VIRTUAL_WIDTH / 2;
-    const buildingY = 940;
+    // 카페 건물을 격자 자리(0,0)에 맞춰 놓습니다.
+    const tileScreen = isoToScreen(CAFE_TILE.gx, CAFE_TILE.gy);
+    const buildingX = groundScreenX + tileScreen.x;
+    const buildingY = groundScreenY + tileScreen.y + 45; // 타일 앞쪽 꼭짓점(바닥)에 맞춤
     const building = this.add
-      .image(buildingX, buildingY, "world-cafe")
-      .setOrigin(0.5, 1);
+      .image(buildingX, buildingY, "world-cafe-iso")
+      .setOrigin(0.5, 0.75);
 
     const signText = this.add
-      .text(buildingX, buildingY - 340, "카페", {
-        fontSize: "26px",
+      .text(buildingX, buildingY - 300, "카페", {
+        fontSize: "24px",
         fontStyle: "bold",
         color: "#4a3226",
       })
       .setOrigin(0.5);
 
     const hint = this.add
-      .text(buildingX, buildingY + 60, "카페를 눌러 들어가세요", {
+      .text(buildingX, buildingY + 80, "카페를 눌러 들어가세요", {
         fontSize: "22px",
         fontStyle: "bold",
         color: "#fffaf2",
@@ -59,7 +73,7 @@ export class WorldScene extends Phaser.Scene {
     });
 
     // 건물 전체를 누를 수 있게 넉넉한 범위로 잡습니다 (손가락으로 누르기 쉽게).
-    const hit = this.add.rectangle(buildingX, buildingY - 240, 380, 500, 0xffffff, 0);
+    const hit = this.add.rectangle(buildingX, buildingY - 180, 260, 400, 0xffffff, 0);
     hit.setInteractive({ useHandCursor: true });
 
     let entering = false;

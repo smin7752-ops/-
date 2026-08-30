@@ -15,6 +15,28 @@ import { ALL_MENU, decorOfSlot, EQUIPMENT, UNIFORMS, type UniformSlot } from "./
 /** 2배로 그린 그림을 화면에 올릴 때 줄이는 비율 */
 export const ART_SCALE = 0.5;
 
+/** 바깥 초원(아이소메트릭 월드맵)의 타일 한 칸 크기 — 폭:높이 = 2:1 */
+export const ISO_TILE_W = 100;
+export const ISO_TILE_H = 50;
+
+/** 격자 좌표(gx, gy) → 화면 좌표. 건물을 놓을 자리를 계산할 때 그림을 그릴 때와
+ * 똑같은 식을 써야 타일과 건물이 정확히 맞물립니다. */
+export function isoToScreen(gx: number, gy: number) {
+  return {
+    x: (gx - gy) * (ISO_TILE_W / 2),
+    y: (gx + gy) * (ISO_TILE_H / 2),
+  };
+}
+
+/** 들판 타일이 몇 칸까지 깔리는지 (가운데에서 사방으로). */
+export const ISO_GRID_RADIUS = 3;
+
+/** "world-ground" 그림의 왼쪽 위 기준으로, 격자 원점(0,0)이 놓이는 자리.
+ * 건물을 화면에 놓을 때도 이 값을 더해야 타일과 자리가 맞습니다. */
+export function isoGroundOrigin() {
+  return { x: ISO_GRID_RADIUS * ISO_TILE_W, y: ISO_GRID_RADIUS * ISO_TILE_H + 20 };
+}
+
 /** 테두리 색. 모든 그림이 이 색 테두리를 둘러 한 세트처럼 보이게 합니다. */
 const INK = 0x4a3226;
 
@@ -1137,6 +1159,25 @@ function buildUiIcons(scene: Phaser.Scene) {
  * 바깥 초원 화면 — 문을 열기 전, 카페 건물을 밖에서 보여줍니다.
  * ------------------------------------------------------------------ */
 
+/** 마름모(아이소메트릭 타일 한 칸)를 그립니다. (cx,cy)는 타일의 가운데입니다. */
+function isoTile(
+  g: Phaser.GameObjects.Graphics,
+  cx: number,
+  cy: number,
+  w: number,
+  h: number,
+  fill: number,
+) {
+  g.fillStyle(fill, 1);
+  g.beginPath();
+  g.moveTo(cx, cy - h / 2);
+  g.lineTo(cx + w / 2, cy);
+  g.lineTo(cx, cy + h / 2);
+  g.lineTo(cx - w / 2, cy);
+  g.closePath();
+  g.fillPath();
+}
+
 function buildWorldArt(scene: Phaser.Scene) {
   const S = ART_COLORS;
   const SKY_TOP = 0x8fd3ec;
@@ -1144,7 +1185,7 @@ function buildWorldArt(scene: Phaser.Scene) {
   const SUN = 0xffe27a;
   const HILL = 0x9fcf7c;
   const GRASS = 0x8fc36b;
-  const GRASS_DARK = 0x76b357;
+  const GRASS_LIGHT = 0x9ed17f;
   const PATH = 0xe6d3a0;
   const ROOF = 0xc0693a;
   const ROOF_DARK = 0x9a4f2b;
@@ -1153,7 +1194,8 @@ function buildWorldArt(scene: Phaser.Scene) {
   const GLASS = 0xbfe6ef;
   const FLOWERS = [0xf4a9a8, 0xf7d08a, 0xd5b8e8, 0xffffff];
 
-  // 하늘 + 들판 배경 — 화면 전체(720x1280)를 통째로 채웁니다.
+  // 하늘 + 먼 언덕 + 잔디 바탕 — 화면 전체(720x1280)를 채웁니다.
+  // 이 위에 "world-ground"(아이소메트릭 타일 바닥)를 겹쳐서 놓습니다.
   tex(scene, "world-bg", 720, 1280, (g) => {
     g.fillStyle(SKY_TOP, 1);
     g.fillRect(0, 0, 720, 560);
@@ -1180,99 +1222,102 @@ function buildWorldArt(scene: Phaser.Scene) {
     g.fillEllipse(150, 570, 420, 160);
     g.fillEllipse(570, 590, 480, 180);
 
-    // 들판
+    // 들판 (아이소메트릭 타일 바닥 바깥까지 넉넉히 채워두는 바탕색)
     g.fillStyle(GRASS, 1);
     g.fillRect(0, 500, 720, 780);
-    g.fillStyle(GRASS_DARK, 1);
-    for (let i = 0; i < 46; i++) {
-      const x = (i * 137) % 720;
-      const y = 540 + ((i * 251) % 700);
-      g.fillEllipse(x, y, 34, 12);
+  });
+
+  // 아이소메트릭 들판 타일 — 건물이 서는 격자. -3~3 칸(7x7)을 위에서
+  // 비스듬히 내려다보는 마름모 타일로 깔아, 나중에 건물을 더 추가할 때도
+  // 같은 격자(isoToScreen)에 자리만 잡아주면 됩니다.
+  const GRID = ISO_GRID_RADIUS;
+  const { x: ox, y: oy } = isoGroundOrigin();
+  const gw = ox * 2;
+  const gh = oy * 2;
+  tex(scene, "world-ground", gw, gh, (g) => {
+    // 카페 문 앞(0,1)~(0,3)까지 이어지는 오솔길
+    const isPathTile = (gx: number, gy: number) => gx === 0 && gy >= 1 && gy <= GRID;
+
+    for (let gy = -GRID; gy <= GRID; gy++) {
+      for (let gx = -GRID; gx <= GRID; gx++) {
+        const p = isoToScreen(gx, gy);
+        const color = isPathTile(gx, gy)
+          ? PATH
+          : (gx + gy) % 2 === 0
+            ? GRASS_LIGHT
+            : GRASS;
+        isoTile(g, p.x + ox, p.y + oy, ISO_TILE_W, ISO_TILE_H, color);
+      }
     }
 
-    // 카페 문 앞까지 이어지는 오솔길
-    g.fillStyle(PATH, 1);
-    g.beginPath();
-    g.moveTo(300, 1280);
-    g.lineTo(420, 1280);
-    g.lineTo(392, 900);
-    g.lineTo(328, 900);
-    g.closePath();
-    g.fillPath();
-
-    // 들꽃
-    const spots: [number, number][] = [
-      [80, 640], [640, 700], [110, 900], [610, 980],
-      [70, 1120], [650, 1150], [200, 1040], [520, 640],
+    // 들꽃 — 카페 자리(0,0)와 오솔길은 피해서 몇 칸에만 놓습니다.
+    const flowerTiles: [number, number][] = [
+      [-2, -1], [2, -2], [-3, 1], [3, 1], [-1, 3], [2, 3], [-2, 2], [1, -3],
     ];
-    spots.forEach(([x, y], i) => {
-      disc(g, x, y, 9, FLOWERS[i % FLOWERS.length], 3);
-      disc(g, x, y, 3, 0xf5c542, 0);
+    flowerTiles.forEach(([gx, gy], i) => {
+      const p = isoToScreen(gx, gy);
+      disc(g, p.x + ox, p.y + oy, 8, FLOWERS[i % FLOWERS.length], 3);
+      disc(g, p.x + ox, p.y + oy, 3, 0xf5c542, 0);
     });
   });
 
-  // 카페 건물 — 360x480. 원점은 이미지를 놓을 때 문 앞 바닥(하단 중앙)에 맞춥니다.
-  tex(scene, "world-cafe", 360, 480, (g) => {
-    // 지붕
-    g.fillStyle(ROOF_DARK, 1);
-    g.beginPath();
-    g.moveTo(-10, 170);
-    g.lineTo(180, 30);
-    g.lineTo(370, 170);
-    g.closePath();
-    g.fillPath();
-    g.fillStyle(ROOF, 1);
-    g.beginPath();
-    g.moveTo(0, 160);
-    g.lineTo(180, 40);
-    g.lineTo(360, 160);
-    g.closePath();
-    g.fillPath();
-    g.lineStyle(6, INK, 1);
-    g.beginPath();
-    g.moveTo(0, 160);
-    g.lineTo(180, 40);
-    g.lineTo(360, 160);
-    g.closePath();
-    g.strokePath();
+  // 카페 건물 — 아이소메트릭 박스(지붕 2면 + 벽 2면)로 그립니다.
+  // 원점(이미지를 놓을 기준점)은 건물이 서는 타일의 앞쪽 꼭짓점 바닥입니다.
+  const BW = 300;
+  const BH = 400;
+  const cx = BW / 2;
+  const gcy = 300; // 바닥 마름모의 세로 중심
+  const w2 = 90;
+  const h2 = 45;
+  const WALL_H = 180;
+  tex(scene, "world-cafe-iso", BW, BH, (g) => {
+    const T = { x: cx, y: gcy - h2 };
+    const R = { x: cx + w2, y: gcy };
+    const B = { x: cx, y: gcy + h2 };
+    const L = { x: cx - w2, y: gcy };
+    const up = (p: { x: number; y: number }) => ({ x: p.x, y: p.y - WALL_H });
+    const [Tt, Rt, Bt, Lt] = [up(T), up(R), up(B), up(L)];
+
+    const poly = (pts: { x: number; y: number }[], fill: number) => {
+      g.fillStyle(fill, 1);
+      g.beginPath();
+      g.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) g.lineTo(pts[i].x, pts[i].y);
+      g.closePath();
+      g.fillPath();
+      g.lineStyle(5, INK, 1);
+      g.beginPath();
+      g.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) g.lineTo(pts[i].x, pts[i].y);
+      g.closePath();
+      g.strokePath();
+    };
+
+    // 벽 두 면 (오른쪽이 더 어둡게 — 그늘)
+    poly([B, R, Rt, Bt], WALL_SHADE);
+    poly([B, L, Lt, Bt], WALL);
+
+    // 지붕 두 면 (오른쪽 = 그늘)
+    poly([Tt, Bt, Rt], ROOF_DARK);
+    poly([Tt, Lt, Bt], ROOF);
 
     // 굴뚝
-    blob(g, 258, 55, 32, 65, 4, S.woodDark, 5);
+    blob(g, Rt.x - 46, Rt.y - 60, 26, 60, 4, S.woodDark, 5);
 
-    // 2층 벽 + 창문
-    blob(g, 20, 150, 320, 150, 10, WALL, 6);
-    blob(g, 66, 190, 70, 70, 8, GLASS, 5);
-    blob(g, 224, 190, 70, 70, 8, GLASS, 5);
-    g.lineStyle(4, WALL_SHADE, 1);
-    g.lineBetween(101, 190, 101, 260);
-    g.lineBetween(66, 225, 136, 225);
-    g.lineBetween(259, 190, 259, 260);
-    g.lineBetween(224, 225, 294, 225);
+    // 문 (오른쪽 벽 — 안전하게 안쪽으로 넉넉히 들여서 그립니다)
+    blob(g, 165, 160, 50, 150, 6, S.woodDark, 5);
+    blob(g, 173, 172, 34, 100, 5, GLASS, 4);
+    disc(g, 200, 235, 4, S.steelDark, 0);
 
-    // 1층 벽
-    blob(g, 10, 290, 340, 190, 10, WALL_SHADE, 6);
-    // 1층 창문 (문 양옆)
-    blob(g, 32, 330, 70, 70, 8, GLASS, 5);
-    blob(g, 258, 330, 70, 70, 8, GLASS, 5);
-    // 출입문 (가운데)
-    blob(g, 140, 340, 80, 140, 8, S.woodDark, 5);
-    blob(g, 150, 350, 60, 100, 6, GLASS, 4);
-    g.lineStyle(4, S.woodDark, 1);
-    g.lineBetween(180, 350, 180, 450);
-    disc(g, 195, 400, 5, S.steelDark, 0);
+    // 창문 (왼쪽 벽)
+    blob(g, 85, 160, 50, 150, 6, S.woodDark, 5);
+    blob(g, 93, 172, 34, 100, 5, GLASS, 4);
+    g.lineStyle(3, S.woodDark, 1);
+    g.lineBetween(110, 172, 110, 272);
+    g.lineBetween(93, 222, 127, 222);
 
-    // 문 위 차양(어닝)
-    g.fillStyle(ROOF, 1);
-    g.fillRect(118, 316, 124, 22);
-    g.lineStyle(5, INK, 1);
-    g.strokeRect(118, 316, 124, 22);
-    for (let i = 0; i < 7; i++) {
-      g.fillStyle(i % 2 === 0 ? ROOF_DARK : 0xffffff, 1);
-      g.fillRect(118 + i * 18, 338, 9, 12);
-    }
-
-    // 간판 자리 (글자는 화면에서 텍스트로 따로 얹습니다)
-    blob(g, 110, 138, 140, 34, 10, S.paper, 5);
+    // 간판 (글자는 화면에서 텍스트로 따로 얹습니다)
+    blob(g, Bt.x - 70, Bt.y - 30, 140, 32, 10, S.paper, 5);
   });
 }
 
