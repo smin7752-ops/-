@@ -10,7 +10,7 @@
  * ------------------------------------------------------------------ */
 
 import Phaser from "phaser";
-import { ALL_MENU, EQUIPMENT, UNIFORMS, type UniformSlot } from "./config";
+import { ALL_MENU, decorOfSlot, EQUIPMENT, UNIFORMS, type UniformSlot } from "./config";
 
 /** 2배로 그린 그림을 화면에 올릴 때 줄이는 비율 */
 export const ART_SCALE = 0.5;
@@ -60,6 +60,10 @@ export const itemKey = (menuId: string) => `item-${menuId}`;
 export const equipKey = (equipmentId: string) => `equip-${equipmentId}`;
 /** 유니폼별 전신 그림 */
 export const personKey = (uniformId: string) => `person-${uniformId}`;
+/** 인테리어(꾸미기)별 가구 그림 */
+export const chairKey = (decorId: string) => `chair-${decorId}`;
+export const tableKey = (decorId: string) => `table-${decorId}`;
+export const doorKey = (decorId: string) => `door-${decorId}`;
 
 /* ------------------------------------------------------------------ *
  * 그리기 도우미
@@ -539,48 +543,57 @@ function buildFurniture(scene: Phaser.Scene) {
   const S = ART_COLORS;
 
   // 의자 — 손님 한 명이 앉는 크기입니다. 손님 뒤에 깔려요. 120x96
-  tex(scene, "chair", 120, 96, (g) => {
-    blob(g, 16, 16, 14, 74, 7, S.woodDark, 5); // 왼쪽 기둥
-    blob(g, 90, 16, 14, 74, 7, S.woodDark, 5); // 오른쪽 기둥
-    blob(g, 10, 60, 100, 28, 11, S.woodDark, 5); // 앉는 면
-    blob(g, 24, 10, 72, 52, 18, S.wood, 5); // 등받이
-    g.lineStyle(5, S.woodDark, 0.8);
-    g.lineBetween(60, 20, 60, 50);
-  });
+  // 인테리어(꾸미기)에서 산 색으로 여러 벌 구워둡니다.
+  // primary: 기둥·좌판, secondary: 등받이
+  for (const d of decorOfSlot("chair")) {
+    tex(scene, chairKey(d.id), 120, 96, (g) => {
+      blob(g, 16, 16, 14, 74, 7, d.colors.primary, 5); // 왼쪽 기둥
+      blob(g, 90, 16, 14, 74, 7, d.colors.primary, 5); // 오른쪽 기둥
+      blob(g, 10, 60, 100, 28, 11, d.colors.primary, 5); // 앉는 면
+      blob(g, 24, 10, 72, 52, 18, d.colors.secondary, 5); // 등받이
+      g.lineStyle(5, d.colors.primary, 0.8);
+      g.lineBetween(60, 20, 60, 50);
+    });
+  }
 
   // 테이블 상판 — 손님 앞에 덮여서, 손님이 테이블에 앉은 것처럼 보이게 합니다.
-  // 264x150
-  tex(scene, "table-top", 264, 150, (g) => {
-    blob(g, 118, 60, 28, 60, 8, S.woodDark, 5); // 다리
-    blob(g, 88, 112, 88, 24, 10, S.woodDark, 5); // 받침
-    oval(g, 132, 44, 232, 66, S.woodLight, 6); // 상판
-    g.fillStyle(0x000000, 0.08);
-    g.fillEllipse(132, 52, 206, 42);
-    g.lineStyle(4, S.wood, 0.7); // 나뭇결
-    g.beginPath();
-    g.arc(132, 20, 78, Phaser.Math.DegToRad(30), Phaser.Math.DegToRad(150));
-    g.strokePath();
-    g.beginPath();
-    g.arc(132, 6, 100, Phaser.Math.DegToRad(40), Phaser.Math.DegToRad(140));
-    g.strokePath();
-  });
+  // 264x150. primary: 상판, secondary: 다리·받침, accent: 나뭇결
+  for (const d of decorOfSlot("table")) {
+    tex(scene, tableKey(d.id), 264, 150, (g) => {
+      blob(g, 118, 60, 28, 60, 8, d.colors.secondary, 5); // 다리
+      blob(g, 88, 112, 88, 24, 10, d.colors.secondary, 5); // 받침
+      oval(g, 132, 44, 232, 66, d.colors.primary, 6); // 상판
+      g.fillStyle(0x000000, 0.08);
+      g.fillEllipse(132, 52, 206, 42);
+      g.lineStyle(4, d.colors.accent, 0.7); // 나뭇결
+      g.beginPath();
+      g.arc(132, 20, 78, Phaser.Math.DegToRad(30), Phaser.Math.DegToRad(150));
+      g.strokePath();
+      g.beginPath();
+      g.arc(132, 6, 100, Phaser.Math.DegToRad(40), Phaser.Math.DegToRad(140));
+      g.strokePath();
+    });
+  }
 
   // 가게 문 — 손님이 여기로 들어오고, 매니저가 옆에 섭니다.
   // 가로보다 세로가 길어야 "창문"이 아니라 문으로 보입니다. 160x200
-  tex(scene, "door", 160, 200, (g) => {
-    blob(g, 8, 24, 144, 172, 12, S.woodDark, 6); // 문틀
-    blob(g, 22, 38, 116, 146, 8, 0xdff0f5, 5); // 유리문
-    g.lineStyle(6, S.woodDark, 1);
-    g.lineBetween(80, 38, 80, 184); // 가운데 기둥
-    g.fillStyle(0xffffff, 0.5); // 유리 반사
-    g.fillRect(34, 50, 14, 118);
-    g.fillRect(96, 50, 14, 118);
-    disc(g, 68, 112, 7, S.steelDark, 4); // 손잡이
-    disc(g, 92, 112, 7, S.steelDark, 4);
-    blob(g, 26, 2, 108, 26, 10, 0x86caa5, 5); // 문 위 간판
-    g.fillStyle(S.paper, 1);
-    g.fillRoundedRect(40, 9, 80, 12, 6);
-  });
+  // primary: 문틀, secondary: 유리, accent: 간판
+  for (const d of decorOfSlot("door")) {
+    tex(scene, doorKey(d.id), 160, 200, (g) => {
+      blob(g, 8, 24, 144, 172, 12, d.colors.primary, 6); // 문틀
+      blob(g, 22, 38, 116, 146, 8, d.colors.secondary, 5); // 유리문
+      g.lineStyle(6, d.colors.primary, 1);
+      g.lineBetween(80, 38, 80, 184); // 가운데 기둥
+      g.fillStyle(0xffffff, 0.5); // 유리 반사
+      g.fillRect(34, 50, 14, 118);
+      g.fillRect(96, 50, 14, 118);
+      disc(g, 68, 112, 7, S.steelDark, 4); // 손잡이
+      disc(g, 92, 112, 7, S.steelDark, 4);
+      blob(g, 26, 2, 108, 26, 10, d.colors.accent, 5); // 문 위 간판
+      g.fillStyle(S.paper, 1);
+      g.fillRoundedRect(40, 9, 80, 12, 6);
+    });
+  }
 
   // 아직 안 산 자리 — 200x200
   tex(scene, "table-empty", 200, 200, (g) => {
@@ -920,6 +933,19 @@ function buildUiIcons(scene: Phaser.Scene) {
     g.fillRoundedRect(23, 32, 18, 22, 5);
   });
 
+  U("decor", (g) => {
+    // 페인트 롤러
+    g.fillStyle(0x86caa5, 1); // 롤러 원통
+    g.fillRoundedRect(8, 12, 34, 18, 8);
+    g.lineStyle(5, INK, 1);
+    g.strokeRoundedRect(8, 12, 34, 18, 8);
+    g.lineStyle(6, S.steelDark, 1); // 손잡이
+    g.lineBetween(30, 26, 30, 42);
+    g.lineBetween(30, 42, 47, 55);
+    disc(g, 47, 55, 5, S.steelDark, 3);
+    disc(g, 14, 50, 6, 0xf5c542, 3); // 페인트 방울
+  });
+
   U("lock", (g) => {
     // 자물쇠 고리
     g.lineStyle(6, S.steelDark, 1);
@@ -1056,9 +1082,21 @@ export function publishIconUrls(scene: Phaser.Scene) {
     ...EQUIPMENT.map((e) => equipKey(e.id)),
     ...["barista", "server", "manager", "gm"].map(staffKey),
     ...UNIFORMS.map((u) => personKey(u.id)),
-    ...["menu", "supply", "staff", "store", "equipment", "sales", "uniform", "lock", "warning"].map(
-      uiKey,
-    ),
+    ...decorOfSlot("chair").map((d) => chairKey(d.id)),
+    ...decorOfSlot("table").map((d) => tableKey(d.id)),
+    ...decorOfSlot("door").map((d) => doorKey(d.id)),
+    ...[
+      "menu",
+      "supply",
+      "staff",
+      "store",
+      "equipment",
+      "sales",
+      "uniform",
+      "decor",
+      "lock",
+      "warning",
+    ].map(uiKey),
   ];
   for (const key of keys) {
     if (iconUrls[key] || !scene.textures.exists(key)) continue;

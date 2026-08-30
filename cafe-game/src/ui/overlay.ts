@@ -3,6 +3,9 @@ import {
   AUTO_RESTOCK_THRESHOLD,
   CLOSE_HOUR,
   DAY_CLOSE_AUTO_MS,
+  DECOR_SLOT_NAME,
+  DECOR_SLOTS,
+  decorOfSlot,
   EQUIPMENT,
   equipmentCost,
   floorPriceScale,
@@ -29,6 +32,7 @@ import {
   roleWage,
   tableCost,
   type Category,
+  type DecorDef,
   type Role,
 } from "../game/config";
 import {
@@ -43,10 +47,28 @@ import {
   type DayLedger,
 } from "../game/state";
 import { sim } from "../game/sim";
-import { equipKey, iconUrl, itemKey, personKey, staffKey, uiKey } from "../game/art";
+import {
+  chairKey,
+  doorKey,
+  equipKey,
+  iconUrl,
+  itemKey,
+  personKey,
+  staffKey,
+  tableKey,
+  uiKey,
+} from "../game/art";
 import { injectStyles } from "./styles";
 
-type PanelId = "menu" | "supply" | "staff" | "store" | "equipment" | "sales" | "uniform";
+type PanelId =
+  | "menu"
+  | "supply"
+  | "staff"
+  | "store"
+  | "equipment"
+  | "sales"
+  | "uniform"
+  | "decor";
 
 const PANEL_TITLES: Record<PanelId, string> = {
   menu: "메뉴",
@@ -56,6 +78,7 @@ const PANEL_TITLES: Record<PanelId, string> = {
   equipment: "설비",
   sales: "매출표",
   uniform: "유니폼",
+  decor: "꾸미기",
 };
 
 function num(n: number): string {
@@ -164,6 +187,7 @@ export function mountUI(root: HTMLElement) {
     { id: "equipment", label: "설비", icon: uiKey("equipment") },
     { id: "sales", label: "매출표", icon: uiKey("sales") },
     { id: "uniform", label: "유니폼", icon: uiKey("uniform") },
+    { id: "decor", label: "꾸미기", icon: uiKey("decor") },
   ];
 
   function refreshNav() {
@@ -285,6 +309,9 @@ export function mountUI(root: HTMLElement) {
         break;
       case "uniform":
         renderUniformPanel();
+        break;
+      case "decor":
+        renderDecorPanel();
         break;
     }
   }
@@ -568,6 +595,81 @@ export function mountUI(root: HTMLElement) {
       if (!gameState.equipUniform(el.dataset.wear!)) return;
       gameState.save();
       bus.emit(EVENTS.UNIFORM_CHANGED);
+      refreshAll();
+    });
+  }
+
+  /* ---------------------------- 꾸미기 패널 ---------------------------- */
+
+  /** 가구는 그려둔 그림, 바닥·벽지는 색이라 작은 색 견본으로 보여줍니다 */
+  function decorIcon(d: DecorDef): string {
+    switch (d.slot) {
+      case "chair":
+        return ic(chairKey(d.id), 46);
+      case "table":
+        return ic(tableKey(d.id), 46);
+      case "door":
+        return ic(doorKey(d.id), 40);
+      default: {
+        const hex = `#${d.colors.primary.toString(16).padStart(6, "0")}`;
+        return `<span class="ic-box" style="width:40px;height:40px;border-radius:8px;
+          background:${hex};border:2px solid rgba(0,0,0,0.15)"></span>`;
+      }
+    }
+  }
+
+  function decorRow(d: DecorDef): string {
+    const owned = gameState.ownsDecor(d.id);
+    const worn = gameState.equippedDecor(d.slot) === d.id;
+    const affordable = gameState.data.coins >= d.cost;
+    const button = worn
+      ? `<div class="buy-btn" style="background:#f0e3ca;color:#7a5a33">착용중</div>`
+      : owned
+        ? `<button class="buy-btn alt" data-wear-decor="${d.id}">쓰기</button>`
+        : `<button class="buy-btn" data-buy-decor="${d.id}"
+             ${affordable ? "" : "disabled"}>${coin(d.cost)}</button>`;
+    return `
+      <div class="row ${owned ? "" : "locked"}">
+        ${decorIcon(d)}
+        <div class="row-main">
+          <div class="row-label">${d.name}
+            ${worn ? `<span class="pill">착용중</span>` : ""}</div>
+        </div>
+        ${button}
+      </div>`;
+  }
+
+  function renderDecorPanel() {
+    const progress = gameState.decorProgress();
+
+    bodyEl.innerHTML = `
+      <div class="note">바닥·벽지·테이블·의자·출입문을 다른 모양으로 꾸밀 수 있어요.
+      <b>가게 전체</b> 공용이고, 효과는 없이 순전히 꾸미기용이에요.</div>
+
+      <div class="rating-box">
+        <div class="rating-big">${progress.owned}<span class="muted" style="font-size:16px">/${progress.total}</span></div>
+        <div class="rating-note"><b>모은 인테리어</b></div>
+      </div>
+
+      ${DECOR_SLOTS.map(
+        (slot) => `
+        <h3>${DECOR_SLOT_NAME[slot]}</h3>
+        ${decorOfSlot(slot).map(decorRow).join("")}`,
+      ).join("")}
+    `;
+
+    wire("[data-buy-decor]", (el) => {
+      if (!gameState.buyDecor(el.dataset.buyDecor!)) return;
+      // 새로 산 인테리어는 바로 씁니다.
+      gameState.wearDecor(el.dataset.buyDecor!);
+      gameState.save();
+      bus.emit(EVENTS.DECOR_CHANGED);
+      refreshAll();
+    });
+    wire("[data-wear-decor]", (el) => {
+      if (!gameState.wearDecor(el.dataset.wearDecor!)) return;
+      gameState.save();
+      bus.emit(EVENTS.DECOR_CHANGED);
       refreshAll();
     });
   }

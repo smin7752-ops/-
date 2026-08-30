@@ -5,6 +5,7 @@ import {
   ratingSpawnScale,
   CLEAN_STAY_MAX_MS,
   CLEAN_STAY_MIN_MS,
+  CLEAN_TRAVEL_MS,
   CUSTOMER_PATIENCE_MS,
   EAT_TIME_MS,
   GAME_MINUTES_PER_SECOND,
@@ -52,9 +53,11 @@ export interface SimTable {
   state: TableState;
   /** 지금 이 자리를 치우고 있는 홀 직원 자리 번호 (0부터). 아직 아무도 안 왔으면 null */
   assignedServer: number | null;
-  /** 치우는 데 남은 시간(ms). 직원이 오기 전에는 0 */
+  /** 배정은 됐지만 아직 걸어가는 중인 시간(ms). 0이 되기 전엔 청소가 시작되지 않습니다 */
+  cleanTravelLeft: number;
+  /** 치우는 데 남은 시간(ms). 도착하기 전에는 0 */
   cleanLeft: number;
-  /** 이번 청소에 걸리는 전체 시간(ms). 게이지 바 비율 계산용 */
+  /** 이번 청소에 걸리는 전체 시간(ms). 게이지 바 비율 계산용. 도착하기 전에는 0 */
   cleanTotal: number;
 }
 
@@ -97,7 +100,13 @@ class Simulation {
       const seatCount = data.tables * SEATS_PER_TABLE;
       const tables: SimTable[] = Array.from({ length: seatCount }, (_, t) => {
         return (
-          old?.tables[t] ?? { state: "clean", assignedServer: null, cleanLeft: 0, cleanTotal: 0 }
+          old?.tables[t] ?? {
+            state: "clean",
+            assignedServer: null,
+            cleanTravelLeft: 0,
+            cleanLeft: 0,
+            cleanTotal: 0,
+          }
         );
       });
       return {
@@ -347,6 +356,7 @@ class Simulation {
     if (table) {
       table.state = "dirty";
       table.assignedServer = null;
+      table.cleanTravelLeft = 0;
       table.cleanLeft = 0;
       table.cleanTotal = 0;
     }
@@ -413,6 +423,7 @@ class Simulation {
     if (!table || table.state !== "dirty") return false;
     table.state = "clean";
     table.assignedServer = null;
+    table.cleanTravelLeft = 0;
     table.cleanLeft = 0;
     table.cleanTotal = 0;
     bus.emit(EVENTS.TABLE_CLEANED, { floorIndex, tableIndex });
@@ -448,8 +459,21 @@ class Simulation {
         if (freeSlot === -1) continue; // 다들 다른 자리를 치우는 중이면 기다립니다.
         table.assignedServer = freeSlot;
         busy.add(freeSlot);
-        table.cleanTotal = Phaser.Math.Between(CLEAN_STAY_MIN_MS, CLEAN_STAY_MAX_MS);
-        table.cleanLeft = table.cleanTotal;
+        // 배정만 됐을 뿐, 아직 자리에 도착하지 않았습니다. 걸어가는 동안은
+        // 청소가 시작되지 않고(게이지도 안 뜨고), 도착한 뒤에야 시작됩니다.
+        table.cleanTravelLeft = CLEAN_TRAVEL_MS;
+        table.cleanTotal = 0;
+        table.cleanLeft = 0;
+        continue;
+      }
+
+      if (table.cleanTravelLeft > 0) {
+        table.cleanTravelLeft -= dt;
+        if (table.cleanTravelLeft <= 0) {
+          table.cleanTravelLeft = 0;
+          table.cleanTotal = Phaser.Math.Between(CLEAN_STAY_MIN_MS, CLEAN_STAY_MAX_MS);
+          table.cleanLeft = table.cleanTotal;
+        }
         continue;
       }
 
@@ -457,6 +481,7 @@ class Simulation {
       if (table.cleanLeft <= 0) {
         table.state = "clean";
         table.assignedServer = null;
+        table.cleanTravelLeft = 0;
         table.cleanLeft = 0;
         table.cleanTotal = 0;
       }

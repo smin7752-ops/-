@@ -2,6 +2,8 @@ import {
   ALL_MENU,
   AUTO_RESTOCK_BATCH,
   AUTO_RESTOCK_THRESHOLD,
+  DECOR,
+  DECOR_SLOTS,
   DESSERTS,
   DRINKS,
   EAT_TIME_MS,
@@ -33,12 +35,15 @@ import {
   OFFLINE_NO_GM_CAP_MS,
   SAVE_KEY,
   SETS,
+  STARTING_DECOR,
   STARTING_EQUIPMENT,
   STARTING_LAUNCHED,
   STARTING_STOCK,
   STARTING_TABLES,
   baristaSpeed,
   cleanDelayMs,
+  decorById,
+  decorOfSlot,
   expToNext,
   menuById,
   menuListOf,
@@ -46,6 +51,7 @@ import {
   serveDelayMs,
   spawnIntervalMs,
   type Category,
+  type DecorSlot,
   type MenuDef,
   type Role,
   type SetDef,
@@ -100,6 +106,10 @@ export interface SaveData {
   uniforms: string[];
   /** 자리별로 지금 입고 있는 유니폼 */
   equipped: Record<UniformSlot, string>;
+  /** 사둔 인테리어 (바닥·벽지·테이블·의자·문) */
+  decor: string[];
+  /** 자리별로 지금 쓰고 있는 인테리어 */
+  decorEquipped: Record<DecorSlot, string>;
   generalManager: boolean;
   lastSavedAt: number;
   totalEarned: number;
@@ -158,6 +168,8 @@ function defaultSave(): SaveData {
     rating: RATING_START,
     uniforms: [...STARTING_UNIFORMS],
     equipped: defaultEquipped(),
+    decor: [...STARTING_DECOR],
+    decorEquipped: defaultDecorEquipped(),
     generalManager: false,
     lastSavedAt: Date.now(),
     totalEarned: 0,
@@ -173,6 +185,15 @@ function defaultEquipped(): Record<UniformSlot, string> {
   const out = {} as Record<UniformSlot, string>;
   for (const slot of UNIFORM_SLOTS) {
     out[slot] = uniformsOfSlot(slot)[0].id;
+  }
+  return out;
+}
+
+/** 자리마다 기본 인테리어로 시작합니다 */
+function defaultDecorEquipped(): Record<DecorSlot, string> {
+  const out = {} as Record<DecorSlot, string>;
+  for (const slot of DECOR_SLOTS) {
+    out[slot] = decorOfSlot(slot)[0].id;
   }
   return out;
 }
@@ -242,14 +263,20 @@ class GameState {
       );
       return merger;
     });
-    // 메뉴 구매(발주 탭 한 번 사기)도 나중에 추가된 기능입니다. 이미 그
-    // 설비를 사둔 메뉴는 예전 규칙대로 바로 팔리고 있었을 테니, 다시 사라고
-    // 하지 않고 그대로 열어드립니다. 앞으로 새로 사는 설비부터 이 구매가
-    // 필요해요.
-    const ownedEquipmentIds = new Set(merged.floors.flatMap((f) => f.equipment));
-    const grandfathered = ALL_MENU.filter((m) => ownedEquipmentIds.has(m.equipmentId)).map(
-      (m) => m.id,
+    // 메뉴 구매(발주 탭 한 번 사기)도 나중에 추가된 기능입니다. 이미 "돈
+    // 주고 산" 설비(기본 커피머신 말고)가 있는 메뉴는 예전 규칙대로 바로
+    // 팔리고 있었을 테니, 다시 사라고 하지 않고 그대로 열어드립니다.
+    // 커피머신은 처음부터 공짜로 깔려 있는 설비라 여기서 빼야 합니다 —
+    // 안 그러면 카페라떼처럼 커피머신만 있으면 되는 메뉴가 신규 저장본
+    // 여부와 상관없이 전부 구매 없이 열려버립니다.
+    const purchasedEquipmentIds = new Set(
+      merged.floors.flatMap((f) =>
+        f.equipment.filter((e) => !STARTING_EQUIPMENT.includes(e)),
+      ),
     );
+    const grandfathered = ALL_MENU.filter((m) =>
+      purchasedEquipmentIds.has(m.equipmentId),
+    ).map((m) => m.id);
     merged.launched = Array.from(
       new Set([...STARTING_LAUNCHED, ...grandfathered, ...(parsed.launched ?? [])]),
     );
@@ -263,6 +290,17 @@ class GameState {
     for (const slot of UNIFORM_SLOTS) {
       if (!merged.uniforms.includes(merged.equipped[slot])) {
         merged.equipped[slot] = uniformsOfSlot(slot)[0].id;
+      }
+    }
+    // 인테리어(꾸미기)도 나중에 추가된 기능이라 예전 저장본에는 없습니다.
+    merged.decor = Array.from(new Set([...STARTING_DECOR, ...(parsed.decor ?? [])]));
+    merged.decorEquipped = {
+      ...defaultDecorEquipped(),
+      ...(parsed.decorEquipped ?? {}),
+    };
+    for (const slot of DECOR_SLOTS) {
+      if (!merged.decor.includes(merged.decorEquipped[slot])) {
+        merged.decorEquipped[slot] = decorOfSlot(slot)[0].id;
       }
     }
     // 세트 레벨도 나중에 추가된 기능이라 예전 저장본에는 없습니다.
@@ -361,6 +399,42 @@ class GameState {
   /** 옷장을 몇 벌 채웠는지 (화면 표시용) */
   uniformProgress(): { owned: number; total: number } {
     return { owned: this.data.uniforms.length, total: UNIFORMS.length };
+  }
+
+  /* ----------------------------- 인테리어 ----------------------------- */
+
+  ownsDecor(id: string): boolean {
+    return this.data.decor.includes(id);
+  }
+
+  equippedDecor(slot: DecorSlot): string {
+    return this.data.decorEquipped[slot];
+  }
+
+  /** 지금 그 자리에 쓰고 있는 인테리어의 색 (바닥·벽지 그리기용) */
+  decorColors(slot: DecorSlot) {
+    const def = decorById(this.equippedDecor(slot));
+    return def?.colors ?? decorOfSlot(slot)[0].colors;
+  }
+
+  buyDecor(id: string): boolean {
+    const def = decorById(id);
+    if (!def || this.ownsDecor(id)) return false;
+    if (!this.spendCoins(def.cost)) return false;
+    this.data.decor.push(id);
+    return true;
+  }
+
+  wearDecor(id: string): boolean {
+    const def = decorById(id);
+    if (!def || !this.ownsDecor(id)) return false;
+    this.data.decorEquipped[def.slot] = id;
+    return true;
+  }
+
+  /** 인테리어를 몇 개 모았는지 (화면 표시용) */
+  decorProgress(): { owned: number; total: number } {
+    return { owned: this.data.decor.length, total: DECOR.length };
   }
 
   /* ------------------------------ 평점 ------------------------------ */

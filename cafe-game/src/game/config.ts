@@ -265,6 +265,10 @@ export function serveDelayMs(serverCount: number): number {
 export const CLEAN_STAY_MIN_MS = 3000;
 export const CLEAN_STAY_MAX_MS = 5000;
 
+/** 직원이 배정되고 나서 실제로 도착할 때까지 걸어가는 시간(ms).
+    이 시간 동안은 청소 게이지가 아직 안 뜹니다 (도착 전에 차오르면 이상해 보여서). */
+export const CLEAN_TRAVEL_MS = 900;
+
 /** 자리를 비운 동안 대략 얼마나 빨리 치워질지 어림잡을 때 쓰는 평균값(ms). Infinity = 미고용(수동) */
 export function cleanDelayMs(serverCount: number): number {
   return serverCount <= 0 ? Infinity : (CLEAN_STAY_MIN_MS + CLEAN_STAY_MAX_MS) / 2 / serverCount;
@@ -463,4 +467,99 @@ export function ownEffectText(e: UniformOwnEffect): string {
   if (e.ratingGuard) parts.push(`평점 하락 −${Math.round(e.ratingGuard * 100)}%`);
   if (e.supplyCut) parts.push(`발주 원가 −${Math.round(e.supplyCut * 100)}%`);
   return parts.length ? parts.join(" · ") : "없음";
+}
+
+/* ------------------------------ 인테리어 ------------------------------ */
+/* 바닥·벽지·테이블·의자·출입문을 다른 모양으로 꾸밀 수 있습니다.
+   유니폼처럼 가게 전체 공용이고, 자리마다 한 번에 하나씩만 씁니다.
+   효과는 없고 순전히 꾸미기용이에요. */
+
+export type DecorSlot = "floor" | "wallpaper" | "table" | "chair" | "door";
+
+export const DECOR_SLOTS: DecorSlot[] = ["floor", "wallpaper", "table", "chair", "door"];
+
+export const DECOR_SLOT_NAME: Record<DecorSlot, string> = {
+  floor: "바닥",
+  wallpaper: "벽지",
+  table: "테이블",
+  chair: "의자",
+  door: "출입문",
+};
+
+/** 색만 다르면 되므로, 자리마다 뜻은 다르지만 세 색만 씁니다. */
+export interface DecorColors {
+  primary: number;
+  secondary: number;
+  accent: number;
+}
+
+export interface DecorDef {
+  id: string;
+  name: string;
+  slot: DecorSlot;
+  cost: number;
+  colors: DecorColors;
+}
+
+export const DECOR: DecorDef[] = [
+  // 바닥 — primary: 밝은 타일, secondary: 어두운 타일, accent: 문 앞 매트
+  { id: "floor_classic", name: "클래식 타일", slot: "floor", cost: 0,
+    colors: { primary: 0xe4d0ad, secondary: 0xd8c096, accent: 0xc9a97a } },
+  { id: "floor_mono", name: "모노 타일", slot: "floor", cost: 2000,
+    colors: { primary: 0xe9e6df, secondary: 0xd2cdc0, accent: 0xb7b0a0 } },
+  { id: "floor_mint", name: "민트 타일", slot: "floor", cost: 6000,
+    colors: { primary: 0xdcefe4, secondary: 0xb7ddc9, accent: 0x8fc7ac } },
+  { id: "floor_slate", name: "다크 슬레이트", slot: "floor", cost: 15000,
+    colors: { primary: 0x6b6f76, secondary: 0x53565c, accent: 0x3f4146 } },
+
+  // 벽지 — primary: 벽 색 (하나뿐이라 세 값 다 같습니다)
+  { id: "wall_classic", name: "클래식 벽지", slot: "wallpaper", cost: 0,
+    colors: { primary: 0xd9c3a0, secondary: 0xd9c3a0, accent: 0xd9c3a0 } },
+  { id: "wall_sky", name: "하늘색 벽지", slot: "wallpaper", cost: 2000,
+    colors: { primary: 0xd3e8f0, secondary: 0xd3e8f0, accent: 0xd3e8f0 } },
+  { id: "wall_rose", name: "로즈 벽지", slot: "wallpaper", cost: 6000,
+    colors: { primary: 0xf1dbe0, secondary: 0xf1dbe0, accent: 0xf1dbe0 } },
+  { id: "wall_night", name: "미드나잇 벽지", slot: "wallpaper", cost: 15000,
+    colors: { primary: 0x3a3550, secondary: 0x3a3550, accent: 0x3a3550 } },
+
+  // 테이블 — primary: 상판, secondary: 다리·받침, accent: 나뭇결
+  { id: "table_classic", name: "클래식 테이블", slot: "table", cost: 0,
+    colors: { primary: 0xb98350, secondary: 0x5a3b22, accent: 0x8a5a34 } },
+  { id: "table_white", name: "화이트 테이블", slot: "table", cost: 2500,
+    colors: { primary: 0xf3ede1, secondary: 0xcac0ac, accent: 0xd8cdb8 } },
+  { id: "table_marble", name: "마블 테이블", slot: "table", cost: 7000,
+    colors: { primary: 0xe4e1e6, secondary: 0x8f96a3, accent: 0xc3c7cf } },
+  { id: "table_walnut", name: "월넛 테이블", slot: "table", cost: 16000,
+    colors: { primary: 0x6b4630, secondary: 0x3a2617, accent: 0x8a5a34 } },
+
+  // 의자 — primary: 기둥·좌판, secondary: 등받이
+  { id: "chair_classic", name: "클래식 의자", slot: "chair", cost: 0,
+    colors: { primary: 0x5a3b22, secondary: 0x8a5a34, accent: 0x8a5a34 } },
+  { id: "chair_white", name: "화이트 의자", slot: "chair", cost: 2500,
+    colors: { primary: 0xcac0ac, secondary: 0xf3ede1, accent: 0xf3ede1 } },
+  { id: "chair_teal", name: "틸 의자", slot: "chair", cost: 7000,
+    colors: { primary: 0x2f6f6a, secondary: 0x4a9d94, accent: 0x4a9d94 } },
+  { id: "chair_walnut", name: "월넛 의자", slot: "chair", cost: 16000,
+    colors: { primary: 0x3a2617, secondary: 0x6b4630, accent: 0x6b4630 } },
+
+  // 출입문 — primary: 문틀, secondary: 유리, accent: 간판
+  { id: "door_classic", name: "클래식 문", slot: "door", cost: 0,
+    colors: { primary: 0x5a3b22, secondary: 0xdff0f5, accent: 0x86caa5 } },
+  { id: "door_black", name: "블랙 프레임 문", slot: "door", cost: 3000,
+    colors: { primary: 0x2b2b2f, secondary: 0xe7f2f5, accent: 0xc0a062 } },
+  { id: "door_red", name: "레드 도어", slot: "door", cost: 8000,
+    colors: { primary: 0x8a3b34, secondary: 0xf5e6d8, accent: 0xf5c542 } },
+  { id: "door_glass", name: "올글라스 도어", slot: "door", cost: 18000,
+    colors: { primary: 0x9fb4bd, secondary: 0xeaf6f8, accent: 0x4a9d94 } },
+];
+
+/** 처음부터 갖고 있는 기본 인테리어 (자리마다 하나씩) */
+export const STARTING_DECOR = DECOR.filter((d) => d.cost === 0).map((d) => d.id);
+
+export function decorById(id: string): DecorDef | undefined {
+  return DECOR.find((d) => d.id === id);
+}
+
+export function decorOfSlot(slot: DecorSlot): DecorDef[] {
+  return DECOR.filter((d) => d.slot === slot);
 }

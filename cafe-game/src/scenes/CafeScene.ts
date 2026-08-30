@@ -14,12 +14,15 @@ import {
   BUBBLE_BOX_OFFSET,
   bodyKey,
   buildArt,
+  chairKey,
+  doorKey,
   equipKey,
   hairKey,
   headKey,
   itemKey,
   personKey,
   publishIconUrls,
+  tableKey,
 } from "../game/art";
 
 export const VIRTUAL_WIDTH = 720;
@@ -59,14 +62,18 @@ const DIRTY_ITEM_DX = 34;
 const DIRTY_ITEM_DY = TABLE_TOP_DY - 22;
 
 /* 직원이 치울 때 서는 자리 — 의자(SEAT_DX=74)보다 훨씬 안쪽, 흔적 바로
-   옆이라 "다가가서 치우는" 것처럼 보입니다. */
+   옆이라 "다가가서 치우는" 것처럼 보입니다.
+   Y는 테이블 상판 그림의 세로 중심(TABLE_TOP_DY)과 맞춰서, 깊이상 상판
+   뒤에 놓이는 직원의 다리~허리가 상판에 실제로 가려지게 합니다
+   (그냥 자리 위치(y=0)에 세우면 상판 그림과 거의 안 겹쳐서 안 가려 보여요). */
 const CLEAN_STAND_DX = 40;
+const CLEAN_STAND_DY = TABLE_TOP_DY;
 
-/* 청소 게이지는 흔적과 겹치지 않도록, 직원이 서는 자리보다 더 바깥쪽 위에 띄웁니다. */
-const CLEAN_GAUGE_OUT = 30;
-const CLEAN_GAUGE_UP = 66;
-const CLEAN_GAUGE_W = 10;
-const CLEAN_GAUGE_H = 54;
+/* 청소 게이지는 손님 인내심 막대와 같은 모양(가로 막대)으로, 직원 머리
+   위에 띄워서 자연스럽게 보이게 합니다. */
+const CLEAN_GAUGE_UP = 92;
+const CLEAN_GAUGE_W = 40;
+const CLEAN_GAUGE_H = 7;
 
 /* 손님 그림의 각 부분이 놓이는 자리 (앉은 자리 기준).
    머리와 몸이 붙어 보이도록 겹치게 두고, 말풍선·막대는 머리 바로 위에
@@ -159,6 +166,7 @@ export class CafeScene extends Phaser.Scene {
 
     bus.on(EVENTS.LAYOUT_CHANGED, this.onLayoutChanged, this);
     bus.on(EVENTS.UNIFORM_CHANGED, this.applyUniforms, this);
+    bus.on(EVENTS.DECOR_CHANGED, this.applyDecor, this);
     bus.on(EVENTS.FLOOR_SWITCHED, this.onFloorSwitched, this);
     bus.on(EVENTS.SERVED, this.onServed, this);
     bus.on(EVENTS.CUSTOMER_ANGRY, this.onAngry, this);
@@ -168,6 +176,7 @@ export class CafeScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       bus.off(EVENTS.LAYOUT_CHANGED, this.onLayoutChanged, this);
       bus.off(EVENTS.UNIFORM_CHANGED, this.applyUniforms, this);
+      bus.off(EVENTS.DECOR_CHANGED, this.applyDecor, this);
       bus.off(EVENTS.FLOOR_SWITCHED, this.onFloorSwitched, this);
       bus.off(EVENTS.SERVED, this.onServed, this);
       bus.off(EVENTS.CUSTOMER_ANGRY, this.onAngry, this);
@@ -186,18 +195,28 @@ export class CafeScene extends Phaser.Scene {
 
   /* ---------------------------- 가게 배경 ---------------------------- */
 
+  /** 인테리어(바닥·벽지·문)를 바꾸면 통째로 지우고 다시 그립니다 */
+  private roomGraphics?: Phaser.GameObjects.Graphics;
+  private doorImage?: Phaser.GameObjects.Image;
+
   private drawRoom() {
+    this.roomGraphics?.destroy();
+    this.doorImage?.destroy();
+
     const g = this.add.graphics().setDepth(-10);
+    this.roomGraphics = g;
     const floorTop = COUNTER_Y + COUNTER_H - 6;
+    const wallColor = gameState.decorColors("wallpaper").primary;
+    const floorColors = gameState.decorColors("floor");
 
     // 카운터 뒤쪽 벽
-    g.fillStyle(0xd9c3a0, 1);
+    g.fillStyle(wallColor, 1);
     g.fillRect(0, 0, VIRTUAL_WIDTH, floorTop);
 
     // 바닥 (체크 무늬)
-    g.fillStyle(0xe4d0ad, 1);
+    g.fillStyle(floorColors.primary, 1);
     g.fillRect(0, floorTop, VIRTUAL_WIDTH, VIRTUAL_HEIGHT);
-    g.fillStyle(0xd8c096, 1);
+    g.fillStyle(floorColors.secondary, 1);
     for (let y = floorTop; y < VIRTUAL_HEIGHT; y += 96) {
       for (let x = 0; x < VIRTUAL_WIDTH; x += 96) {
         const shift = Math.floor((y - floorTop) / 96) % 2 === 0 ? 0 : 48;
@@ -206,14 +225,20 @@ export class CafeScene extends Phaser.Scene {
     }
 
     // 문 앞 바닥 매트 — 입구를 눈에 띄게 해줍니다
-    g.fillStyle(0xc9a97a, 1);
+    g.fillStyle(floorColors.accent, 1);
     g.fillRoundedRect(DOOR.x - 90, DOOR.y + 58, 180, 32, 12);
 
     // 손님이 드나드는 문 (가게 앞쪽). 입구답게 조금 크게 그립니다.
-    this.add
-      .image(DOOR.x, DOOR.y, "door")
+    this.doorImage = this.add
+      .image(DOOR.x, DOOR.y, doorKey(gameState.equippedDecor("door")))
       .setScale(ART_SCALE * 1.4)
       .setDepth(-5);
+  }
+
+  /** 인테리어를 사거나 바꿔 입으면 바닥·벽지·문·테이블·의자를 새로 그립니다 */
+  private applyDecor() {
+    this.drawRoom();
+    this.rebuildTables();
   }
 
   private drawCounter() {
@@ -397,7 +422,7 @@ export class CafeScene extends Phaser.Scene {
         const table = tablePosition(Math.floor(i / SEATS_PER_TABLE));
         cleaningTarget.set(seat.assignedServer, {
           x: table.x + side * CLEAN_STAND_DX,
-          y: table.y,
+          y: table.y + CLEAN_STAND_DY,
           side,
         });
       }
@@ -433,8 +458,11 @@ export class CafeScene extends Phaser.Scene {
       if (cleanJob) {
         // 치우는 동안은 걸음 방향으로 흔들리지 않도록, 테이블 쪽을 향해 고정합니다.
         img.setFlipX(cleanJob.side > 0);
+        // 손님처럼 테이블 상판(깊이 4) 뒤로 살짝 가려지게 해서 자연스럽게 붙어 서게 합니다.
+        img.setDepth(3);
       } else {
         img.setFlipX(nextX < img.x - 0.4);
+        img.setDepth(5);
       }
       img.setX(nextX);
       img.setY(Phaser.Math.Linear(img.y, target.y, 0.06));
@@ -489,7 +517,7 @@ export class CafeScene extends Phaser.Scene {
         const seat = seatPosition(seatIndex);
 
         const chair = this.add
-          .image(seat.x, seat.y + CHAIR_DY, "chair")
+          .image(seat.x, seat.y + CHAIR_DY, chairKey(gameState.equippedDecor("chair")))
           .setScale(ART_SCALE)
           .setDepth(1);
 
@@ -501,19 +529,20 @@ export class CafeScene extends Phaser.Scene {
           .setVisible(false);
         this.dirtyIcons.set(seatIndex, dirtyIcon);
 
-        // 청소 게이지 — 직원이 서는 자리보다 더 바깥쪽 위에 세로로 세우고,
-        // 흔적(더러운 컵)과 겹치지 않게 합니다. 치우는 동안 아래에서부터 채웁니다.
+        // 청소 게이지 — 손님 인내심 막대와 같은 가로 막대 모양으로,
+        // 직원이 서는 자리 머리 위에 띄웁니다 (왼쪽부터 채워집니다).
         const standX = pos.x + dirtySide * CLEAN_STAND_DX;
-        const gaugeX = standX + dirtySide * CLEAN_GAUGE_OUT;
-        const gaugeY = pos.y - CLEAN_GAUGE_UP;
+        const standY = pos.y + CLEAN_STAND_DY;
+        const gaugeY = standY - CLEAN_GAUGE_UP;
+        const gaugeLeft = standX - CLEAN_GAUGE_W / 2;
         const gaugeBg = this.add
-          .rectangle(gaugeX, gaugeY, CLEAN_GAUGE_W, CLEAN_GAUGE_H, 0x000000, 0.28)
-          .setOrigin(0.5, 1)
+          .rectangle(gaugeLeft, gaugeY, CLEAN_GAUGE_W, CLEAN_GAUGE_H, 0x000000, 0.28)
+          .setOrigin(0, 0.5)
           .setDepth(6)
           .setVisible(false);
         const gaugeFill = this.add
-          .rectangle(gaugeX, gaugeY, CLEAN_GAUGE_W, 0, 0x4aa3df, 1)
-          .setOrigin(0.5, 1)
+          .rectangle(gaugeLeft, gaugeY, 0, CLEAN_GAUGE_H, 0x4aa3df, 1)
+          .setOrigin(0, 0.5)
           .setDepth(6)
           .setVisible(false);
         this.cleanGauges.set(seatIndex, { bg: gaugeBg, fill: gaugeFill });
@@ -531,7 +560,7 @@ export class CafeScene extends Phaser.Scene {
       // 상판은 손님 앞(깊이 4)에 덮여, 두 손님이 마주 앉은 것처럼 보입니다.
       this.roomParts.push(
         this.add
-          .image(pos.x, pos.y + TABLE_TOP_DY, "table-top")
+          .image(pos.x, pos.y + TABLE_TOP_DY, tableKey(gameState.equippedDecor("table")))
           .setScale(ART_SCALE)
           .setDepth(4),
       );
@@ -554,7 +583,7 @@ export class CafeScene extends Phaser.Scene {
       }
       if (cleaning) {
         const progress = Phaser.Math.Clamp(1 - seat!.cleanLeft / seat!.cleanTotal, 0, 1);
-        gauge.fill.setSize(CLEAN_GAUGE_W, CLEAN_GAUGE_H * progress);
+        gauge.fill.setSize(CLEAN_GAUGE_W * progress, CLEAN_GAUGE_H);
       }
     }
   }

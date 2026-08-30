@@ -36,4 +36,6 @@ export const EVENTS = {
   DAY_CLOSED: "day-closed",
   /** 유니폼을 사거나 갈아입었음 (화면의 직원 옷을 바꿉니다) */
   UNIFORM_CHANGED: "uniform-changed",
+  /** 인테리어를 사거나 바꿔 씀 (화면의 바닥·벽지·가구·문을 바꿉니다) */
+  DECOR_CHANGED: "decor-changed",
 } as const;
