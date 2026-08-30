@@ -1,6 +1,5 @@
 import { bus, EVENTS } from "../game/bus";
 import {
-  AUTO_RESTOCK_BATCH,
   AUTO_RESTOCK_THRESHOLD,
   CLOSE_HOUR,
   DAY_CLOSE_AUTO_MS,
@@ -566,14 +565,28 @@ export function mountUI(root: HTMLElement) {
   function renderSupplyPanel() {
     const gm = gameState.data.generalManager;
     const items = gameState.sellableAnywhere();
-    // 점장을 고용하면 실제로 자동 발주되는 단위(더 큰 묶음)로 표시를 맞춥니다.
-    const batch = gm ? AUTO_RESTOCK_BATCH : SUPPLY_BATCH;
 
     const rows = items
       .map((item) => {
         const stock = gameState.stockOf(item.id);
-        const cost = gameState.restockCost(item.id, batch);
         const cls = stock === 0 ? "zero" : stock < AUTO_RESTOCK_THRESHOLD ? "low" : "";
+
+        // 점장이 있으면 알아서 채워주므로, 직접 발주 버튼 대신 "완전 자동" 표시만 보여줍니다.
+        if (gm) {
+          return `
+            <div class="row">
+              ${ic(itemKey(item.id), 40)}
+              <div class="row-main">
+                <div class="row-label">${item.name}
+                  <span class="pill ${cls}">재고 ${stock}</span>
+                </div>
+                <div class="row-sub">점장이 알아서 채워줘요 · 개당 원가 ${item.supplyCost}코인</div>
+              </div>
+              <div class="buy-btn" style="background:#f0e3ca;color:#7a5a33">∞</div>
+            </div>`;
+        }
+
+        const cost = gameState.restockCost(item.id, SUPPLY_BATCH);
         return `
           <div class="row">
             ${ic(itemKey(item.id), 40)}
@@ -581,7 +594,7 @@ export function mountUI(root: HTMLElement) {
               <div class="row-label">${item.name}
                 <span class="pill ${cls}">재고 ${stock}</span>
               </div>
-              <div class="row-sub">${batch}개 발주 · 개당 원가 ${item.supplyCost}코인</div>
+              <div class="row-sub">${SUPPLY_BATCH}개 발주 · 개당 원가 ${item.supplyCost}코인</div>
             </div>
             <button class="buy-btn" data-restock="${item.id}"
               ${gameState.data.coins < cost ? "disabled" : ""}>${coin(cost)}</button>
@@ -632,7 +645,7 @@ export function mountUI(root: HTMLElement) {
     bodyEl.innerHTML = `
       <div class="note">${
         gm
-          ? "점장이 재고를 알아서 채워줍니다. 직접 발주해도 돼요."
+          ? "점장이 재고를 완전히 알아서 채워줍니다. 신경 쓰지 않아도 돼요."
           : "재고가 없으면 손님이 들어오지 않아요. 팔 물건을 미리 발주해두세요."
       }</div>
       <h3>점장</h3>
@@ -653,7 +666,7 @@ export function mountUI(root: HTMLElement) {
     });
     wire("[data-restock]", (el) => {
       const id = el.dataset.restock!;
-      if (gameState.restock(id, batch)) {
+      if (gameState.restock(id, SUPPLY_BATCH)) {
         gameState.save();
         bus.emit(EVENTS.COINS_CHANGED);
         bus.emit(EVENTS.STOCK_CHANGED);
