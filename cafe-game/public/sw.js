@@ -3,7 +3,7 @@
  * 한 번 열어본 파일을 저장해두고, 인터넷이 끊겨도 게임이 열리게 해줍니다.
  * 새 버전을 배포하면 CACHE 이름을 바꿔주세요.
  */
-const CACHE = "cafe-game-v1";
+const CACHE = "cafe-game-v2";
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();
@@ -26,10 +26,11 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
   if (new URL(request.url).origin !== self.location.origin) return;
 
-  // 페이지 이동은 네트워크 우선, 실패하면 캐시에 있는 첫 화면을 보여줍니다.
+  // 페이지 이동은 항상 최신 버전을 받아옵니다 (브라우저 자체 캐시도 건너뜀).
+  // 실패하면(오프라인) 캐시에 있는 첫 화면을 보여줍니다.
   if (request.mode === "navigate") {
     event.respondWith(
-      fetch(request).catch(() =>
+      fetch(request, { cache: "no-store" }).catch(() =>
         caches.match("./").then((hit) => hit || Response.error()),
       ),
     );
