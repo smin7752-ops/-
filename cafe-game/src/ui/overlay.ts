@@ -737,7 +737,7 @@ export function mountUI(root: HTMLElement) {
 
       ${UNIFORM_SLOTS.map(
         (slot) => `
-        <h3>${SLOT_NAME[slot]}</h3>
+        <h3>${slot === "barista" ? kitchenRoleName() : SLOT_NAME[slot]}</h3>
         ${uniformsOfSlot(slot).map(uniformRow).join("")}`,
       ).join("")}
     `;
@@ -1109,8 +1109,22 @@ export function mountUI(root: HTMLElement) {
 
   /* ---------------------------- 직원 패널 ---------------------------- */
 
+  /** "바리스타" 직급을 지금 가게에 맞는 이름으로 (분식집·포차는 "주방 직원") */
+  function kitchenRoleName(): string {
+    return gameState.cfg().kitchenRoleName;
+  }
+
+  /** 받침 유무에 따라 조사를 골라 붙입니다 (예: 바리스타 + 가/이, 주방 직원 + 이/가) */
+  function withParticle(word: string, withBatchim: string, withoutBatchim: string): string {
+    const last = word.charCodeAt(word.length - 1);
+    const hasBatchim =
+      last >= 0xac00 && last <= 0xd7a3 ? (last - 0xac00) % 28 !== 0 : false;
+    return `${word}${hasBatchim ? withBatchim : withoutBatchim}`;
+  }
+
   function roleRow(role: Role, floorIndex: number): string {
     const info = ROLE_INFO[role];
+    const displayName = role === "barista" ? kitchenRoleName() : info.name;
     const count = gameState.roleCount(floorIndex, role);
     const max = roleMax(role);
     const full = count >= max;
@@ -1144,7 +1158,7 @@ export function mountUI(root: HTMLElement) {
       <div class="row">
         ${ic(staffKey(role), 40)}
         <div class="row-main">
-          <div class="row-label">${info.name} ${badge}</div>
+          <div class="row-label">${displayName} ${badge}</div>
           <div class="row-sub">${info.desc}${
             upgradable && count > 0
               ? ` · 지금 팁 <b>+${Math.round(managerTipRate(count) * 100)}%</b>`
@@ -1170,7 +1184,7 @@ export function mountUI(root: HTMLElement) {
     const floorWage = gameState.floorWageTotal(floorIndex);
 
     bodyEl.innerHTML = `
-      <div class="note">직원은 <b>층마다 따로</b> 고용해요. 바리스타와 홀 직원은
+      <div class="note">직원은 <b>층마다 따로</b> 고용해요. ${withParticle(kitchenRoleName(), "과", "와")} 홀 직원은
       <b>${roleMax("barista")}명</b>까지 뽑을 수 있고 사람이 많을수록 그만큼 빨라집니다.
       매니저는 한 명이지만 <b>Lv.${roleMax("manager")}</b> 까지 강화할 수 있어요.
       위층 직원일수록 고용비도 인건비도 비쌉니다
@@ -1187,7 +1201,7 @@ export function mountUI(root: HTMLElement) {
       </div>
 
       <div class="note">
-        바리스타가 없으면 손님을 눌러 <b>직접 만들어야</b> 하고,
+        ${withParticle(kitchenRoleName(), "이", "가")} 없으면 손님을 눌러 <b>직접 만들어야</b> 하고,
         홀 직원이 없으면 <b>직접 서빙하고 테이블도 치워야</b> 해요.
         둘 다 있는 층만 자리를 비운 동안에도 돈을 법니다.
         인건비는 <b>밤 ${CLOSE_HOUR}시 마감할 때</b> 하루치가 한 번에 나갑니다.

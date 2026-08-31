@@ -78,4 +78,15 @@ if ("serviceWorker" in navigator) {
       // 오프라인 캐시는 없어도 게임은 정상 동작합니다.
     });
   });
+  // 앱을 오래 켜두고 있는 동안 새 버전이 배포되면(백그라운드에서 새 서비스
+  // 워커가 활성화되면), 지금 켜져 있는 화면은 저장 데이터를 최신 상태로
+  // 남겨둔 채 새로고침해서 최신 버전으로 자동으로 넘어갑니다. 안 그러면
+  // 앱을 껐다 켜기 전까지 방금 고친 버그가 화면에 반영되지 않습니다.
+  let reloadedForUpdate = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (reloadedForUpdate) return;
+    reloadedForUpdate = true;
+    gameState.save();
+    window.location.reload();
+  });
 }

@@ -826,6 +826,8 @@ export interface RestaurantConfig {
   costScale: number;
   /** 이 가게를 짓는 데 드는 비용 (카페는 처음부터 있으니 0) */
   buildCost: number;
+  /** "바리스타" 직급을 이 가게에서 부르는 이름 (분식집·포차는 "주방 직원") */
+  kitchenRoleName: string;
 }
 
 /** 카페의 4층(floorIndex=3) 증축 비용 — 분식집을 짓는 기준값이 됩니다 */
@@ -922,19 +924,19 @@ export const RESTAURANTS: Record<RestaurantId, RestaurantConfig> = {
     id: "cafe", name: "카페", mainLabel: "음료", sideLabel: "디저트",
     drinks: DRINKS, desserts: DESSERTS, sets: SETS, equipment: EQUIPMENT,
     startingEquipment: STARTING_EQUIPMENT, startingLaunched: STARTING_LAUNCHED,
-    costScale: 1, buildCost: 0,
+    costScale: 1, buildCost: 0, kitchenRoleName: "바리스타",
   },
   bunsik: {
     id: "bunsik", name: "분식집", mainLabel: "메인", sideLabel: "사이드",
     drinks: BUNSIK_MAIN, desserts: BUNSIK_SIDE, sets: BUNSIK_SETS, equipment: BUNSIK_EQUIPMENT,
     startingEquipment: [BUNSIK_EQUIPMENT[0].id], startingLaunched: [BUNSIK_MAIN[0].id],
-    costScale: BUNSIK_COST_SCALE, buildCost: CAFE_TOP_FLOOR_COST,
+    costScale: BUNSIK_COST_SCALE, buildCost: CAFE_TOP_FLOOR_COST, kitchenRoleName: "주방 직원",
   },
   pocha: {
     id: "pocha", name: "포차", mainLabel: "메인", sideLabel: "사이드",
     drinks: POCHA_MAIN, desserts: POCHA_SIDE, sets: POCHA_SETS, equipment: POCHA_EQUIPMENT,
     startingEquipment: [POCHA_EQUIPMENT[0].id], startingLaunched: [POCHA_MAIN[0].id],
-    costScale: POCHA_COST_SCALE, buildCost: BUNSIK_TOP_FLOOR_COST,
+    costScale: POCHA_COST_SCALE, buildCost: BUNSIK_TOP_FLOOR_COST, kitchenRoleName: "주방 직원",
   },
 };
 
