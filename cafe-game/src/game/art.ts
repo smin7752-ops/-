@@ -10,7 +10,13 @@
  * ------------------------------------------------------------------ */
 
 import Phaser from "phaser";
-import { ALL_MENU, decorOfSlot, EQUIPMENT, UNIFORMS, type UniformSlot } from "./config";
+import {
+  ALL_RESTAURANTS_EQUIPMENT,
+  ALL_RESTAURANTS_MENU,
+  decorOfSlot,
+  UNIFORMS,
+  type UniformSlot,
+} from "./config";
 
 /** 2배로 그린 그림을 화면에 올릴 때 줄이는 비율 */
 export const ART_SCALE = 0.5;
@@ -557,6 +563,343 @@ function buildEquipment(scene: Phaser.Scene) {
     g.strokeRoundedRect(28, 46, 94, 66, 10);
     blob(g, 34, 28, 82, 12, 6, 0x6f7684, 4); // 손잡이
     disc(g, 128, 34, 7, 0xf07f7f, 4);
+  });
+}
+
+/* ------------------------------------------------------------------ *
+ * 분식집 · 포차 그림 도우미 (여러 메뉴가 같은 모양을 우려먹습니다)
+ * ------------------------------------------------------------------ */
+
+/** 국물/소스가 담긴 그릇. 96x96 캔버스 기준. */
+function bowl(g: Phaser.GameObjects.Graphics, liquid: number) {
+  blob(g, 16, 52, 64, 34, 14, ART_COLORS.paper, 5); // 그릇 몸통
+  oval(g, 48, 52, 60, 20, liquid, 4); // 국물/소스
+  g.lineStyle(4, INK, 0.35);
+  g.lineBetween(20, 76, 76, 76);
+}
+
+/** 꼬치에 재료를 번갈아 꽂은 그림. items는 [색, 세로위치]입니다. */
+function skewer(g: Phaser.GameObjects.Graphics, colors: number[]) {
+  g.lineStyle(5, 0xc9a97a, 1); // 나무 꼬치
+  g.lineBetween(48, 84, 48, 14);
+  const step = 56 / colors.length;
+  colors.forEach((c, i) => {
+    const y = 26 + i * step;
+    disc(g, 48, y, step * 0.46, c, 4);
+  });
+}
+
+/** 접시 하나 (튀김·전 같은 걸 올릴 때 바탕으로 씁니다) */
+function plate(g: Phaser.GameObjects.Graphics) {
+  oval(g, 48, 66, 76, 24, ART_COLORS.paper, 5);
+  g.lineStyle(3, INK, 0.25);
+  oval(g, 48, 63, 56, 15, ART_COLORS.paper, 0);
+}
+
+/** 김밥 한 알 (검은 김 테두리 + 속재료 점) */
+function gimbapSlice(
+  g: Phaser.GameObjects.Graphics,
+  x: number,
+  y: number,
+  r: number,
+  fillings: number[],
+) {
+  disc(g, x, y, r, 0xf3ede1, 4);
+  g.lineStyle(Math.max(6, r * 0.4), 0x2b2b2f, 1);
+  g.strokeCircle(x, y, r);
+  const step = (Math.PI * 2) / fillings.length;
+  fillings.forEach((c, i) => {
+    const a = i * step;
+    disc(g, x + Math.cos(a) * r * 0.4, y + Math.sin(a) * r * 0.4, r * 0.22, c, 0);
+  });
+}
+
+function buildBunsikArt(scene: Phaser.Scene) {
+  const T = (id: string, draw: Draw) => tex(scene, itemKey(id), 96, 96, draw);
+
+  T("bunsik_tteokbokki", (g) => {
+    bowl(g, 0xd0432f);
+    [30, 46, 62, 40, 56].forEach((x, i) =>
+      blob(g, x - 6, 30 - (i % 2) * 6, 12, 28, 6, 0xf3ede1, 3),
+    );
+  });
+  T("bunsik_rabokki", (g) => {
+    bowl(g, 0xc73a2a);
+    g.lineStyle(5, 0xf2d764, 1);
+    for (let i = 0; i < 3; i++) {
+      g.beginPath();
+      g.arc(34 + i * 14, 42, 10, Phaser.Math.DegToRad(200), Phaser.Math.DegToRad(430));
+      g.strokePath();
+    }
+    blob(g, 42, 26, 12, 24, 6, 0xf3ede1, 3);
+  });
+  T("bunsik_ramen", (g) => {
+    bowl(g, 0xb8482c);
+    g.lineStyle(5, 0xf2d764, 1);
+    for (let i = 0; i < 4; i++) {
+      g.beginPath();
+      g.arc(28 + i * 12, 44, 9, Phaser.Math.DegToRad(190), Phaser.Math.DegToRad(420));
+      g.strokePath();
+    }
+    disc(g, 66, 38, 11, 0xfaf0d4, 4); // 반숙란
+    disc(g, 66, 38, 5, 0xf0a35e, 0);
+  });
+  T("bunsik_twigim", (g) => {
+    plate(g);
+    [[30, 46], [50, 40], [68, 48]].forEach(([x, y], i) => {
+      g.fillStyle(0xe0a95c, 1);
+      g.beginPath();
+      g.moveTo(x, y + 22);
+      g.lineTo(x - 9, y - 14);
+      g.lineTo(x + 9, y - 14);
+      g.closePath();
+      g.fillPath();
+      g.lineStyle(4, INK, 1);
+      g.strokePath();
+      if (i === 1) disc(g, x, y - 18, 6, 0xf29ab4, 3); // 새우꼬리
+    });
+  });
+  T("bunsik_odeng_tang", (g) => {
+    bowl(g, 0xc9a25a);
+    skewer(g, [0xf3ede1, 0xf3ede1, 0xf3ede1]);
+  });
+  T("bunsik_jjajang_tteok", (g) => {
+    bowl(g, 0x3a2c22);
+    [30, 46, 62, 40].forEach((x, i) =>
+      blob(g, x - 6, 30 - (i % 2) * 6, 12, 26, 6, 0xf3ede1, 3),
+    );
+  });
+
+  T("bunsik_sundae", (g) => {
+    plate(g);
+    [28, 48, 68].forEach((x) => {
+      disc(g, x, 54, 13, 0x8a5a5a, 4);
+      disc(g, x, 54, 5, 0x5a3b3b, 0);
+    });
+    g.fillStyle(0x4a3226, 0.6);
+    [24, 44, 64].forEach((x) => g.fillCircle(x - 6, 46, 1.6));
+  });
+  T("bunsik_hotteok", (g) => {
+    disc(g, 48, 54, 32, 0xd9a05b, 5);
+    disc(g, 48, 54, 20, 0xc0834a, 0);
+    g.fillStyle(0x6b4630, 0.5);
+    [[40, 48], [56, 60], [44, 64]].forEach(([x, y]) => g.fillCircle(x, y, 2.4));
+  });
+  T("bunsik_gimbap", (g) => {
+    gimbapSlice(g, 48, 50, 30, [0xf2d764, 0xe4595f, 0x69ab5a, 0xf3ede1]);
+  });
+  T("bunsik_tuna_gimbap", (g) => {
+    gimbapSlice(g, 48, 50, 30, [0xf29ab4, 0xf2d764, 0x69ab5a]);
+  });
+  T("bunsik_odeng_skewer", (g) => {
+    skewer(g, [0xf3ede1, 0xf3ede1, 0xf3ede1, 0xf3ede1]);
+  });
+  T("bunsik_toast", (g) => {
+    blob(g, 18, 60, 60, 20, 6, 0xe0a95c, 5); // 아래 식빵
+    blob(g, 20, 44, 56, 14, 4, 0xfaf0d4, 4); // 계란마요
+    blob(g, 18, 26, 60, 20, 6, 0xe0a95c, 5); // 위 식빵
+  });
+}
+
+function buildPochaArt(scene: Phaser.Scene) {
+  const T = (id: string, draw: Draw) => tex(scene, itemKey(id), 96, 96, draw);
+
+  T("pocha_gyeranmari", (g) => {
+    plate(g);
+    for (let i = 0; i < 3; i++) {
+      const x = 30 + i * 18;
+      blob(g, x - 9, 34, 18, 30, 6, 0xf2d764, 4);
+      g.lineStyle(3, 0xe0b84a, 1);
+      g.beginPath();
+      g.moveTo(x - 9, 40);
+      g.lineTo(x + 9, 46);
+      g.strokePath();
+    }
+  });
+  T("pocha_dakkochi", (g) => skewer(g, [0xc9895a, 0x69ab5a, 0xc9895a, 0x69ab5a]));
+  T("pocha_odengtang", (g) => {
+    bowl(g, 0x8a6a3a);
+    skewer(g, [0xf3ede1, 0xf3ede1]);
+  });
+  T("pocha_golbaengi", (g) => {
+    plate(g);
+    [[32, 50], [50, 44], [64, 54]].forEach(([x, y]) => {
+      g.lineStyle(4, INK, 1);
+      g.fillStyle(0xe0a95c, 1);
+      g.beginPath();
+      g.arc(x, y, 9, Phaser.Math.DegToRad(0), Phaser.Math.DegToRad(340));
+      g.strokePath();
+      g.beginPath();
+      g.arc(x, y, 5, Phaser.Math.DegToRad(0), Phaser.Math.DegToRad(320));
+      g.strokePath();
+    });
+    g.lineStyle(3, 0xd0432f, 0.7);
+    g.lineBetween(24, 66, 72, 62);
+  });
+  T("pocha_jokbal", (g) => {
+    plate(g);
+    blob(g, 30, 30, 36, 34, 16, 0xa8703c, 5);
+    blob(g, 40, 18, 16, 20, 6, 0xe4d0ad, 4); // 뼈
+    g.fillStyle(0x000000, 0.12);
+    g.fillEllipse(48, 46, 26, 12);
+  });
+  T("pocha_haemul_pajeon", (g) => {
+    disc(g, 48, 54, 34, 0xe0b84a, 5);
+    g.lineStyle(4, 0x69ab5a, 1);
+    [20, 36, 52, 68].forEach((x) => g.lineBetween(x, 30, x - 6, 74));
+    disc(g, 40, 44, 6, 0xf29ab4, 3); // 새우
+    disc(g, 58, 56, 7, 0xd8d8e0, 3); // 오징어
+  });
+
+  T("pocha_gamja_twigim", (g) => {
+    plate(g);
+    for (let i = 0; i < 5; i++) {
+      const x = 28 + i * 10;
+      const h = 34 + (i % 2) * 6;
+      g.fillStyle(0xf2d764, 1);
+      g.fillRoundedRect(x, 60 - h, 8, h, 3);
+      g.lineStyle(3, 0xc9a25a, 1);
+      g.strokeRoundedRect(x, 60 - h, 8, h, 3);
+    }
+  });
+  T("pocha_chicken_gangjeong", (g) => {
+    plate(g);
+    [[32, 48], [50, 42], [66, 50], [42, 58]].forEach(([x, y]) => {
+      disc(g, x, y, 11, 0xc9622f, 4);
+      g.fillStyle(0xf5c542, 0.5);
+      g.fillCircle(x - 3, y - 3, 2);
+    });
+  });
+  T("pocha_gyeranjjim", (g) => {
+    blob(g, 18, 48, 60, 30, 10, 0x3a2c22, 5); // 뚝배기
+    oval(g, 48, 46, 54, 22, 0xf2d764, 4);
+    g.lineStyle(3, 0xffffff, 0.5);
+    g.beginPath();
+    g.moveTo(56, 22);
+    g.lineTo(52, 10);
+    g.strokePath();
+  });
+  T("pocha_ojingeo_bokkeum", (g) => {
+    plate(g);
+    [[30, 48], [48, 44], [66, 50]].forEach(([x, y]) => {
+      g.lineStyle(5, INK, 1);
+      g.fillStyle(0xd0432f, 1);
+      g.strokeCircle(x, y, 10);
+      g.fillCircle(x, y, 10);
+      g.fillStyle(0xf3ede1, 1);
+      g.fillCircle(x, y, 4);
+    });
+  });
+  T("pocha_yangnyeom_tongdak", (g) => {
+    plate(g);
+    disc(g, 48, 48, 30, 0xc9622f, 5);
+    g.fillStyle(0xf5c542, 0.5);
+    [[36, 38], [58, 44], [44, 58]].forEach(([x, y]) => g.fillCircle(x, y, 2.4));
+  });
+  T("pocha_modum_jeon", (g) => {
+    plate(g);
+    disc(g, 34, 50, 15, 0x69ab5a, 4);
+    disc(g, 58, 44, 15, 0xe0a95c, 4);
+    disc(g, 48, 62, 13, 0xf3ede1, 4);
+  });
+}
+
+function buildRestaurantEquipment(scene: Phaser.Scene) {
+  const S = ART_COLORS;
+
+  // 분식집 화로 — 130x110
+  tex(scene, equipKey("bunsik_stove"), 130, 110, (g) => {
+    blob(g, 10, 76, 110, 20, 8, S.steelDark, 5); // 화로대
+    disc(g, 65, 50, 38, 0xd0432f, 5); // 냄비
+    oval(g, 65, 38, 60, 16, 0xe85a3f, 4);
+    g.fillStyle(0xf0a35e, 0.85); // 불꽃
+    [40, 65, 90].forEach((x) => {
+      g.beginPath();
+      g.moveTo(x, 90);
+      g.lineTo(x - 6, 78);
+      g.lineTo(x + 6, 78);
+      g.closePath();
+      g.fillPath();
+    });
+  });
+  tex(scene, equipKey("bunsik_display"), 160, 130, (g) => {
+    blob(g, 10, 24, 140, 84, 12, 0xdff0f5, 5);
+    blob(g, 10, 96, 140, 24, 8, S.wood, 5);
+    g.lineStyle(4, INK, 0.6);
+    g.lineBetween(10, 66, 150, 66);
+    gimbapSlice(g, 44, 52, 15, [0xf2d764, 0xe4595f, 0x69ab5a]);
+    gimbapSlice(g, 76, 52, 15, [0xf29ab4, 0xf2d764]);
+    disc(g, 116, 86, 13, 0x8a5a5a, 4);
+  });
+  tex(scene, equipKey("bunsik_noodle_pot"), 150, 130, (g) => {
+    blob(g, 20, 92, 110, 22, 8, S.wood, 5);
+    blob(g, 35, 40, 80, 52, 12, 0xc9ccd4, 5); // 냄비
+    g.lineStyle(6, S.steelDark, 1);
+    g.lineBetween(24, 56, 35, 56);
+    g.lineBetween(115, 56, 126, 56);
+    g.fillStyle(0xffffff, 0.5); // 김
+    g.fillEllipse(60, 24, 14, 22);
+    g.fillEllipse(90, 20, 12, 20);
+  });
+  tex(scene, equipKey("bunsik_fryer"), 150, 130, (g) => {
+    blob(g, 18, 44, 114, 62, 12, S.steel, 5);
+    blob(g, 30, 54, 90, 40, 8, 0xe0a95c, 4); // 기름
+    g.fillStyle(0xf5c542, 0.5);
+    g.fillCircle(50, 66, 4);
+    g.fillCircle(80, 60, 3);
+    blob(g, 26, 24, 98, 16, 6, S.steelDark, 4); // 조작판
+    disc(g, 120, 32, 6, 0xf07f7f, 3);
+  });
+  tex(scene, equipKey("bunsik_grill"), 150, 130, (g) => {
+    blob(g, 14, 60, 122, 50, 10, S.steelDark, 5); // 철판
+    oval(g, 75, 60, 108, 24, 0x6f7684, 0);
+    disc(g, 46, 54, 16, 0xd9a05b, 3); // 호떡
+    disc(g, 84, 56, 16, 0xe0a95c, 3);
+    blob(g, 30, 30, 90, 18, 6, S.steel, 4); // 후드
+  });
+
+  // 포차 화로 — 숯불 화로 130x110
+  tex(scene, equipKey("pocha_stove"), 130, 110, (g) => {
+    blob(g, 14, 70, 102, 26, 10, S.steelDark, 5); // 화로 몸통
+    oval(g, 65, 60, 88, 20, 0x2b2b2f, 4); // 숯
+    g.fillStyle(0xf0a35e, 0.9);
+    [42, 65, 88].forEach((x) => disc(g, x, 56, 7, 0xf07f4a, 0));
+    g.lineStyle(5, S.steelDark, 1); // 석쇠
+    for (let x = 30; x <= 100; x += 14) g.lineBetween(x, 40, x, 60);
+  });
+  tex(scene, equipKey("pocha_display"), 160, 130, (g) => {
+    blob(g, 10, 24, 140, 84, 12, 0xdff0f5, 5);
+    blob(g, 10, 96, 140, 24, 8, S.wood, 5);
+    g.lineStyle(4, INK, 0.6);
+    g.lineBetween(10, 66, 150, 66);
+    disc(g, 44, 52, 15, 0xc9622f, 4);
+    disc(g, 76, 52, 15, 0xe0b84a, 4);
+    disc(g, 112, 86, 13, 0xd0432f, 4);
+  });
+  tex(scene, equipKey("pocha_soup_pot"), 150, 130, (g) => {
+    blob(g, 24, 44, 102, 62, 14, 0x2b2b2f, 5); // 큰 솥
+    oval(g, 75, 44, 92, 16, 0x3a3a3f, 4);
+    g.fillStyle(0xffffff, 0.4);
+    g.fillEllipse(60, 20, 16, 24);
+    g.fillEllipse(94, 16, 12, 20);
+    blob(g, 66, 8, 40, 14, 6, S.wood, 4); // 국자 손잡이
+  });
+  tex(scene, equipKey("pocha_charcoal_grill"), 150, 130, (g) => {
+    blob(g, 18, 64, 114, 44, 10, S.steelDark, 5); // 그릴 몸통
+    oval(g, 75, 64, 100, 20, 0x2b2b2f, 4);
+    g.lineStyle(5, S.steel, 1); // 석쇠
+    for (let x = 34; x <= 116; x += 14) g.lineBetween(x, 46, x, 64);
+    g.fillStyle(0xf0a35e, 0.8);
+    [50, 75, 100].forEach((x) => disc(g, x, 40, 5, 0xf07f4a, 0));
+  });
+  tex(scene, equipKey("pocha_special_station"), 150, 130, (g) => {
+    blob(g, 16, 56, 118, 50, 12, S.steel, 5); // 웍
+    oval(g, 75, 56, 104, 22, 0x3f4a5c, 4);
+    g.fillStyle(0xd0432f, 0.85);
+    g.fillEllipse(75, 52, 70, 14);
+    g.lineStyle(6, S.wood, 1); // 손잡이
+    g.lineBetween(20, 50, 4, 40);
+    g.lineBetween(130, 50, 146, 40);
   });
 }
 
@@ -1349,6 +1692,101 @@ function buildWorldArt(scene: Phaser.Scene) {
   });
 }
 
+/** 카페 건물과 같은 아이소메트릭 박스 기법으로, 분식집·포차 건물을 그립니다. */
+function buildRestaurantBuildings(scene: Phaser.Scene) {
+  const S = ART_COLORS;
+  const GLASS = 0xbfe6ef;
+
+  const BW = 300;
+  const BH = 380;
+  const cx = BW / 2;
+  const gcy = 290;
+  const w2 = 105;
+  const h2 = 52;
+  const WALL_H = 120;
+  const T = { x: cx, y: gcy - h2 };
+  const R = { x: cx + w2, y: gcy };
+  const B = { x: cx, y: gcy + h2 };
+  const L = { x: cx - w2, y: gcy };
+  const up = (p: { x: number; y: number }) => ({ x: p.x, y: p.y - WALL_H });
+  const [Tt, Rt, Bt, Lt] = [up(T), up(R), up(B), up(L)];
+
+  const buildBox = (
+    key: string,
+    roof: number,
+    roofDark: number,
+    wall: number,
+    wallShade: number,
+    topper: (g: Phaser.GameObjects.Graphics, chimneyBase: { x: number; y: number }) => void,
+  ) => {
+    tex(scene, key, BW, BH, (g) => {
+      const poly = (pts: { x: number; y: number }[], fill: number) => {
+        g.fillStyle(fill, 1);
+        g.beginPath();
+        g.moveTo(pts[0].x, pts[0].y);
+        for (let i = 1; i < pts.length; i++) g.lineTo(pts[i].x, pts[i].y);
+        g.closePath();
+        g.fillPath();
+        g.lineStyle(5, INK, 1);
+        g.beginPath();
+        g.moveTo(pts[0].x, pts[0].y);
+        for (let i = 1; i < pts.length; i++) g.lineTo(pts[i].x, pts[i].y);
+        g.closePath();
+        g.strokePath();
+      };
+
+      // 바닥에 지는 그림자
+      g.fillStyle(0x000000, 0.16);
+      g.fillEllipse(B.x, B.y + 6, w2 * 1.5, h2 * 1.1);
+
+      // 벽 두 면
+      poly([B, R, Rt, Bt], wallShade);
+      poly([B, L, Lt, Bt], wall);
+
+      // 지붕 두 면 + 용마루 선
+      poly([Tt, Bt, Rt], roofDark);
+      poly([Tt, Lt, Bt], roof);
+      g.lineStyle(5, INK, 1);
+      g.lineBetween(Tt.x, Tt.y, Bt.x, Bt.y);
+
+      const chimneyBase = { x: Tt.x + (Rt.x - Tt.x) * 0.4, y: Tt.y + (Rt.y - Tt.y) * 0.4 };
+      topper(g, chimneyBase);
+
+      // 문 (오른쪽 벽)
+      blob(g, 170, 213, 50, 94, 6, S.woodDark, 5);
+      blob(g, 178, 221, 34, 60, 5, GLASS, 4);
+      disc(g, 205, 260, 4, S.steelDark, 0);
+
+      // 창문 (왼쪽 벽)
+      blob(g, 80, 213, 50, 94, 6, S.woodDark, 5);
+      blob(g, 88, 221, 34, 60, 5, GLASS, 4);
+      g.lineStyle(3, S.woodDark, 1);
+      g.lineBetween(105, 221, 105, 281);
+      g.lineBetween(88, 251, 122, 251);
+
+      // 간판 자리 (글자는 화면에서 따로 얹습니다)
+      blob(g, Bt.x - 70, Bt.y - 28, 140, 32, 10, S.paper, 5);
+    });
+  };
+
+  // 분식집 — 떡볶이색 빨간 지붕, 조리용 환풍 배기구
+  buildBox("world-bunsik-iso", 0xd0432f, 0xa8331f, 0xf4e8ca, 0xe7d6ac, (g, base) => {
+    blob(g, base.x - 9, base.y - 40, 18, 42, 3, S.steel, 5); // 배기구 몸통
+    g.fillStyle(0xffffff, 0.55); // 김
+    g.fillEllipse(base.x, base.y - 48, 12, 18);
+  });
+
+  // 포차 — 주황 천막 지붕, 처마에 매단 홍등
+  buildBox("world-pocha-iso", 0xd9743a, 0xaa5426, 0xc9a97a, 0xb08f60, (g, base) => {
+    g.lineStyle(3, S.woodDark, 1); // 등을 매단 줄
+    g.lineBetween(base.x, base.y - 8, base.x, base.y - 30);
+    disc(g, base.x, base.y - 38, 13, 0xd0432f, 4); // 홍등
+    g.fillStyle(S.woodDark, 1);
+    g.fillRect(base.x - 4, base.y - 48, 8, 8); // 등 꼭지
+    g.fillRect(base.x - 3, base.y - 26, 6, 6); // 등 술
+  });
+}
+
 let built = false;
 
 /** 게임이 켜질 때 한 번만 부르면 됩니다. */
@@ -1357,11 +1795,15 @@ export function buildArt(scene: Phaser.Scene) {
   buildPeople(scene);
   buildMenuArt(scene);
   buildEquipment(scene);
+  buildBunsikArt(scene);
+  buildPochaArt(scene);
+  buildRestaurantEquipment(scene);
   buildFurniture(scene);
   buildBubbles(scene);
   buildIcons(scene);
   buildUiIcons(scene);
   buildWorldArt(scene);
+  buildRestaurantBuildings(scene);
   built = true;
 }
 
@@ -1375,8 +1817,8 @@ const iconUrls: Record<string, string> = {};
 export function publishIconUrls(scene: Phaser.Scene) {
   const keys = [
     "icon-coin",
-    ...ALL_MENU.map((m) => itemKey(m.id)),
-    ...EQUIPMENT.map((e) => equipKey(e.id)),
+    ...ALL_RESTAURANTS_MENU.map((m) => itemKey(m.id)),
+    ...ALL_RESTAURANTS_EQUIPMENT.map((e) => equipKey(e.id)),
     ...["barista", "server", "manager", "gm"].map(staffKey),
     ...UNIFORMS.map((u) => personKey(u.id)),
     ...decorOfSlot("chair").map((d) => chairKey(d.id)),
