@@ -1098,18 +1098,20 @@ class GameState {
     this.applyOfflineEarningsFor(elapsed);
   }
 
-  /** applyOfflineEarnings()와 switchRestaurant() 둘 다 이 계산을 공유합니다 (지금 활성 가게 기준) */
-  private applyOfflineEarningsFor(elapsed: number) {
-    this.offlineEarnings = 0;
-    this.offlineDurationMs = 0;
-    this.offlineServes = 0;
-    if (elapsed < OFFLINE_MIN_AWAY_MS) return;
+  /**
+   * 자리를 비운 동안 얼마나 벌었을지 계산만 합니다 (재고·코인은 안 건드립니다).
+   * applyOfflineEarningsFor()가 실제로 반영할 때와, previewOfflineEarnings()가
+   * 다른 가게를 미리 살짝 보여줄 때 둘 다 이 계산을 함께 씁니다 (지금 활성
+   * 가게 기준 — previewOfflineEarnings()는 잠깐 활성 가게를 바꿔서 씁니다).
+   */
+  private estimateOfflineNet(elapsed: number): { serves: number; net: number } {
+    if (elapsed < OFFLINE_MIN_AWAY_MS) return { serves: 0, net: 0 };
 
     const autoFloors = this.rdata()
       .floors.map((_, i) => i)
       .filter((i) => this.isFloorAutomated(i));
-    if (autoFloors.length === 0) return;
-    if (this.sellableAnywhere().length === 0) return;
+    if (autoFloors.length === 0) return { serves: 0, net: 0 };
+    if (this.sellableAnywhere().length === 0) return { serves: 0, net: 0 };
 
     const gm = this.hasGeneralManager();
 
@@ -1128,29 +1130,61 @@ class GameState {
     }
 
     let serves = Math.floor(servesPerMs * elapsed * OFFLINE_EARNINGS_RATE);
-    if (serves <= 0) return;
+    if (serves <= 0) return { serves: 0, net: 0 };
+    // 총괄 매니저가 없으면 남아있던 재고만큼만 팔 수 있습니다.
+    if (!gm) serves = Math.min(serves, this.totalStock());
+    if (serves <= 0) return { serves: 0, net: 0 };
 
     const avgPrice = this.averagePrice();
     const avgSupply = this.averageSupplyCost();
+    // 총괄 매니저가 알아서 발주하지만, 그 원가는 매출에서 빠집니다.
+    const supplySpent = gm ? Math.round(serves * avgSupply) : 0;
+    const revenue = Math.round(serves * avgPrice);
+    return { serves, net: Math.max(0, revenue - supplySpent) };
+  }
 
-    let supplySpent = 0;
-    if (gm) {
-      // 총괄 매니저가 알아서 발주하지만, 그 원가는 매출에서 빠집니다.
-      supplySpent = Math.round(serves * avgSupply);
+  /** applyOfflineEarnings()와 switchRestaurant() 둘 다 이 계산을 공유합니다 (지금 활성 가게 기준) */
+  private applyOfflineEarningsFor(elapsed: number) {
+    this.offlineEarnings = 0;
+    this.offlineDurationMs = 0;
+    this.offlineServes = 0;
+
+    const { serves, net } = this.estimateOfflineNet(elapsed);
+    if (serves <= 0) return;
+
+    let actualServes = serves;
+    if (this.hasGeneralManager()) {
       this.consumeStockSpread(serves);
       this.autoRestock();
     } else {
-      // 총괄 매니저가 없으면 남아있던 재고만큼만 팔 수 있습니다.
-      serves = this.consumeStockSpread(Math.min(serves, this.totalStock()));
-      if (serves <= 0) return;
+      actualServes = this.consumeStockSpread(serves);
+      if (actualServes <= 0) return;
     }
 
-    const revenue = Math.round(serves * avgPrice);
-    const net = Math.max(0, revenue - supplySpent);
-    this.offlineServes = serves;
+    this.offlineServes = actualServes;
     this.offlineDurationMs = elapsed;
     this.offlineEarnings = net;
     if (net > 0) this.addCoins(net);
+  }
+
+  /**
+   * 지금 안 들어가 있는 다른 가게가 자리를 비운 동안 어느 정도 벌었을지
+   * 미리 보여줄 때 씁니다 (매장 화면에서, 실제로 넣지는 않고 숫자만 계산).
+   */
+  previewOfflineEarnings(id: RestaurantId): number {
+    const r = this.data.restaurants[id];
+    if (!r.constructed) return 0;
+    const cap = r.generalManager ? OFFLINE_EARNINGS_CAP_MS : OFFLINE_NO_GM_CAP_MS;
+    const elapsed = Math.min(Math.max(0, Date.now() - r.lastVisitedAt), cap);
+
+    const prevActive = this.data.activeRestaurant;
+    if (prevActive === id) return 0;
+    this.data.activeRestaurant = id;
+    try {
+      return this.estimateOfflineNet(elapsed).net;
+    } finally {
+      this.data.activeRestaurant = prevActive;
+    }
   }
 
   /** 재고를 골고루 소모합니다. 실제로 소모한 개수를 돌려줍니다. */
