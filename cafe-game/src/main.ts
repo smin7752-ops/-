@@ -18,6 +18,49 @@ function exposeGameForDebug(game: Phaser.Game) {
   (window as unknown as Record<string, unknown>).__phaser = game;
 }
 
+/**
+ * 어딘가에서 예상 못한 오류가 나서 게임이 멈춰버렸을 때, 화면이 그냥
+ * 까맣게 굳어버리는 대신 "다시 시작하기" 버튼이 있는 안내를 보여줍니다.
+ * (버튼을 누르면 저장된 데이터로 새로고침하니 진행 상황은 안전해요.)
+ */
+function showFatalError(detail: string) {
+  if (document.getElementById("fatal-error-overlay")) return;
+  try {
+    gameState.save();
+  } catch {
+    // 저장이 안 되더라도 최소한 안내는 보여줍니다.
+  }
+
+  const overlay = document.createElement("div");
+  overlay.id = "fatal-error-overlay";
+  overlay.style.cssText =
+    "position:fixed;inset:0;z-index:99999;background:rgba(26,18,11,0.97);" +
+    "color:#fffaf2;display:flex;flex-direction:column;align-items:center;" +
+    "justify-content:center;padding:24px;text-align:center;" +
+    "font-family:system-ui,sans-serif;";
+  overlay.innerHTML = `
+    <div style="font-size:40px;margin-bottom:12px;">😵</div>
+    <div style="font-size:18px;font-weight:bold;margin-bottom:8px;">문제가 생겨서 화면이 멈췄어요</div>
+    <div style="font-size:14px;opacity:0.85;margin-bottom:20px;max-width:320px;line-height:1.5;">
+      아래 버튼을 누르면 다시 시작돼요. 지금까지 진행 상황은 저장되어 있으니 걱정 마세요.
+    </div>
+    <button id="fatal-error-reload" style="padding:14px 32px;border-radius:999px;border:none;
+      background:#e8b04b;color:#3b2a20;font-weight:bold;font-size:16px;">다시 시작하기</button>
+    <div style="margin-top:24px;font-size:11px;opacity:0.5;max-width:320px;word-break:break-all;">${detail.slice(0, 300)}</div>
+  `;
+  document.body.appendChild(overlay);
+  overlay
+    .querySelector("#fatal-error-reload")
+    ?.addEventListener("click", () => window.location.reload());
+}
+
+window.addEventListener("error", (e) => {
+  showFatalError(e.message || String(e.error ?? "알 수 없는 오류"));
+});
+window.addEventListener("unhandledrejection", (e) => {
+  showFatalError(String(e.reason));
+});
+
 // 자리를 비운 동안 번 돈은 화면을 그리기 전에 먼저 정산합니다.
 gameState.applyOfflineEarnings();
 
@@ -30,6 +73,13 @@ const game = new Phaser.Game({
     autoCenter: Phaser.Scale.CENTER_BOTH,
     width: VIRTUAL_WIDTH,
     height: VIRTUAL_HEIGHT,
+  },
+  // 홈 화면에 설치한 폰 앱에서는 화면을 껐다 켜거나 다른 앱을 오갈 때,
+  // 브라우저의 기본 화면 갱신 신호(requestAnimationFrame)가 다시 안
+  // 살아나서 게임 전체가 완전히 멈춰버리는 기기가 있습니다. 대신 타이머
+  // 방식(setTimeout)으로 화면을 갱신하면 이 문제 없이 항상 다시 깨어납니다.
+  fps: {
+    forceSetTimeOut: true,
   },
   // HTML UI(상점 창, 버튼)가 캔버스 위에 겹쳐 있습니다. 이 옵션이 없으면
   // Phaser가 window 단위로 클릭을 한 번 더 잡아서, HTML 버튼을 눌렀는데
