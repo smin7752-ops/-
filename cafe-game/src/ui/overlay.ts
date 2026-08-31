@@ -1472,8 +1472,10 @@ export function mountUI(root: HTMLElement) {
     bodyEl.addEventListener("touchcancel", endDrag);
   }
 
-  // 뒤로 가기(안드로이드 기본 동작)를 누르면 바로 앱이 꺼지지 않고, 먼저 확인을 받습니다.
-  // 열려있는 패널이 있으면 그것부터 닫고, 아무것도 안 열려있을 때만 나가기 확인창을 띄워요.
+  // 뒤로 가기(안드로이드 기본 동작)를 누르면 바로 앱이 꺼지지 않고, 단계별로 동작해요.
+  // 1) 열려있는 패널이 있으면 그것부터 닫고
+  // 2) 가게 안(카페/분식집/포차)에 있으면 초원 화면으로 나가고
+  // 3) 이미 초원 화면이면 그때서야 게임을 나갈지 확인창을 띄워요.
   {
     const exitModal = root.querySelector("#exit-modal") as HTMLElement;
     let allowExit = false;
@@ -1484,6 +1486,12 @@ export function mountUI(root: HTMLElement) {
       history.pushState(null, "", location.href);
       if (openPanel) {
         closePanel();
+        return;
+      }
+      if (root.style.display !== "none") {
+        // ui-root가 보이는 중 = 지금 가게 안에 있다는 뜻이라, 나가기
+        // 버튼을 누른 것처럼 초원 화면으로 먼저 나갑니다.
+        bus.emit(EVENTS.EXIT_TO_WORLD);
         return;
       }
       exitModal.classList.remove("hidden");

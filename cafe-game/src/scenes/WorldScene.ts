@@ -17,6 +17,9 @@ function coinText(amount: number): string {
   return `${Math.round(amount).toLocaleString("ko-KR")}코인`;
 }
 
+/** 안내 글씨들이 다른 건물 그림에 가려지지 않도록, 건물보다 훨씬 위에 그립니다 */
+const UI_DEPTH = 100000;
+
 /** 받침 유무에 따라 조사를 골라 붙입니다 (예: 카페 + 를, 분식집 + 을) */
 function withParticle(word: string, withBatchim: string, withoutBatchim: string): string {
   const last = word.charCodeAt(word.length - 1);
@@ -31,7 +34,7 @@ function withParticle(word: string, withBatchim: string, withoutBatchim: string)
  */
 export class WorldScene extends Phaser.Scene {
   /** 지금 안 들어가 있는 가게마다, 쌓인 매출을 보여주는 글씨 (실시간으로 갱신) */
-  private pendingLabels: { id: RestaurantId; label: Phaser.GameObjects.Text }[] = [];
+  private pendingLabels: { id: RestaurantId; label: Phaser.GameObjects.Text; shown: number }[] = [];
 
   constructor() {
     super("world");
@@ -61,6 +64,8 @@ export class WorldScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
+    this.buildCurrentRestaurantCard();
+
     let entering = false;
     for (const tile of RESTAURANT_TILES) {
       this.buildRestaurantSpot(tile, groundScreenX, groundScreenY, () => entering, (v) => {
@@ -73,11 +78,58 @@ export class WorldScene extends Phaser.Scene {
     this.time.addEvent({ delay: 1000, loop: true, callback: () => this.refreshPendingLabels() });
   }
 
+  /** 지금 어느 가게가 "활성" 상태인지 (마지막으로 들어가 있던 가게) 오른쪽 위에 작은 카드로 보여줍니다 */
+  private buildCurrentRestaurantCard() {
+    const cfg = restaurantConfig(gameState.data.activeRestaurant);
+    const cardX = VIRTUAL_WIDTH - 24;
+    const cardY = 36;
+    const cardW = 180;
+    const cardH = 60;
+
+    const g = this.add.graphics().setDepth(UI_DEPTH);
+    g.fillStyle(0x3b2a20, 0.85);
+    g.fillRoundedRect(cardX - cardW, cardY, cardW, cardH, 14);
+    g.lineStyle(3, 0xffe066, 1);
+    g.strokeRoundedRect(cardX - cardW, cardY, cardW, cardH, 14);
+
+    this.add
+      .text(cardX - cardW / 2, cardY + 16, "현재 매장", {
+        fontSize: "13px",
+        color: "#e8c896",
+      })
+      .setOrigin(0.5)
+      .setDepth(UI_DEPTH);
+    this.add
+      .text(cardX - cardW / 2, cardY + 38, cfg.name, {
+        fontSize: "22px",
+        fontStyle: "bold",
+        color: "#fffaf2",
+      })
+      .setOrigin(0.5)
+      .setDepth(UI_DEPTH);
+  }
+
   private refreshPendingLabels() {
-    for (const { id, label } of this.pendingLabels) {
-      const pending = gameState.previewOfflineEarnings(id);
-      label.setText(pending > 0 ? `쌓인 매출\n${coinText(pending)}` : "");
-      label.setVisible(pending > 0);
+    for (const entry of this.pendingLabels) {
+      const pending = gameState.previewOfflineEarnings(entry.id);
+      if (pending <= 0) {
+        entry.label.setVisible(false);
+        entry.shown = 0;
+        continue;
+      }
+      entry.label.setVisible(true);
+      const from = entry.shown;
+      // 숫자가 한 번에 툭 바뀌는 대신, 다음 갱신 때까지 부드럽게 세어
+      // 올라가는 것처럼 보여줍니다 (진짜 실시간으로 오르는 느낌).
+      this.tweens.addCounter({
+        from,
+        to: pending,
+        duration: 950,
+        onUpdate: (tween) => {
+          entry.label.setText(`쌓인 매출\n${coinText(tween.getValue() ?? 0)}`);
+        },
+      });
+      entry.shown = pending;
     }
   }
 
@@ -109,7 +161,7 @@ export class WorldScene extends Phaser.Scene {
         color: "#4a3226",
       })
       .setOrigin(0.5)
-      .setDepth(buildingY + 1);
+      .setDepth(UI_DEPTH);
 
     if (constructed) {
       const hint = this.add
@@ -121,13 +173,14 @@ export class WorldScene extends Phaser.Scene {
           strokeThickness: 5,
         })
         .setOrigin(0.5)
-        .setDepth(buildingY + 1);
+        .setDepth(UI_DEPTH);
       this.tweens.add({ targets: hint, alpha: 0.35, duration: 700, yoyo: true, repeat: -1 });
 
       // 지금 안 들어가 있는 동안 이 가게가 벌고 있을 것으로 보이는 돈을
       // 크게 보여줍니다 — 다른 가게에 있는 동안 여기는 그냥 멈춰 있는
-      // 것처럼 보이지 않도록. 이 화면에 서 있는 동안은 refreshPendingLabels()가
-      // 주기적으로 다시 계산해서 실시간으로 오르는 것처럼 보여줍니다.
+      // 것처럼 보이지 않도록. 다른 건물 그림에 가려지지 않게 맨 위에
+      // 그리고, 이 화면에 서 있는 동안은 refreshPendingLabels()가 주기적으로
+      // 다시 계산해서 숫자가 부드럽게 실시간으로 오르는 것처럼 보여줍니다.
       const pending = gameState.previewOfflineEarnings(tile.id);
       const pendingLabel = this.add
         .text(buildingX, buildingY + 70, pending > 0 ? `쌓인 매출\n${coinText(pending)}` : "", {
@@ -139,9 +192,9 @@ export class WorldScene extends Phaser.Scene {
           align: "center",
         })
         .setOrigin(0.5, 0)
-        .setDepth(buildingY + 1)
+        .setDepth(UI_DEPTH)
         .setVisible(pending > 0);
-      this.pendingLabels.push({ id: tile.id, label: pendingLabel });
+      this.pendingLabels.push({ id: tile.id, label: pendingLabel, shown: pending });
 
       const hit = this.add
         .rectangle(buildingX, buildingY - 140, 280, 300, 0xffffff, 0)
@@ -182,7 +235,7 @@ export class WorldScene extends Phaser.Scene {
         align: "center",
       })
       .setOrigin(0.5)
-      .setDepth(buildingY + 1);
+      .setDepth(UI_DEPTH);
 
     if (!gmHired) return; // 총괄 매니저가 없으면 아직 누를 수 없습니다.
 
