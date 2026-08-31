@@ -20,6 +20,7 @@ import {
 } from "./config";
 import { bus, EVENTS } from "./bus";
 import { gameState, type Order } from "./state";
+import type { RestaurantId } from "./config";
 import { randomLook, type CustomerLook } from "./art";
 
 export type CustomerPhase = "walking" | "preparing" | "ready" | "eating";
@@ -86,6 +87,8 @@ class Simulation {
   private lastTickAt = -1;
   /** 마감해서 문을 닫은 상태 (사장님이 정산을 확인하면 풀립니다) */
   private closed = false;
+  /** 마지막으로 맞춘 게 어느 가게였는지 (가게가 바뀌면 손님을 이어받으면 안 됩니다) */
+  private lastRestaurant: RestaurantId | null = null;
 
   constructor() {
     this.rebuild();
@@ -93,7 +96,13 @@ class Simulation {
 
   /** 층/테이블 수가 바뀌면 다시 맞춰줍니다. */
   rebuild() {
-    const previous = this.floors;
+    const restaurant = gameState.data.activeRestaurant;
+    // 다른 가게로 건너온 것이면 이전 가게의 손님·자리 상태를 이어받지
+    // 않습니다. 그 손님이 들고 있는 주문은 이전 가게의 메뉴라서, 그대로
+    // 두면 나중에 서빙될 때 지금 가게 메뉴 목록에서 그 항목을 찾다가
+    // 화면이 멈춰버립니다.
+    const previous = restaurant === this.lastRestaurant ? this.floors : [];
+    this.lastRestaurant = restaurant;
     this.floors = Array.from({ length: MAX_FLOORS }, (_, i) => {
       const data = gameState.floor(i);
       const old = previous[i];
