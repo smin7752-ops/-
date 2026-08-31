@@ -112,7 +112,9 @@ export const DESSERTS: MenuDef[] = [
 export const ALL_MENU: MenuDef[] = [...DRINKS, ...DESSERTS];
 
 export function menuById(id: string): MenuDef {
-  const found = ALL_MENU.find((m) => m.id === id);
+  // 카페 메뉴를 먼저 찾고(가장 흔한 경우라 빠르게), 없으면 다른 가게(분식집·포차)
+  // 메뉴까지 뒤집니다. id는 가게마다 겹치지 않으므로 안전합니다.
+  const found = ALL_MENU.find((m) => m.id === id) ?? ALL_RESTAURANTS_MENU.find((m) => m.id === id);
   if (!found) throw new Error(`unknown menu id: ${id}`);
   return found;
 }
@@ -206,15 +208,19 @@ export function floorPriceScale(floorIndex: number): number {
   return 1 + floorIndex * 0.7;
 }
 
-/** floorIndex 층(0부터)을 여는 데 드는 비용 */
-export function floorUnlockCost(floorIndex: number): number {
-  return Math.round(20000 * Math.pow(6, floorIndex - 1));
+/**
+ * floorIndex 층(0부터)을 여는 데 드는 비용.
+ * costScale은 가게 전체가 어느 "값 단위"에 있는지를 나타냅니다 (카페 = 1배).
+ * 다른 가게(분식집·포차)는 이전 가게의 4층 비용을 이어받아 costScale이 훨씬 큽니다.
+ */
+export function floorUnlockCost(floorIndex: number, costScale = 1): number {
+  return Math.round(20000 * costScale * Math.pow(6, floorIndex - 1));
 }
 
 /** 그 층에 테이블을 하나 더 놓는 비용. 놓을수록 훨씬 가파르게 비싸집니다 */
-export function tableCost(tablesOnFloor: number, floorIndex: number): number {
+export function tableCost(tablesOnFloor: number, floorIndex: number, costScale = 1): number {
   return Math.round(
-    500 * Math.pow(3.4, tablesOnFloor - STARTING_TABLES) * (1 + floorIndex * 0.6),
+    500 * costScale * Math.pow(3.4, tablesOnFloor - STARTING_TABLES) * (1 + floorIndex * 0.6),
   );
 }
 
@@ -272,16 +278,16 @@ export const ROLE_INFO: Record<
 };
 
 /** 다음 한 명을 더 뽑는 데 드는 비용 (인원이 많을수록, 위층일수록 비쌉니다) */
-export function roleCost(role: Role, currentCount: number, floorIndex: number): number {
+export function roleCost(role: Role, currentCount: number, floorIndex: number, costScale = 1): number {
   const base = ROLE_INFO[role].baseCost;
   return Math.round(
-    base * Math.pow(2.8, currentCount) * floorPriceScale(floorIndex),
+    base * Math.pow(2.8, currentCount) * floorPriceScale(floorIndex) * costScale,
   );
 }
 
 /** 그 직급 한 명의 하루 인건비 (위층 직원이 더 비쌉니다) */
-export function roleWage(role: Role, floorIndex: number): number {
-  return Math.round(ROLE_INFO[role].wage * floorPriceScale(floorIndex));
+export function roleWage(role: Role, floorIndex: number, costScale = 1): number {
+  return Math.round(ROLE_INFO[role].wage * floorPriceScale(floorIndex) * costScale);
 }
 
 /** 그 직급을 한 층에 몇 명까지 둘 수 있는지 */
@@ -789,4 +795,159 @@ export function hobbyEffectText(e: HobbyEffect): string {
   if (e.spawnBoost) parts.push(`손님 방문 +${Math.round(e.spawnBoost * 100)}%`);
   if (e.fameBoost) parts.push(`인지도 +${Math.round(e.fameBoost * 100)}%`);
   return parts.length ? parts.join(" · ") : "없음";
+}
+
+/* ------------------------------ 다른 가게 ------------------------------ */
+/* 카페 말고도 분식집·포차를 지을 수 있습니다. 메뉴·설비·세트는 가게마다
+   완전히 따로지만(같은 구조를 재사용), 코인·인지도·점장 같은 공용 자원은
+   가게 전체가 하나로 씁니다(state.ts 참고).
+   각 가게는 "값 단위(costScale)"가 있어서, 분식집은 카페의 4층 증축
+   비용에서, 포차는 분식집의 4층 증축 비용에서 시작합니다 — 그래서 새
+   가게를 지을 때마다 그 가게 안의 모든 값(설비·메뉴·직원)도 한 단계
+   위로 뛰어오릅니다. */
+
+export type RestaurantId = "cafe" | "bunsik" | "pocha";
+
+export const RESTAURANT_ORDER: RestaurantId[] = ["cafe", "bunsik", "pocha"];
+
+export interface RestaurantConfig {
+  id: RestaurantId;
+  name: string;
+  /** 메뉴판에서 두 칸의 이름 (카페는 "음료"/"디저트") */
+  mainLabel: string;
+  sideLabel: string;
+  drinks: MenuDef[];
+  desserts: MenuDef[];
+  sets: SetDef[];
+  equipment: EquipmentDef[];
+  startingEquipment: string[];
+  startingLaunched: string[];
+  /** 이 가게 안의 층·테이블·직원 값에 곱해지는 값 단위 (카페 = 1) */
+  costScale: number;
+  /** 이 가게를 짓는 데 드는 비용 (카페는 처음부터 있으니 0) */
+  buildCost: number;
+}
+
+/** 카페의 4층(floorIndex=3) 증축 비용 — 분식집을 짓는 기준값이 됩니다 */
+const CAFE_TOP_FLOOR_COST = floorUnlockCost(3, 1);
+const BUNSIK_COST_SCALE = Math.round(CAFE_TOP_FLOOR_COST / 20000);
+/** 분식집의 4층 증축 비용 — 포차를 짓는 기준값이 됩니다 */
+const BUNSIK_TOP_FLOOR_COST = floorUnlockCost(3, BUNSIK_COST_SCALE);
+const POCHA_COST_SCALE = Math.round(BUNSIK_TOP_FLOOR_COST / 20000);
+
+/** 분식집 설비 — 커피머신(기본)·쇼케이스·티스테이션·블렌더·오븐 자리를 그대로 잇습니다 */
+export const BUNSIK_EQUIPMENT: EquipmentDef[] = [
+  { id: "bunsik_stove", name: "떡볶이 화로", emoji: "🔥", cost: 0,
+    desc: "기본으로 드려요. 떡볶이를 만들 수 있어요" },
+  { id: "bunsik_display", name: "분식 진열대", emoji: "🍥", cost: Math.round(900 * BUNSIK_COST_SCALE),
+    desc: "김밥·순대를 진열해서 팔 수 있어요" },
+  { id: "bunsik_noodle_pot", name: "라면 냄비", emoji: "🍜", cost: Math.round(7000 * BUNSIK_COST_SCALE),
+    desc: "라면류를 만들 수 있어요" },
+  { id: "bunsik_fryer", name: "튀김기", emoji: "🍤", cost: Math.round(26000 * BUNSIK_COST_SCALE),
+    desc: "튀김류를 만들 수 있어요" },
+  { id: "bunsik_grill", name: "즉석 조리대", emoji: "🍳", cost: Math.round(80000 * BUNSIK_COST_SCALE),
+    desc: "즉석 요리를 만들 수 있어요" },
+];
+
+export const BUNSIK_MAIN: MenuDef[] = [
+  { id: "bunsik_tteokbokki", name: "떡볶이", emoji: "🍢", category: "drink", equipmentId: "bunsik_stove", basePrice: 792, supplyCost: 144, makeTimeMs: 1200, launchCost: 0 },
+  { id: "bunsik_rabokki", name: "라볶이", emoji: "🍜", category: "drink", equipmentId: "bunsik_stove", basePrice: 1368, supplyCost: 288, makeTimeMs: 1600, launchCost: 25200 },
+  { id: "bunsik_ramen", name: "라면", emoji: "🍲", category: "drink", equipmentId: "bunsik_noodle_pot", basePrice: 2088, supplyCost: 468, makeTimeMs: 1400, launchCost: 36000 },
+  { id: "bunsik_twigim", name: "모둠튀김", emoji: "🍤", category: "drink", equipmentId: "bunsik_fryer", basePrice: 3024, supplyCost: 684, makeTimeMs: 1800, launchCost: 54000 },
+  { id: "bunsik_odeng_tang", name: "즉석오뎅탕", emoji: "🍥", category: "drink", equipmentId: "bunsik_fryer", basePrice: 4464, supplyCost: 1008, makeTimeMs: 2200, launchCost: 79200 },
+  { id: "bunsik_jjajang_tteok", name: "짜장떡볶이", emoji: "⚫", category: "drink", equipmentId: "bunsik_noodle_pot", basePrice: 6480, supplyCost: 1512, makeTimeMs: 2000, launchCost: 115200 },
+];
+
+export const BUNSIK_SIDE: MenuDef[] = [
+  { id: "bunsik_sundae", name: "순대", emoji: "🌭", category: "dessert", equipmentId: "bunsik_display", basePrice: 1008, supplyCost: 216, makeTimeMs: 600, launchCost: 18000 },
+  { id: "bunsik_hotteok", name: "호떡", emoji: "🥞", category: "dessert", equipmentId: "bunsik_grill", basePrice: 1728, supplyCost: 396, makeTimeMs: 900, launchCost: 30600 },
+  { id: "bunsik_gimbap", name: "김밥", emoji: "🍙", category: "dessert", equipmentId: "bunsik_display", basePrice: 2664, supplyCost: 612, makeTimeMs: 800, launchCost: 46800 },
+  { id: "bunsik_tuna_gimbap", name: "참치김밥", emoji: "🍙", category: "dessert", equipmentId: "bunsik_display", basePrice: 3960, supplyCost: 900, makeTimeMs: 700, launchCost: 72000 },
+  { id: "bunsik_odeng_skewer", name: "꼬치어묵", emoji: "🍡", category: "dessert", equipmentId: "bunsik_display", basePrice: 5760, supplyCost: 1332, makeTimeMs: 1000, launchCost: 104400 },
+  { id: "bunsik_toast", name: "계란마요토스트", emoji: "🍞", category: "dessert", equipmentId: "bunsik_grill", basePrice: 8640, supplyCost: 2016, makeTimeMs: 1100, launchCost: 154800 },
+];
+
+export const BUNSIK_SETS: SetDef[] = [
+  { id: "bunsik_basic_set", name: "떡순세트", emoji: "🍢", drinkId: "bunsik_tteokbokki", dessertId: "bunsik_sundae", bonusRate: 1.15 },
+  { id: "bunsik_hotteok_set", name: "라볶이호떡세트", emoji: "🥞", drinkId: "bunsik_rabokki", dessertId: "bunsik_hotteok", bonusRate: 1.2 },
+  { id: "bunsik_gimbap_set", name: "라면김밥세트", emoji: "🍙", drinkId: "bunsik_ramen", dessertId: "bunsik_gimbap", bonusRate: 1.25 },
+  { id: "bunsik_twigim_set", name: "튀김참치김밥세트", emoji: "🍤", drinkId: "bunsik_twigim", dessertId: "bunsik_tuna_gimbap", bonusRate: 1.3 },
+  { id: "bunsik_odeng_set", name: "오뎅탕꼬치세트", emoji: "🍥", drinkId: "bunsik_odeng_tang", dessertId: "bunsik_odeng_skewer", bonusRate: 1.35 },
+  { id: "bunsik_signature_set", name: "짜장떡볶이스페셜세트", emoji: "👑", drinkId: "bunsik_jjajang_tteok", dessertId: "bunsik_toast", bonusRate: 1.45 },
+];
+
+/** 포차 설비 */
+export const POCHA_EQUIPMENT: EquipmentDef[] = [
+  { id: "pocha_stove", name: "화로", emoji: "🔥", cost: 0,
+    desc: "기본으로 드려요. 계란말이를 만들 수 있어요" },
+  { id: "pocha_display", name: "안주 진열대", emoji: "🍢", cost: Math.round(900 * POCHA_COST_SCALE),
+    desc: "튀김·전을 진열해서 팔 수 있어요" },
+  { id: "pocha_soup_pot", name: "국물솥", emoji: "🍲", cost: Math.round(7000 * POCHA_COST_SCALE),
+    desc: "국물 안주를 만들 수 있어요" },
+  { id: "pocha_charcoal_grill", name: "숯불그릴", emoji: "🍗", cost: Math.round(26000 * POCHA_COST_SCALE),
+    desc: "숯불 안주를 만들 수 있어요" },
+  { id: "pocha_special_station", name: "특선 조리대", emoji: "🦑", cost: Math.round(80000 * POCHA_COST_SCALE),
+    desc: "고급 안주를 만들 수 있어요" },
+];
+
+export const POCHA_MAIN: MenuDef[] = [
+  { id: "pocha_gyeranmari", name: "계란말이", emoji: "🍳", category: "drink", equipmentId: "pocha_stove", basePrice: 28512, supplyCost: 5184, makeTimeMs: 1200, launchCost: 0 },
+  { id: "pocha_dakkochi", name: "닭꼬치", emoji: "🍢", category: "drink", equipmentId: "pocha_stove", basePrice: 49248, supplyCost: 10368, makeTimeMs: 1600, launchCost: 907200 },
+  { id: "pocha_odengtang", name: "오뎅탕", emoji: "🍲", category: "drink", equipmentId: "pocha_soup_pot", basePrice: 75168, supplyCost: 16848, makeTimeMs: 1400, launchCost: 1296000 },
+  { id: "pocha_golbaengi", name: "골뱅이무침", emoji: "🥗", category: "drink", equipmentId: "pocha_charcoal_grill", basePrice: 108864, supplyCost: 24624, makeTimeMs: 1800, launchCost: 1944000 },
+  { id: "pocha_jokbal", name: "족발", emoji: "🍖", category: "drink", equipmentId: "pocha_charcoal_grill", basePrice: 160704, supplyCost: 36288, makeTimeMs: 2200, launchCost: 2851200 },
+  { id: "pocha_haemul_pajeon", name: "해물파전", emoji: "🥘", category: "drink", equipmentId: "pocha_soup_pot", basePrice: 233280, supplyCost: 54432, makeTimeMs: 2000, launchCost: 4147200 },
+];
+
+export const POCHA_SIDE: MenuDef[] = [
+  { id: "pocha_gamja_twigim", name: "감자튀김", emoji: "🍟", category: "dessert", equipmentId: "pocha_display", basePrice: 36288, supplyCost: 7776, makeTimeMs: 600, launchCost: 648000 },
+  { id: "pocha_chicken_gangjeong", name: "치킨강정", emoji: "🍗", category: "dessert", equipmentId: "pocha_special_station", basePrice: 62208, supplyCost: 14256, makeTimeMs: 900, launchCost: 1101600 },
+  { id: "pocha_gyeranjjim", name: "계란찜", emoji: "🍳", category: "dessert", equipmentId: "pocha_display", basePrice: 95904, supplyCost: 22032, makeTimeMs: 800, launchCost: 1684800 },
+  { id: "pocha_ojingeo_bokkeum", name: "오징어볶음", emoji: "🦑", category: "dessert", equipmentId: "pocha_display", basePrice: 142560, supplyCost: 32400, makeTimeMs: 700, launchCost: 2592000 },
+  { id: "pocha_yangnyeom_tongdak", name: "양념통닭", emoji: "🍗", category: "dessert", equipmentId: "pocha_display", basePrice: 207360, supplyCost: 47952, makeTimeMs: 1000, launchCost: 3758400 },
+  { id: "pocha_modum_jeon", name: "모둠전", emoji: "🥘", category: "dessert", equipmentId: "pocha_special_station", basePrice: 311040, supplyCost: 72576, makeTimeMs: 1100, launchCost: 5572800 },
+];
+
+export const POCHA_SETS: SetDef[] = [
+  { id: "pocha_basic_set", name: "계란말이감자세트", emoji: "🍳", drinkId: "pocha_gyeranmari", dessertId: "pocha_gamja_twigim", bonusRate: 1.15 },
+  { id: "pocha_dak_set", name: "닭꼬치강정세트", emoji: "🍗", drinkId: "pocha_dakkochi", dessertId: "pocha_chicken_gangjeong", bonusRate: 1.2 },
+  { id: "pocha_guk_set", name: "오뎅탕계란찜세트", emoji: "🍲", drinkId: "pocha_odengtang", dessertId: "pocha_gyeranjjim", bonusRate: 1.25 },
+  { id: "pocha_anju_set", name: "골뱅이오징어세트", emoji: "🥗", drinkId: "pocha_golbaengi", dessertId: "pocha_ojingeo_bokkeum", bonusRate: 1.3 },
+  { id: "pocha_premium_set", name: "족발통닭세트", emoji: "🍖", drinkId: "pocha_jokbal", dessertId: "pocha_yangnyeom_tongdak", bonusRate: 1.35 },
+  { id: "pocha_signature_set", name: "해물파전모둠전세트", emoji: "👑", drinkId: "pocha_haemul_pajeon", dessertId: "pocha_modum_jeon", bonusRate: 1.45 },
+];
+
+export const RESTAURANTS: Record<RestaurantId, RestaurantConfig> = {
+  cafe: {
+    id: "cafe", name: "카페", mainLabel: "음료", sideLabel: "디저트",
+    drinks: DRINKS, desserts: DESSERTS, sets: SETS, equipment: EQUIPMENT,
+    startingEquipment: STARTING_EQUIPMENT, startingLaunched: STARTING_LAUNCHED,
+    costScale: 1, buildCost: 0,
+  },
+  bunsik: {
+    id: "bunsik", name: "분식집", mainLabel: "메인", sideLabel: "사이드",
+    drinks: BUNSIK_MAIN, desserts: BUNSIK_SIDE, sets: BUNSIK_SETS, equipment: BUNSIK_EQUIPMENT,
+    startingEquipment: [BUNSIK_EQUIPMENT[0].id], startingLaunched: [BUNSIK_MAIN[0].id],
+    costScale: BUNSIK_COST_SCALE, buildCost: CAFE_TOP_FLOOR_COST,
+  },
+  pocha: {
+    id: "pocha", name: "포차", mainLabel: "메인", sideLabel: "사이드",
+    drinks: POCHA_MAIN, desserts: POCHA_SIDE, sets: POCHA_SETS, equipment: POCHA_EQUIPMENT,
+    startingEquipment: [POCHA_EQUIPMENT[0].id], startingLaunched: [POCHA_MAIN[0].id],
+    costScale: POCHA_COST_SCALE, buildCost: BUNSIK_TOP_FLOOR_COST,
+  },
+};
+
+/** 어느 가게든 상관없이 메뉴 id로 정의를 찾습니다 (id가 가게마다 겹치지 않습니다) */
+export const ALL_RESTAURANTS_MENU: MenuDef[] = RESTAURANT_ORDER.flatMap(
+  (id) => [...RESTAURANTS[id].drinks, ...RESTAURANTS[id].desserts],
+);
+
+/** 어느 가게든 상관없이 설비 id로 정의를 찾을 때 씁니다 */
+export const ALL_RESTAURANTS_EQUIPMENT: EquipmentDef[] = RESTAURANT_ORDER.flatMap(
+  (id) => RESTAURANTS[id].equipment,
+);
+
+export function restaurantConfig(id: RestaurantId): RestaurantConfig {
+  return RESTAURANTS[id];
 }

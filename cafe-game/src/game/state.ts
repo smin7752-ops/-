@@ -1,5 +1,4 @@
 import {
-  ALL_MENU,
   AUTO_RESTOCK_BATCH,
   AUTO_RESTOCK_THRESHOLD,
   DECOR,
@@ -8,7 +7,6 @@ import {
   DRINKS,
   donationFame,
   EAT_TIME_MS,
-  EQUIPMENT,
   HOBBIES,
   hobbyCoinCost,
   MAX_FLOORS,
@@ -18,16 +16,19 @@ import {
   LEDGER_WEEK_DAYS,
   MAX_STOCK,
   OPEN_HOUR,
+  RESTAURANT_ORDER,
   ROLE_ORDER,
   STARTING_UNIFORMS,
   UNIFORMS,
-  UNIFORM_SLOTS,
   uniformById,
   uniformsOfSlot,
   fameForVisit,
   hobbyById,
+  restaurantConfig,
   type DecorEffect,
   type HobbyEffect,
+  type RestaurantConfig,
+  type RestaurantId,
   type UniformEquipEffect,
   type UniformOwnEffect,
   type UniformSlot,
@@ -38,10 +39,7 @@ import {
   OFFLINE_MIN_AWAY_MS,
   OFFLINE_NO_GM_CAP_MS,
   SAVE_KEY,
-  SETS,
   STARTING_DECOR,
-  STARTING_EQUIPMENT,
-  STARTING_LAUNCHED,
   STARTING_STOCK,
   STARTING_TABLES,
   baristaSpeed,
@@ -53,7 +51,6 @@ import {
   enhanceRequiredLevel,
   expToNext,
   menuById,
-  menuListOf,
   priceMultiplier,
   serveDelayMs,
   spawnIntervalMs,
@@ -84,7 +81,7 @@ export interface FloorData {
   equipment: string[];
 }
 
-/** 하루치 장부 — 매출표에 그대로 보여줍니다 */
+/** 하루치 장부 — 매출표에 그대로 보여줍니다. 가게 전체(카페+분식집+포차) 합산입니다 */
 export interface DayLedger {
   day: number;
   /** 손님에게 받은 돈 */
@@ -103,38 +100,49 @@ export interface SetProgress {
   exp: number;
 }
 
-export interface SaveData {
-  coins: number;
+/** 가게 하나(카페/분식집/포차)마다 따로 갖는 데이터 */
+export interface RestaurantSaveData {
+  /** 지어서 실제로 영업 중인가 (분식집·포차는 지어야 열립니다) */
+  constructed: boolean;
   menu: Record<string, MenuProgress>;
   /** 발주 탭에서 한 번 사서 열어둔 메뉴 id 목록 */
   launched: string[];
   sets: Record<string, SetProgress>;
   floors: FloorData[];
-  /** 사둔 유니폼 (옷장). 안 입어도 보유 효과가 붙습니다 */
+  /** 사둔 유니폼 (옷장). barista/server/manager 자리만 — 점장(gm) 옷은 회사 전체 공용입니다 */
   uniforms: string[];
-  /** 자리별로 지금 입고 있는 유니폼 */
-  equipped: Record<UniformSlot, string>;
+  equipped: Record<"barista" | "server" | "manager", string>;
   /** 사둔 인테리어 (바닥·벽지·테이블·의자·문) */
   decor: string[];
-  /** 자리별로 지금 쓰고 있는 인테리어 */
   decorEquipped: Record<DecorSlot, string>;
-  /** 인지도 — 손님이 왔다 갈 때마다 쌓이고, 소문이 나서 손님이 더 자주 오게 만듭니다 */
+  /** 실제 시계 기준으로, 이 가게를 마지막으로 보고 있었던 시각 (다른 가게에 가 있는 동안 번 돈 정산용) */
+  lastVisitedAt: number;
+}
+
+export interface SaveData {
+  /** 가게 전체가 하나로 쓰는 공용 자원 */
+  coins: number;
   fame: number;
-  /** 인지도가 일정 이상 쌓이면 돈으로 살 수 있게 열리는 취미 활동 */
   hobbies: string[];
-  /** 지금까지 기부한 코인 총액 */
   totalDonated: number;
+  /** 총괄 매니저 — 한 번 고용하면 가게 전체(모든 지점)에서 자동 발주가 되고, 새 가게도 지을 수 있게 됩니다 */
   generalManager: boolean;
+  /** 총괄 매니저 옷장 — 회사 전체 공용이라 지점마다 따로 있지 않습니다 */
+  gmUniforms: string[];
+  gmEquipped: string;
   lastSavedAt: number;
   totalEarned: number;
   /** 며칠째 영업 중인지 (1일차부터) */
   day: number;
   /** 게임 속 시각 — 자정부터 흐른 분 */
   clock: number;
-  /** 아직 마감하지 않은 오늘 장부 */
+  /** 아직 마감하지 않은 오늘 장부 (모든 지점 합산) */
   today: DayLedger;
   /** 마감이 끝난 지난 날들 (최근 것이 앞) */
   history: DayLedger[];
+  /** 지금 보고 있는 가게 */
+  activeRestaurant: RestaurantId;
+  restaurants: Record<RestaurantId, RestaurantSaveData>;
 }
 
 /** 손님 한 명의 주문 (단품 또는 세트) */
@@ -149,7 +157,7 @@ export interface Order {
   makeTimeMs: number;
 }
 
-function defaultFloor(index: number): FloorData {
+function defaultFloor(cfg: RestaurantConfig, index: number): FloorData {
   return {
     unlocked: index === 0,
     tables: index === 0 ? STARTING_TABLES : 0,
@@ -157,52 +165,18 @@ function defaultFloor(index: number): FloorData {
     barista: index === 0 ? 1 : 0,
     server: 0,
     manager: 0,
-    // 어느 층이든 커피머신은 기본으로 깔아드립니다.
-    equipment: [...STARTING_EQUIPMENT],
+    // 어느 층이든 그 가게의 기본 설비는 깔아드립니다.
+    equipment: [...cfg.startingEquipment],
   };
 }
 
-function defaultSave(): SaveData {
-  const menu: Record<string, MenuProgress> = {};
-  for (const item of ALL_MENU) {
-    menu[item.id] = { level: 1, exp: 0, stock: 0, stars: 0 };
-  }
-  // 첫 메뉴는 재고를 조금 채워서 시작합니다.
-  menu[DRINKS[0].id].stock = STARTING_STOCK;
-
-  const sets: Record<string, SetProgress> = {};
-  for (const set of SETS) sets[set.id] = { level: 1, exp: 0 };
-
+/** 자리마다 기본 옷을 입고 시작합니다 (점장 자리는 회사 공용이라 여기 없습니다) */
+function defaultEquipped(): Record<"barista" | "server" | "manager", string> {
   return {
-    coins: 100,
-    menu,
-    launched: [...STARTING_LAUNCHED],
-    sets,
-    floors: Array.from({ length: MAX_FLOORS }, (_, i) => defaultFloor(i)),
-    uniforms: [...STARTING_UNIFORMS],
-    equipped: defaultEquipped(),
-    decor: [...STARTING_DECOR],
-    decorEquipped: defaultDecorEquipped(),
-    fame: 0,
-    hobbies: [],
-    totalDonated: 0,
-    generalManager: false,
-    lastSavedAt: Date.now(),
-    totalEarned: 0,
-    day: 1,
-    clock: OPEN_HOUR * 60,
-    today: emptyLedger(1),
-    history: [],
+    barista: uniformsOfSlot("barista")[0].id,
+    server: uniformsOfSlot("server")[0].id,
+    manager: uniformsOfSlot("manager")[0].id,
   };
-}
-
-/** 자리마다 기본 옷을 입고 시작합니다 */
-function defaultEquipped(): Record<UniformSlot, string> {
-  const out = {} as Record<UniformSlot, string>;
-  for (const slot of UNIFORM_SLOTS) {
-    out[slot] = uniformsOfSlot(slot)[0].id;
-  }
-  return out;
 }
 
 /** 자리마다 기본 인테리어로 시작합니다 */
@@ -212,6 +186,55 @@ function defaultDecorEquipped(): Record<DecorSlot, string> {
     out[slot] = decorOfSlot(slot)[0].id;
   }
   return out;
+}
+
+function defaultRestaurantData(id: RestaurantId): RestaurantSaveData {
+  const cfg = restaurantConfig(id);
+  const menu: Record<string, MenuProgress> = {};
+  for (const item of [...cfg.drinks, ...cfg.desserts]) {
+    menu[item.id] = { level: 1, exp: 0, stock: 0, stars: 0 };
+  }
+  // 첫 메뉴는 재고를 조금 채워서 시작합니다.
+  if (cfg.drinks[0]) menu[cfg.drinks[0].id].stock = STARTING_STOCK;
+
+  const sets: Record<string, SetProgress> = {};
+  for (const set of cfg.sets) sets[set.id] = { level: 1, exp: 0 };
+
+  return {
+    constructed: id === "cafe",
+    menu,
+    launched: [...cfg.startingLaunched],
+    sets,
+    floors: Array.from({ length: MAX_FLOORS }, (_, i) => defaultFloor(cfg, i)),
+    uniforms: [...STARTING_UNIFORMS.filter((u) => uniformById(u)?.slot !== "gm")],
+    equipped: defaultEquipped(),
+    decor: [...STARTING_DECOR],
+    decorEquipped: defaultDecorEquipped(),
+    lastVisitedAt: Date.now(),
+  };
+}
+
+function defaultSave(): SaveData {
+  const restaurants = {} as Record<RestaurantId, RestaurantSaveData>;
+  for (const id of RESTAURANT_ORDER) restaurants[id] = defaultRestaurantData(id);
+
+  return {
+    coins: 100,
+    fame: 0,
+    hobbies: [],
+    totalDonated: 0,
+    generalManager: false,
+    gmUniforms: [...STARTING_UNIFORMS.filter((u) => uniformById(u)?.slot === "gm")],
+    gmEquipped: uniformsOfSlot("gm")[0].id,
+    lastSavedAt: Date.now(),
+    totalEarned: 0,
+    day: 1,
+    clock: OPEN_HOUR * 60,
+    today: emptyLedger(1),
+    history: [],
+    activeRestaurant: "cafe",
+    restaurants,
+  };
 }
 
 export function emptyLedger(day: number): DayLedger {
@@ -235,6 +258,77 @@ export function clockText(minutes: number): string {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
+/** 예전(가게가 카페 하나뿐이던 시절) 저장본 하나를 새 구조의 카페 자리로 옮겨 담습니다 */
+function mergeRestaurantData(
+  id: RestaurantId,
+  base: RestaurantSaveData,
+  saved: Partial<RestaurantSaveData> | undefined,
+): RestaurantSaveData {
+  const cfg = restaurantConfig(id);
+  if (!saved) return base;
+
+  const merged: RestaurantSaveData = { ...base, ...saved };
+  merged.constructed = typeof saved.constructed === "boolean" ? saved.constructed : base.constructed;
+
+  merged.menu = { ...base.menu };
+  for (const [itemId, progress] of Object.entries(saved.menu ?? {})) {
+    if (merged.menu[itemId]) merged.menu[itemId] = { ...merged.menu[itemId], ...progress };
+  }
+
+  // 예전에는 설비가 가게 전체 공용이었습니다. 그때 산 설비는 열려 있던
+  // 층 모두에 그대로 놓아드려, 업데이트로 손해 보는 일이 없게 합니다.
+  const legacyEquipment = (saved as { equipment?: string[] }).equipment ?? [];
+  merged.floors = base.floors.map((floor, i) => {
+    const savedFloor = saved.floors?.[i];
+    const floorMerged: FloorData = { ...floor, ...(savedFloor ?? {}) };
+    floorMerged.equipment = Array.from(
+      new Set([
+        ...cfg.startingEquipment,
+        ...(savedFloor?.equipment ?? []),
+        ...(floorMerged.unlocked ? legacyEquipment : []),
+      ]),
+    );
+    return floorMerged;
+  });
+
+  // 이미 "돈 주고 산" 설비(기본 설비 말고)가 있는 메뉴는 예전 규칙대로
+  // 팔리고 있었을 테니, 다시 사라고 하지 않고 그대로 열어드립니다.
+  const purchasedEquipmentIds = new Set(
+    merged.floors.flatMap((f) => f.equipment.filter((e) => !cfg.startingEquipment.includes(e))),
+  );
+  const grandfathered = [...cfg.drinks, ...cfg.desserts]
+    .filter((m) => purchasedEquipmentIds.has(m.equipmentId))
+    .map((m) => m.id);
+  merged.launched = Array.from(
+    new Set([...cfg.startingLaunched, ...grandfathered, ...(saved.launched ?? [])]),
+  );
+
+  const nonGmStarting = STARTING_UNIFORMS.filter((u) => uniformById(u)?.slot !== "gm");
+  merged.uniforms = Array.from(new Set([...nonGmStarting, ...(saved.uniforms ?? [])]));
+  merged.equipped = { ...defaultEquipped(), ...(saved.equipped ?? {}) };
+  for (const slot of ["barista", "server", "manager"] as const) {
+    if (!merged.uniforms.includes(merged.equipped[slot])) {
+      merged.equipped[slot] = uniformsOfSlot(slot)[0].id;
+    }
+  }
+
+  merged.decor = Array.from(new Set([...STARTING_DECOR, ...(saved.decor ?? [])]));
+  merged.decorEquipped = { ...defaultDecorEquipped(), ...(saved.decorEquipped ?? {}) };
+  for (const slot of DECOR_SLOTS) {
+    if (!merged.decor.includes(merged.decorEquipped[slot])) {
+      merged.decorEquipped[slot] = decorOfSlot(slot)[0].id;
+    }
+  }
+
+  merged.sets = { ...base.sets };
+  for (const [setId, progress] of Object.entries(saved.sets ?? {})) {
+    if (merged.sets[setId]) merged.sets[setId] = { ...merged.sets[setId], ...progress };
+  }
+
+  merged.lastVisitedAt = typeof saved.lastVisitedAt === "number" ? saved.lastVisitedAt : Date.now();
+  return merged;
+}
+
 class GameState {
   data: SaveData;
   offlineEarnings = 0;
@@ -245,96 +339,129 @@ class GameState {
     this.data = this.load();
   }
 
+  /* ------------------------- 지금 보고 있는 가게 ------------------------- */
+
+  /** 지금 활성화된 가게의 설정(메뉴·설비·세트·값 단위) */
+  cfg(): RestaurantConfig {
+    return restaurantConfig(this.data.activeRestaurant);
+  }
+
+  /** 지금 활성화된 가게의 저장 데이터 */
+  private rdata(): RestaurantSaveData {
+    return this.data.restaurants[this.data.activeRestaurant];
+  }
+
+  restaurantData(id: RestaurantId): RestaurantSaveData {
+    return this.data.restaurants[id];
+  }
+
+  isConstructed(id: RestaurantId): boolean {
+    return this.data.restaurants[id].constructed;
+  }
+
+  /** 이 가게를 지을 수 있는가 (총괄 매니저를 고용했고, 아직 안 지었고, 돈이 충분한가) */
+  canBuildRestaurant(id: RestaurantId): boolean {
+    const r = this.data.restaurants[id];
+    if (r.constructed) return false;
+    if (!this.data.generalManager) return false;
+    return this.data.coins >= restaurantConfig(id).buildCost;
+  }
+
+  /** 새 가게를 짓습니다. 총괄 매니저가 있어야 하고, 비용을 냅니다 */
+  buildRestaurant(id: RestaurantId): boolean {
+    const r = this.data.restaurants[id];
+    if (r.constructed || !this.data.generalManager) return false;
+    if (!this.spendCoins(restaurantConfig(id).buildCost)) return false;
+    r.constructed = true;
+    r.lastVisitedAt = Date.now();
+    return true;
+  }
+
+  /** 지금 보고 있는 가게를 바꿉니다. 자리를 비운 동안 번 돈이 있으면 정산해서 보여줍니다 */
+  switchRestaurant(id: RestaurantId) {
+    if (id === this.data.activeRestaurant) return;
+    if (!this.data.restaurants[id].constructed) return;
+    this.rdata().lastVisitedAt = Date.now();
+    this.save();
+
+    const target = this.data.restaurants[id];
+    const cap = this.data.generalManager ? OFFLINE_EARNINGS_CAP_MS : OFFLINE_NO_GM_CAP_MS;
+    const elapsed = Math.min(Math.max(0, Date.now() - target.lastVisitedAt), cap);
+
+    this.data.activeRestaurant = id;
+    this.applyOfflineEarningsFor(elapsed);
+    this.rdata().lastVisitedAt = Date.now();
+    this.save();
+  }
+
   /* ------------------------------ 저장 ------------------------------ */
 
   private load(): SaveData {
     const base = defaultSave();
-    let parsed: Partial<SaveData> | null = null;
+    let parsed: Record<string, unknown> | null = null;
     try {
       const raw = localStorage.getItem(SAVE_KEY);
-      if (raw) parsed = JSON.parse(raw) as Partial<SaveData>;
+      if (raw) parsed = JSON.parse(raw) as Record<string, unknown>;
     } catch {
       parsed = null;
     }
     if (!parsed) return base;
 
-    // 저장본에 없는 항목(업데이트로 새로 추가된 메뉴/층)은 기본값으로 메웁니다.
-    const merged: SaveData = { ...base, ...parsed };
-    merged.menu = { ...base.menu };
-    for (const [id, progress] of Object.entries(parsed.menu ?? {})) {
-      if (merged.menu[id]) merged.menu[id] = { ...merged.menu[id], ...progress };
+    // v4 이하(가게가 카페 하나뿐이던 시절) 저장본은 flat한 구조입니다.
+    // 그 저장본을 통째로 새 구조의 "카페" 자리로 옮겨 담습니다.
+    const isLegacyFlat = !parsed.restaurants && Array.isArray(parsed.floors);
+    const restaurantsSource = (
+      isLegacyFlat
+        ? { cafe: parsed as Partial<RestaurantSaveData> }
+        : ((parsed.restaurants as Record<string, Partial<RestaurantSaveData>>) ?? {})
+    ) as Partial<Record<RestaurantId, Partial<RestaurantSaveData>>>;
+
+    const merged: SaveData = { ...base, ...parsed } as SaveData;
+    merged.restaurants = {} as Record<RestaurantId, RestaurantSaveData>;
+    for (const id of RESTAURANT_ORDER) {
+      merged.restaurants[id] = mergeRestaurantData(id, base.restaurants[id], restaurantsSource[id]);
     }
-    // 예전에는 설비가 가게 전체 공용이었습니다. 그때 산 설비는 열려 있던
-    // 층 모두에 그대로 놓아드려, 업데이트로 손해 보는 일이 없게 합니다.
-    const legacyEquipment = (parsed as { equipment?: string[] }).equipment ?? [];
-    merged.floors = base.floors.map((floor, i) => {
-      const saved = parsed?.floors?.[i];
-      const merger: FloorData = { ...floor, ...(saved ?? {}) };
-      merger.equipment = Array.from(
-        new Set([
-          ...STARTING_EQUIPMENT,
-          ...(saved?.equipment ?? []),
-          ...(merger.unlocked ? legacyEquipment : []),
-        ]),
-      );
-      return merger;
-    });
-    // 메뉴 구매(발주 탭 한 번 사기)도 나중에 추가된 기능입니다. 이미 "돈
-    // 주고 산" 설비(기본 커피머신 말고)가 있는 메뉴는 예전 규칙대로 바로
-    // 팔리고 있었을 테니, 다시 사라고 하지 않고 그대로 열어드립니다.
-    // 커피머신은 처음부터 공짜로 깔려 있는 설비라 여기서 빼야 합니다 —
-    // 안 그러면 카페라떼처럼 커피머신만 있으면 되는 메뉴가 신규 저장본
-    // 여부와 상관없이 전부 구매 없이 열려버립니다.
-    const purchasedEquipmentIds = new Set(
-      merged.floors.flatMap((f) =>
-        f.equipment.filter((e) => !STARTING_EQUIPMENT.includes(e)),
-      ),
+    merged.activeRestaurant = RESTAURANT_ORDER.includes(parsed.activeRestaurant as RestaurantId)
+      ? (parsed.activeRestaurant as RestaurantId)
+      : "cafe";
+
+    // 총괄 매니저 옷장은 나중에 회사 전체 공용으로 분리된 기능이라, 예전
+    // 저장본에는 없거나 카페 자리에 섞여 있었을 수 있습니다.
+    const legacyUniforms = isLegacyFlat
+      ? ((parsed as { uniforms?: string[] }).uniforms ?? [])
+      : [];
+    const legacyEquippedGm = isLegacyFlat
+      ? ((parsed as { equipped?: Partial<Record<UniformSlot, string>> }).equipped ?? {}).gm
+      : undefined;
+    const gmStarting = STARTING_UNIFORMS.filter((u) => uniformById(u)?.slot === "gm");
+    merged.gmUniforms = Array.from(
+      new Set([
+        ...gmStarting,
+        ...legacyUniforms.filter((u) => uniformById(u)?.slot === "gm"),
+        ...((parsed.gmUniforms as string[] | undefined) ?? []),
+      ]),
     );
-    const grandfathered = ALL_MENU.filter((m) =>
-      purchasedEquipmentIds.has(m.equipmentId),
-    ).map((m) => m.id);
-    merged.launched = Array.from(
-      new Set([...STARTING_LAUNCHED, ...grandfathered, ...(parsed.launched ?? [])]),
-    );
-    // 유니폼도 나중에 추가된 기능이라 예전 저장본에는 없습니다.
-    merged.uniforms = Array.from(
-      new Set([...STARTING_UNIFORMS, ...(parsed.uniforms ?? [])]),
-    );
-    merged.equipped = { ...defaultEquipped(), ...(parsed.equipped ?? {}) };
-    // 안 갖고 있는 옷이 입혀져 있으면 기본 옷으로 되돌립니다.
-    for (const slot of UNIFORM_SLOTS) {
-      if (!merged.uniforms.includes(merged.equipped[slot])) {
-        merged.equipped[slot] = uniformsOfSlot(slot)[0].id;
-      }
+    merged.gmEquipped =
+      (parsed.gmEquipped as string | undefined) ?? legacyEquippedGm ?? uniformsOfSlot("gm")[0].id;
+    if (!merged.gmUniforms.includes(merged.gmEquipped)) {
+      merged.gmEquipped = uniformsOfSlot("gm")[0].id;
     }
-    // 인테리어(꾸미기)도 나중에 추가된 기능이라 예전 저장본에는 없습니다.
-    merged.decor = Array.from(new Set([...STARTING_DECOR, ...(parsed.decor ?? [])]));
-    merged.decorEquipped = {
-      ...defaultDecorEquipped(),
-      ...(parsed.decorEquipped ?? {}),
-    };
-    for (const slot of DECOR_SLOTS) {
-      if (!merged.decor.includes(merged.decorEquipped[slot])) {
-        merged.decorEquipped[slot] = decorOfSlot(slot)[0].id;
-      }
-    }
+
     // 인지도 · 취미 활동 · 기부 총액도 나중에 추가된 기능이라 예전 저장본에는 없습니다.
     merged.fame = typeof parsed.fame === "number" ? parsed.fame : 0;
-    merged.hobbies = Array.isArray(parsed.hobbies) ? parsed.hobbies : [];
+    merged.hobbies = Array.isArray(parsed.hobbies) ? (parsed.hobbies as string[]) : [];
     merged.totalDonated = typeof parsed.totalDonated === "number" ? parsed.totalDonated : 0;
-    // 세트 레벨도 나중에 추가된 기능이라 예전 저장본에는 없습니다.
-    merged.sets = { ...base.sets };
-    for (const [id, progress] of Object.entries(parsed.sets ?? {})) {
-      if (merged.sets[id]) merged.sets[id] = { ...merged.sets[id], ...progress };
-    }
+    merged.generalManager = !!parsed.generalManager;
+
     // 매출표는 나중에 추가된 기능이라, 예전 저장본에는 없습니다.
-    merged.today = { ...emptyLedger(merged.day), ...(parsed.today ?? {}) };
-    merged.history = Array.isArray(parsed.history) ? parsed.history : [];
+    merged.today = { ...emptyLedger(merged.day), ...((parsed.today as Partial<DayLedger>) ?? {}) };
+    merged.history = Array.isArray(parsed.history) ? (parsed.history as DayLedger[]) : [];
     return merged;
   }
 
   save() {
     this.data.lastSavedAt = Date.now();
+    this.rdata().lastVisitedAt = this.data.lastSavedAt;
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify(this.data));
     } catch {
@@ -365,7 +492,7 @@ class GameState {
 
   /* --------------------------- 하루 / 장부 --------------------------- */
 
-  /** 손님에게 받은 돈을 오늘 매출에 적습니다 */
+  /** 손님에게 받은 돈을 오늘 매출에 적습니다 (가게 전체 합산) */
   recordSale(amount: number) {
     this.data.today.revenue += amount;
     this.data.today.served += 1;
@@ -374,25 +501,29 @@ class GameState {
   /* ----------------------------- 유니폼 ----------------------------- */
 
   ownsUniform(id: string): boolean {
-    return this.data.uniforms.includes(id);
+    if (uniformById(id)?.slot === "gm") return this.data.gmUniforms.includes(id);
+    return this.rdata().uniforms.includes(id);
   }
 
   equippedUniform(slot: UniformSlot): string {
-    return this.data.equipped[slot];
+    if (slot === "gm") return this.data.gmEquipped;
+    return this.rdata().equipped[slot];
   }
 
   buyUniform(id: string): boolean {
     const def = uniformById(id);
     if (!def || this.ownsUniform(id)) return false;
     if (!this.spendCoins(def.cost)) return false;
-    this.data.uniforms.push(id);
+    if (def.slot === "gm") this.data.gmUniforms.push(id);
+    else this.rdata().uniforms.push(id);
     return true;
   }
 
   equipUniform(id: string): boolean {
     const def = uniformById(id);
     if (!def || !this.ownsUniform(id)) return false;
-    this.data.equipped[def.slot] = id;
+    if (def.slot === "gm") this.data.gmEquipped = id;
+    else this.rdata().equipped[def.slot] = id;
     return true;
   }
 
@@ -401,10 +532,10 @@ class GameState {
     return uniformById(this.equippedUniform(slot))?.equip ?? {};
   }
 
-  /** 옷장에 있는 모든 옷의 보유 효과를 더한 값 */
+  /** 옷장에 있는 모든 옷의 보유 효과를 더한 값 (이 가게 옷장 + 총괄 매니저 공용 옷장) */
   ownedBonus(): Required<UniformOwnEffect> {
     const total = { price: 0, patience: 0, fameBoost: 0, supplyCut: 0 };
-    for (const id of this.data.uniforms) {
+    for (const id of [...this.rdata().uniforms, ...this.data.gmUniforms]) {
       const own = uniformById(id)?.own;
       if (!own) continue;
       total.price += own.price ?? 0;
@@ -415,9 +546,12 @@ class GameState {
     return total;
   }
 
-  /** 옷장을 몇 벌 채웠는지 (화면 표시용) */
+  /** 옷장을 몇 벌 채웠는지 (화면 표시용, 이 가게 옷장 + 총괄 매니저 공용 옷장) */
   uniformProgress(): { owned: number; total: number } {
-    return { owned: this.data.uniforms.length, total: UNIFORMS.length };
+    return {
+      owned: this.rdata().uniforms.length + this.data.gmUniforms.length,
+      total: UNIFORMS.length,
+    };
   }
 
   /** 유니폼 + 인테리어(장착·보유) + 취미 효과를 합친 값. 실제 계산은 다 이걸 씁니다 */
@@ -438,11 +572,11 @@ class GameState {
   /* ----------------------------- 인테리어 ----------------------------- */
 
   ownsDecor(id: string): boolean {
-    return this.data.decor.includes(id);
+    return this.rdata().decor.includes(id);
   }
 
   equippedDecor(slot: DecorSlot): string {
-    return this.data.decorEquipped[slot];
+    return this.rdata().decorEquipped[slot];
   }
 
   /** 지금 그 자리에 쓰고 있는 인테리어의 색 (바닥·벽지 그리기용) */
@@ -455,20 +589,20 @@ class GameState {
     const def = decorById(id);
     if (!def || this.ownsDecor(id)) return false;
     if (!this.spendCoins(def.cost)) return false;
-    this.data.decor.push(id);
+    this.rdata().decor.push(id);
     return true;
   }
 
   wearDecor(id: string): boolean {
     const def = decorById(id);
     if (!def || !this.ownsDecor(id)) return false;
-    this.data.decorEquipped[def.slot] = id;
+    this.rdata().decorEquipped[def.slot] = id;
     return true;
   }
 
   /** 인테리어를 몇 개 모았는지 (화면 표시용) */
   decorProgress(): { owned: number; total: number } {
-    return { owned: this.data.decor.length, total: DECOR.length };
+    return { owned: this.rdata().decor.length, total: DECOR.length };
   }
 
   /** 지금 자리마다 장착 중인 인테리어의 효과를 더한 값 (안 쓰는 건 효과 없음) */
@@ -488,7 +622,7 @@ class GameState {
   /** 사둔 인테리어 전부의 보유 효과를 더한 값 (안 쓰고 있어도 붙어요) */
   decorOwnedBonus(): Required<DecorEffect> {
     const total = { price: 0, patience: 0, spawnBoost: 0, fameBoost: 0 };
-    for (const id of this.data.decor) {
+    for (const id of this.rdata().decor) {
       const eff = decorById(id)?.ownEffect;
       if (!eff) continue;
       total.price += eff.price ?? 0;
@@ -563,13 +697,18 @@ class GameState {
     this.data.today.supplyCost += amount;
   }
 
-  /** 지금 고용한 사람들의 하루 인건비 합계 */
+  /** 지금 고용한 사람들의 하루 인건비 합계 — 지어놓은 가게 전부를 더합니다 */
   dailyWageTotal(): number {
     let total = 0;
-    this.data.floors.forEach((floor, i) => {
-      if (!floor.unlocked) return;
-      for (const role of ROLE_ORDER) total += floor[role] * roleWage(role, i);
-    });
+    for (const id of RESTAURANT_ORDER) {
+      const r = this.data.restaurants[id];
+      if (!r.constructed) continue;
+      const scale = restaurantConfig(id).costScale;
+      r.floors.forEach((floor, i) => {
+        if (!floor.unlocked) return;
+        for (const role of ROLE_ORDER) total += floor[role] * roleWage(role, i, scale);
+      });
+    }
     // 총괄 매니저가 입은 옷만큼 인건비가 깎입니다 (고용했을 때만).
     if (this.data.generalManager) {
       const cut = Math.min(0.8, this.equipEffect("gm").wageCut ?? 0);
@@ -578,22 +717,27 @@ class GameState {
     return total;
   }
 
-  /** 그 층 하루 인건비 */
+  /** 그 층 하루 인건비 (지금 활성화된 가게 기준) */
   floorWageTotal(floorIndex: number): number {
     const floor = this.floor(floorIndex);
     if (!floor.unlocked) return 0;
+    const scale = this.cfg().costScale;
     return ROLE_ORDER.reduce(
-      (sum, role) => sum + floor[role] * roleWage(role, floorIndex),
+      (sum, role) => sum + floor[role] * roleWage(role, floorIndex, scale),
       0,
     );
   }
 
-  /** 지금 고용한 사람 수 (직급 상관없이) */
+  /** 지금 고용한 사람 수 (직급 상관없이, 지어놓은 가게 전부 합산) */
   totalStaff(): number {
     let total = 0;
-    for (const floor of this.data.floors) {
-      if (!floor.unlocked) continue;
-      for (const role of ROLE_ORDER) total += floor[role];
+    for (const id of RESTAURANT_ORDER) {
+      const r = this.data.restaurants[id];
+      if (!r.constructed) continue;
+      for (const floor of r.floors) {
+        if (!floor.unlocked) continue;
+        for (const role of ROLE_ORDER) total += floor[role];
+      }
     }
     return total;
   }
@@ -629,7 +773,7 @@ class GameState {
   /* --------------------------- 메뉴 / 해금 --------------------------- */
 
   progress(id: string): MenuProgress {
-    return this.data.menu[id];
+    return this.rdata().menu[id];
   }
 
   hasEquipment(floorIndex: number, id: string): boolean {
@@ -638,12 +782,12 @@ class GameState {
 
   /** 열려 있는 층 중 하나라도 이 설비를 갖고 있는가 */
   hasEquipmentAnywhere(id: string): boolean {
-    return this.data.floors.some((f) => f.unlocked && f.equipment.includes(id));
+    return this.rdata().floors.some((f) => f.unlocked && f.equipment.includes(id));
   }
 
   /** 발주 탭에서 한 번 사서 열어둔 메뉴인가 */
   isLaunched(id: string): boolean {
-    return this.data.launched.includes(id);
+    return this.rdata().launched.includes(id);
   }
 
   /**
@@ -655,7 +799,7 @@ class GameState {
     const item = menuById(id);
     if (!this.hasEquipmentAnywhere(item.equipmentId)) return false;
     if (!this.spendCoins(item.launchCost)) return false;
-    this.data.launched.push(id);
+    this.rdata().launched.push(id);
     return true;
   }
 
@@ -673,21 +817,26 @@ class GameState {
     );
   }
 
+  /** 지금 가게의 메뉴 목록 (카테고리를 안 주면 음료+디저트 전체) */
+  private menuList(category?: Category): MenuDef[] {
+    const cfg = this.cfg();
+    if (category === "drink") return cfg.drinks;
+    if (category === "dessert") return cfg.desserts;
+    return [...cfg.drinks, ...cfg.desserts];
+  }
+
   sellableItems(floorIndex: number, category?: Category): MenuDef[] {
-    const list = category ? menuListOf(category) : ALL_MENU;
-    return list.filter((m) => this.isSellable(floorIndex, m.id));
+    return this.menuList(category).filter((m) => this.isSellable(floorIndex, m.id));
   }
 
   /** 가게 전체에서 팔 수 있는 메뉴 (발주·재고 경고에 씁니다) */
   sellableAnywhere(category?: Category): MenuDef[] {
-    const list = category ? menuListOf(category) : ALL_MENU;
-    return list.filter((m) => this.isSellableAnywhere(m.id));
+    return this.menuList(category).filter((m) => this.isSellableAnywhere(m.id));
   }
 
   /** 설비는 있지만 아직 발주 탭에서 안 산 메뉴 (발주 탭의 "구매" 목록용) */
   awaitingLaunch(category?: Category): MenuDef[] {
-    const list = category ? menuListOf(category) : ALL_MENU;
-    return list.filter(
+    return this.menuList(category).filter(
       (m) => !this.isLaunched(m.id) && this.hasEquipmentAnywhere(m.equipmentId),
     );
   }
@@ -760,7 +909,7 @@ class GameState {
   /* ---------------------------- 세트 메뉴 ---------------------------- */
 
   sellableSets(floorIndex: number): SetDef[] {
-    return SETS.filter(
+    return this.cfg().sets.filter(
       (s) =>
         this.isSellable(floorIndex, s.drinkId) &&
         this.isSellable(floorIndex, s.dessertId),
@@ -768,13 +917,13 @@ class GameState {
   }
 
   sellableSetsAnywhere(): SetDef[] {
-    return SETS.filter(
+    return this.cfg().sets.filter(
       (s) => this.isSellableAnywhere(s.drinkId) && this.isSellableAnywhere(s.dessertId),
     );
   }
 
   setProgress(setId: string): SetProgress {
-    return this.data.sets[setId];
+    return this.rdata().sets[setId];
   }
 
   setPrice(set: SetDef): number {
@@ -822,7 +971,7 @@ class GameState {
     return true;
   }
 
-  /** 총괄 매니저가 있을 때 부족한 재고를 자동으로 채웁니다. */
+  /** 총괄 매니저가 있을 때 부족한 재고를 자동으로 채웁니다 (지금 보고 있는 가게 기준). */
   autoRestock() {
     if (!this.data.generalManager) return;
     for (const item of this.sellableAnywhere()) {
@@ -853,17 +1002,17 @@ class GameState {
   /* ------------------------------ 매장 ------------------------------ */
 
   floor(index: number): FloorData {
-    return this.data.floors[index];
+    return this.rdata().floors[index];
   }
 
   unlockedFloors(): number[] {
-    return this.data.floors
-      .map((f, i) => (f.unlocked ? i : -1))
+    return this.rdata()
+      .floors.map((f, i) => (f.unlocked ? i : -1))
       .filter((i) => i >= 0);
   }
 
   totalTables(): number {
-    return this.data.floors.reduce((sum, f) => sum + (f.unlocked ? f.tables : 0), 0);
+    return this.rdata().floors.reduce((sum, f) => sum + (f.unlocked ? f.tables : 0), 0);
   }
 
   /* ------------------------- 자리 비운 동안 ------------------------- */
@@ -874,16 +1023,14 @@ class GameState {
     return f.unlocked && f.barista > 0 && f.server > 0;
   }
 
-
-
   equipmentDefs() {
-    return EQUIPMENT;
+    return this.cfg().equipment;
   }
 
   /** 그 층에 설비를 들여놓습니다. 위층일수록 비쌉니다 */
   buyEquipment(floorIndex: number, id: string): boolean {
     if (this.hasEquipment(floorIndex, id)) return false;
-    const def = EQUIPMENT.find((e) => e.id === id);
+    const def = this.cfg().equipment.find((e) => e.id === id);
     if (!def) return false;
     if (!this.spendCoins(equipmentCost(def, floorIndex))) return false;
     this.floor(floorIndex).equipment.push(id);
@@ -903,19 +1050,19 @@ class GameState {
   averagePrice(): number {
     const items = this.inStockAnywhere();
     const pool = items.length > 0 ? items : this.sellableAnywhere();
-    if (pool.length === 0) return DRINKS[0].basePrice;
+    if (pool.length === 0) return this.cfg().drinks[0].basePrice;
     return pool.reduce((sum, m) => sum + this.priceOf(m.id), 0) / pool.length;
   }
 
   averageSupplyCost(): number {
     const pool = this.sellableAnywhere();
-    if (pool.length === 0) return DRINKS[0].supplyCost;
+    if (pool.length === 0) return this.cfg().drinks[0].supplyCost;
     return pool.reduce((sum, m) => sum + m.supplyCost, 0) / pool.length;
   }
 
   averageMakeTime(): number {
     const pool = this.sellableAnywhere();
-    if (pool.length === 0) return DRINKS[0].makeTimeMs;
+    if (pool.length === 0) return this.cfg().drinks[0].makeTimeMs;
     return pool.reduce((sum, m) => sum + m.makeTimeMs, 0) / pool.length;
   }
 
@@ -924,7 +1071,7 @@ class GameState {
   }
 
   /**
-   * 자리를 비운 동안 자동화된 층이 번 돈을 계산해서 넣어줍니다.
+   * 자리를 비운 동안 자동화된 층이 번 돈을 계산해서 넣어줍니다 (앱을 다시 열었을 때).
    * 완전 자동(바리스타+직원)인 층만 돈을 벌고, 총괄 매니저가 없으면
    * 재고가 떨어지므로 짧게 끊고 남은 재고만큼만 인정합니다.
    */
@@ -932,16 +1079,23 @@ class GameState {
     const gm = this.data.generalManager;
     const cap = gm ? OFFLINE_EARNINGS_CAP_MS : OFFLINE_NO_GM_CAP_MS;
     const elapsed = Math.min(Math.max(0, Date.now() - this.data.lastSavedAt), cap);
+    this.applyOfflineEarningsFor(elapsed);
+  }
+
+  /** applyOfflineEarnings()와 switchRestaurant() 둘 다 이 계산을 공유합니다 (지금 활성 가게 기준) */
+  private applyOfflineEarningsFor(elapsed: number) {
     this.offlineEarnings = 0;
     this.offlineDurationMs = 0;
     this.offlineServes = 0;
     if (elapsed < OFFLINE_MIN_AWAY_MS) return;
 
-    const autoFloors = this.data.floors
-      .map((_, i) => i)
+    const autoFloors = this.rdata()
+      .floors.map((_, i) => i)
       .filter((i) => this.isFloorAutomated(i));
     if (autoFloors.length === 0) return;
     if (this.sellableAnywhere().length === 0) return;
+
+    const gm = this.data.generalManager;
 
     // 층별로 "테이블 회전율"과 "손님 등장 속도" 중 느린 쪽이 실제 처리량입니다.
     let servesPerMs = 0;
