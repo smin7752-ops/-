@@ -71,7 +71,8 @@ export class WorldScene extends Phaser.Scene {
     const buildingY = groundScreenY + tileScreen.y + ISO_TILE_H / 2;
 
     const constructed = gameState.isConstructed(tile.id);
-    const gmHired = gameState.data.generalManager;
+    const requiredGmId = gameState.requiredGmFor(tile.id);
+    const gmHired = requiredGmId === null || gameState.hasGeneralManager(requiredGmId);
 
     const building = this.add
       .image(buildingX, buildingY, tile.textureKey)
@@ -124,7 +125,7 @@ export class WorldScene extends Phaser.Scene {
     signText.setAlpha(0.7);
 
     const infoText = !gmHired
-      ? "총괄 매니저를 고용하면 지을 수 있어요"
+      ? `${requiredGmId ? restaurantConfig(requiredGmId).name : ""}에 총괄 매니저를 고용하면 지을 수 있어요`
       : `${coinText(cfg.buildCost)}\n눌러서 짓기`;
     this.add
       .text(buildingX, buildingY + 40, infoText, {

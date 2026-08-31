@@ -163,6 +163,17 @@ export class CafeScene extends Phaser.Scene {
     // 다른 가게에서 방금 들어왔을 수도 있으니, 항상 1층부터 보여줍니다
     // (위층은 그 가게에서 아직 안 열려 있을 수 있어요).
     this.activeFloor = 0;
+    // 나가기 버튼을 눌러 어두워진 채로 나갔을 수 있으니, 화면을 다시 밝게 되돌립니다.
+    this.cameras.main.resetFX();
+    // 다른 가게로 들어온 것일 수 있으니, 시뮬레이션도 지금 가게 기준으로 다시 맞춥니다
+    // (안 그러면 이전 가게의 테이블 수만큼 손님이 계속 앉을 자리가 남아 있어서,
+    // 테이블이 없는 자리에도 손님이 나타나 보입니다).
+    sim.rebuild();
+    // 이전 가게(또는 이전에 들어왔을 때)의 손님 그림들은 장면이 다시 시작되며
+    // 이미 사라진 것들이라, 여기 남아있는 목록도 함께 비웁니다. 안 비우면 이미
+    // 사라진 그림을 다시 쓰려다가 오류가 납니다.
+    this.customerViews.forEach((v) => v.root.destroy());
+    this.customerViews.clear();
 
     buildArt(this);
     // 같은 그림을 HTML 창(상점·매출표)에서도 쓰도록 넘겨줍니다.
@@ -541,7 +552,7 @@ export class CafeScene extends Phaser.Scene {
 
     // 총괄 매니저는 캐셔가 되어, 층과 상관없이 포스기 뒤를 지킵니다.
     // (포스기 자체는 산 인테리어라서, 총괄 매니저가 없어도 카운터에 그대로 놓여 있어요.)
-    const hasGm = gameState.data.generalManager;
+    const hasGm = gameState.hasGeneralManager();
     if (this.generalManager.visible !== hasGm) this.generalManager.setVisible(hasGm);
     if (hasGm) {
       this.generalManager.setY(CASHIER_POS.y + Math.sin(this.time.now / 420) * 3);

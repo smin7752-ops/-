@@ -12,7 +12,6 @@ import {
   equipmentCost,
   fameSpawnScale,
   floorPriceScale,
-  GENERAL_MANAGER_COST,
   HOBBIES,
   hobbyCoinCost,
   hobbyEffectText,
@@ -569,7 +568,7 @@ export function mountUI(root: HTMLElement) {
   /* ---------------------------- 발주 패널 ---------------------------- */
 
   function renderSupplyPanel() {
-    const gm = gameState.data.generalManager;
+    const gm = gameState.hasGeneralManager();
     const items = gameState.sellableAnywhere();
 
     const rows = items
@@ -631,7 +630,7 @@ export function mountUI(root: HTMLElement) {
             .join("")}
         `;
 
-    const gmCost = GENERAL_MANAGER_COST;
+    const gmCost = gameState.generalManagerCost();
     const gmRow = gm
       ? `<div class="row">
            <div class="row-main">
@@ -642,7 +641,7 @@ export function mountUI(root: HTMLElement) {
       : `<div class="row">
            <div class="row-main">
              <div class="row-label">${ic(staffKey("gm"), 24)} 점장 고용</div>
-             <div class="row-sub">고용하면 발주가 자동이 돼요. 자리를 비운 동안에도 재고가 안 끊깁니다</div>
+             <div class="row-sub">이 가게에서만 발주가 자동이 돼요 (가게마다 따로 고용해야 해요). 자리를 비운 동안에도 재고가 안 끊깁니다</div>
            </div>
            <button class="buy-btn alt" id="hire-gm"
              ${gameState.data.coins < gmCost ? "disabled" : ""}>${coin(gmCost)}</button>
@@ -679,8 +678,7 @@ export function mountUI(root: HTMLElement) {
       }
     });
     wire("#hire-gm", () => {
-      if (gameState.spendCoins(gmCost)) {
-        gameState.data.generalManager = true;
+      if (gameState.hireGeneralManager()) {
         gameState.save();
         refreshAll();
       }
@@ -1386,7 +1384,7 @@ export function mountUI(root: HTMLElement) {
       <p class="offline-earn">${ic("icon-coin", 26)} +${num(gameState.offlineEarnings)}</p>
       <p class="muted">손님 ${num(gameState.offlineServes)}명을 받았어요</p>
       ${
-        gameState.data.generalManager
+        gameState.hasGeneralManager()
           ? `<p class="muted">점장이 발주까지 챙겼어요 (원가는 차감됨)</p>`
           : `<p class="muted">점장을 고용하면 재고가 안 끊겨서 훨씬 오래 벌 수 있어요</p>`
       }
