@@ -50,6 +50,9 @@ if (uiRoot) {
   bus.on(EVENTS.ENTERED_CAFE, () => {
     uiRoot.style.display = "";
   });
+  bus.on(EVENTS.EXIT_TO_WORLD_DONE, () => {
+    uiRoot.style.display = "none";
+  });
 }
 
 // 폰에서는 앱을 왔다갔다 하는 일이 잦습니다. 화면을 벗어나면 저장하고,

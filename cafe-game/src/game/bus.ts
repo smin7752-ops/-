@@ -42,4 +42,8 @@ export const EVENTS = {
   FAME_GAINED: "fame-gained",
   /** 초원 화면에서 카페를 눌러 들어옴 — 그때부터 상단·하단 UI를 보여줍니다 */
   ENTERED_CAFE: "entered-cafe",
+  /** 가게 안에서 초원 화면으로 나가고 싶을 때 (상단 바의 나가기 버튼) */
+  EXIT_TO_WORLD: "exit-to-world",
+  /** 화면이 다 어두워져서, 실제로 초원 화면으로 돌아간 순간 — 이때 상단·하단 UI를 감춥니다 */
+  EXIT_TO_WORLD_DONE: "exit-to-world-done",
 } as const;

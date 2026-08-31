@@ -30,6 +30,20 @@ export function injectStyles() {
     align-items: center;
     gap: 6px;
   }
+  /* 상단 바의 나가기(초원으로) 버튼 — 옆의 코인 알약과 같은 톤으로 맞춥니다 */
+  #ui-root #world-btn.icon-btn {
+    background: rgba(0,0,0,0.6);
+    color: #fff;
+    border-radius: 999px;
+    width: 36px;
+    height: 36px;
+    font-size: 18px;
+    font-weight: 800;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
   /* 게임 속 시각. 누르면 매출표가 열립니다. */
   #ui-root .clock-pill {
     background: rgba(0,0,0,0.6);

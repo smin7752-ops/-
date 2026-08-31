@@ -9,7 +9,6 @@ import {
   decorEffectText,
   donationFame,
   DONATION_PRESETS,
-  EQUIPMENT,
   equipmentCost,
   fameSpawnScale,
   floorPriceScale,
@@ -23,7 +22,6 @@ import {
   OPEN_HOUR,
   ROLE_INFO,
   ROLE_ORDER,
-  SETS,
   SUPPLY_BATCH,
   TABLES_PER_FLOOR,
   floorUnlockCost,
@@ -45,8 +43,6 @@ import {
   type Role,
 } from "../game/config";
 import {
-  DESSERTS,
-  DRINKS,
   clockText,
   gameState,
   ledgerExpense,
@@ -120,6 +116,7 @@ export function mountUI(root: HTMLElement) {
   root.innerHTML = `
     <div class="top-bar ui-interactive">
       <div class="pill-row">
+        <button class="icon-btn" id="world-btn" title="초원으로 나가기">←</button>
         <div class="coin-pill" id="coin-pill"><span id="coin-icon"></span><span id="coin-count">0</span></div>
         <button class="clock-pill" id="clock-pill">
           <span id="day-label">1일차</span>
@@ -311,9 +308,16 @@ export function mountUI(root: HTMLElement) {
 
   /* ----------------------------- 패널 ----------------------------- */
 
+  /** 이 패널이 지금 보고 있는 가게(카페/분식집/포차)만의 내용인지 — 그 가게 이름을 제목에 같이 보여줍니다 */
+  const RESTAURANT_SCOPED_PANELS: PanelId[] = ["menu", "supply", "staff", "store", "shop", "equipment"];
+
   function showPanel(id: PanelId) {
     openPanel = id;
-    titleEl.textContent = PANEL_TITLES[id];
+    const suffix =
+      RESTAURANT_SCOPED_PANELS.includes(id) && gameState.data.activeRestaurant !== "cafe"
+        ? ` · ${gameState.cfg().name}`
+        : "";
+    titleEl.textContent = PANEL_TITLES[id] + suffix;
     modal.classList.remove("hidden");
     renderPanel();
   }
@@ -415,11 +419,12 @@ export function mountUI(root: HTMLElement) {
 
   function menuSection(title: string, category: Category): string {
     const rows: string[] = [`<h3>${title}</h3>`];
-    for (const item of category === "drink" ? DRINKS : DESSERTS) {
+    const cfg = gameState.cfg();
+    for (const item of category === "drink" ? cfg.drinks : cfg.desserts) {
       const p = gameState.progress(item.id);
       const launched = gameState.isLaunched(item.id);
       const equipped = gameState.hasEquipmentAnywhere(item.equipmentId);
-      const equipName = EQUIPMENT.find((e) => e.id === item.equipmentId)?.name ?? "";
+      const equipName = cfg.equipment.find((e) => e.id === item.equipmentId)?.name ?? "";
 
       if (!launched) {
         if (!equipped) {
@@ -464,7 +469,8 @@ export function mountUI(root: HTMLElement) {
   }
 
   function renderMenuPanel() {
-    const sets = SETS.map((set) => {
+    const cfg = gameState.cfg();
+    const sets = cfg.sets.map((set) => {
       const ok =
         gameState.isSellableAnywhere(set.drinkId) &&
         gameState.isSellableAnywhere(set.dessertId);
@@ -499,8 +505,8 @@ export function mountUI(root: HTMLElement) {
     bodyEl.innerHTML = `
       <div class="note">메뉴는 팔 때마다 경험치가 쌓여 레벨이 오르고, 레벨이 오르면 판매가가 올라가요.
       새 메뉴는 설비를 산 뒤 발주 탭에서 한 번 구매하면 열립니다.</div>
-      ${menuSection("음료", "drink")}
-      ${menuSection("디저트", "dessert")}
+      ${menuSection(cfg.mainLabel, "drink")}
+      ${menuSection(cfg.sideLabel, "dessert")}
       <h3>세트 메뉴</h3>
       ${sets}
       <div class="note">세트가 열리면 손님이 가끔 세트로 주문해요. 단품보다 비싸고,
@@ -1110,8 +1116,9 @@ export function mountUI(root: HTMLElement) {
     const count = gameState.roleCount(floorIndex, role);
     const max = roleMax(role);
     const full = count >= max;
-    const cost = roleCost(role, count, floorIndex);
-    const wage = roleWage(role, floorIndex);
+    const costScale = gameState.cfg().costScale;
+    const cost = roleCost(role, count, floorIndex, costScale);
+    const wage = roleWage(role, floorIndex, costScale);
     // 사람 수(바리스타·홀 직원)는 점으로, 등급(매니저)은 Lv. 로 보여줍니다.
     const upgradable = info.upgradable === true;
     const pips = Array.from({ length: max }, (_, i) =>
@@ -1193,7 +1200,7 @@ export function mountUI(root: HTMLElement) {
       const role = el.dataset.hire as Role;
       const count = gameState.roleCount(floorIndex, role);
       if (count >= roleMax(role)) return;
-      const cost = roleCost(role, count, floorIndex);
+      const cost = roleCost(role, count, floorIndex, gameState.cfg().costScale);
       if (!gameState.spendCoins(cost)) return;
       gameState.setRoleCount(floorIndex, role, count + 1);
       gameState.save();
@@ -1206,12 +1213,13 @@ export function mountUI(root: HTMLElement) {
 
   function renderStorePanel() {
     const rows: string[] = [];
+    const costScale = gameState.cfg().costScale;
 
     for (let i = 0; i < MAX_FLOORS; i++) {
       const f = gameState.floor(i);
       if (f.unlocked) {
         const maxed = f.tables >= TABLES_PER_FLOOR;
-        const cost = tableCost(f.tables, i);
+        const cost = tableCost(f.tables, i, costScale);
         rows.push(`
           <div class="row">
             <div class="row-main">
@@ -1227,7 +1235,7 @@ export function mountUI(root: HTMLElement) {
           </div>`);
       } else {
         const prevOpen = gameState.floor(i - 1)?.unlocked;
-        const cost = floorUnlockCost(i);
+        const cost = floorUnlockCost(i, costScale);
         rows.push(`
           <div class="row ${prevOpen ? "" : "locked"}">
             <div class="row-main">
@@ -1254,7 +1262,7 @@ export function mountUI(root: HTMLElement) {
       const i = Number(el.dataset.table);
       const f = gameState.floor(i);
       if (f.tables >= TABLES_PER_FLOOR) return;
-      if (!gameState.spendCoins(tableCost(f.tables, i))) return;
+      if (!gameState.spendCoins(tableCost(f.tables, i, gameState.cfg().costScale))) return;
       f.tables += 1;
       gameState.save();
       bus.emit(EVENTS.LAYOUT_CHANGED);
@@ -1264,7 +1272,7 @@ export function mountUI(root: HTMLElement) {
     wire("[data-floor-buy]", (el) => {
       const i = Number(el.dataset.floorBuy);
       if (!gameState.floor(i - 1)?.unlocked) return;
-      if (!gameState.spendCoins(floorUnlockCost(i))) return;
+      if (!gameState.spendCoins(floorUnlockCost(i, gameState.cfg().costScale))) return;
       const f = gameState.floor(i);
       f.unlocked = true;
       f.tables = 2;
@@ -1313,11 +1321,12 @@ export function mountUI(root: HTMLElement) {
       return;
     }
 
-    const rows = EQUIPMENT.map((eq) => {
+    const cfg = gameState.cfg();
+    const rows = cfg.equipment.map((eq) => {
       const owned = gameState.hasEquipment(floorIndex, eq.id);
       const cost = equipmentCost(eq, floorIndex);
       const elsewhere = !owned && gameState.hasEquipmentAnywhere(eq.id);
-      const uses = [...DRINKS, ...DESSERTS]
+      const uses = [...cfg.drinks, ...cfg.desserts]
         .filter((m) => m.equipmentId === eq.id)
         .map((m) => ic(itemKey(m.id), 26))
         .join("");
@@ -1483,6 +1492,10 @@ export function mountUI(root: HTMLElement) {
 
   clockPill.addEventListener("click", () => showPanel("sales"));
   famePill.addEventListener("click", () => showPanel("fame"));
+  root.querySelector("#world-btn")?.addEventListener("click", () => {
+    closePanel();
+    bus.emit(EVENTS.EXIT_TO_WORLD);
+  });
   root.querySelector("#close-confirm")?.addEventListener("click", confirmDayClose);
   root.querySelector("#enhance-confirm")?.addEventListener("click", confirmEnhance);
   root.querySelector("#enhance-cancel")?.addEventListener("click", closeEnhanceModal);
@@ -1493,7 +1506,11 @@ export function mountUI(root: HTMLElement) {
   bus.on(EVENTS.OPEN_PANEL, (id: PanelId) => showPanel(id));
   bus.on(EVENTS.DAY_CLOSED, (ledger: DayLedger) => showDayClosed(ledger));
   // 코드로 그린 그림이 준비되면, 이모지 자리를 그림으로 바꿔 다시 그립니다.
+  // 다른 가게로 들어올 때마다도 다시 불려서(카페 씬이 새로 시작하므로),
+  // 그때는 1층부터 새로 보여주고 열려 있던 창은 닫아둡니다.
   bus.on(EVENTS.ART_READY, () => {
+    activeFloor = 0;
+    closePanel();
     refreshNav();
     refreshAll();
   });

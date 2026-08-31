@@ -160,6 +160,10 @@ export class CafeScene extends Phaser.Scene {
   }
 
   create() {
+    // 다른 가게에서 방금 들어왔을 수도 있으니, 항상 1층부터 보여줍니다
+    // (위층은 그 가게에서 아직 안 열려 있을 수 있어요).
+    this.activeFloor = 0;
+
     buildArt(this);
     // 같은 그림을 HTML 창(상점·매출표)에서도 쓰도록 넘겨줍니다.
     publishIconUrls(this);
@@ -187,6 +191,7 @@ export class CafeScene extends Phaser.Scene {
     bus.on(EVENTS.MADE_BY_HAND, this.onMadeByHand, this);
     bus.on(EVENTS.TABLE_CLEANED, this.onTableCleaned, this);
     bus.on(EVENTS.FAME_GAINED, this.onFameGained, this);
+    bus.on(EVENTS.EXIT_TO_WORLD, this.exitToWorld, this);
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       bus.off(EVENTS.LAYOUT_CHANGED, this.onLayoutChanged, this);
@@ -198,6 +203,17 @@ export class CafeScene extends Phaser.Scene {
       bus.off(EVENTS.MADE_BY_HAND, this.onMadeByHand, this);
       bus.off(EVENTS.TABLE_CLEANED, this.onTableCleaned, this);
       bus.off(EVENTS.FAME_GAINED, this.onFameGained, this);
+      bus.off(EVENTS.EXIT_TO_WORLD, this.exitToWorld, this);
+    });
+  }
+
+  /** 상단 바의 나가기 버튼 — 화면을 어둡게 한 뒤 초원 화면으로 돌아갑니다 */
+  private exitToWorld() {
+    gameState.save();
+    this.cameras.main.fadeOut(400, 26, 18, 11);
+    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+      bus.emit(EVENTS.EXIT_TO_WORLD_DONE);
+      this.scene.start("world");
     });
   }
 
