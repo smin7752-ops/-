@@ -35,6 +35,8 @@ import {
   uniformsOfSlot,
   roleWage,
   tableCost,
+  RESTAURANT_ORDER,
+  restaurantConfig,
   type Category,
   type DecorDef,
   type HobbyDef,
@@ -48,6 +50,7 @@ import {
   ledgerProfit,
   levelProgressRatio,
   levelProgressText,
+  restaurantStatsOf,
   type DayLedger,
 } from "../game/state";
 import { sim } from "../game/sim";
@@ -936,12 +939,51 @@ export function mountUI(root: HTMLElement) {
 
   /* ---------------------------- 매출표 패널 ---------------------------- */
 
-  /** 매출 · 지출 · 순이익을 한 줄씩 보여주는 정산표 */
-  function ledgerTable(l: DayLedger, wagePreview?: number): string {
-    const wage = wagePreview ?? l.wageCost;
+  /** 가게 하나만의 매출 · 지출 · 순이익 (일일 매출표에서 가게별로 나눠 보여줄 때 씁니다) */
+  function restaurantLedgerBlock(name: string, revenue: number, supplyCost: number, wageCost: number): string {
+    const expense = supplyCost + wageCost;
+    const profit = revenue - expense;
+    return `
+      <h3>${name}</h3>
+      <div class="ledger">
+        <div class="ledger-row">
+          <span>매출</span><b class="plus">+${num(revenue)}</b>
+        </div>
+        <div class="ledger-row sub">
+          <span>└ 재료비 (발주)</span><b class="minus">-${num(supplyCost)}</b>
+        </div>
+        <div class="ledger-row sub">
+          <span>└ 인건비</span><b class="minus">-${num(wageCost)}</b>
+        </div>
+        <div class="ledger-row total ${profit < 0 ? "loss" : ""}">
+          <span>순이익</span><b>${profit < 0 ? "" : "+"}${num(profit)}</b>
+        </div>
+      </div>`;
+  }
+
+  /**
+   * 매출 · 지출 · 순이익을 보여주는 정산표. 지어둔 가게마다 따로 한 줄씩
+   * 나눠 보여주고, 맨 아래에 전체(가게 다 합친) 매출현황을 한 번 더
+   * 보여줍니다. liveWage가 true면(아직 마감 전인 "오늘") 인건비를 지금
+   * 인원 기준으로 미리 계산해서 보여줍니다.
+   */
+  function ledgerTable(l: DayLedger, liveWage = false): string {
+    const restaurantRows = RESTAURANT_ORDER.filter((id) => {
+      const stats = restaurantStatsOf(l, id);
+      return liveWage ? gameState.isConstructed(id) : stats.revenue > 0 || stats.served > 0;
+    })
+      .map((id) => {
+        const stats = restaurantStatsOf(l, id);
+        const wageCost = liveWage ? gameState.restaurantWageTotal(id) : stats.wageCost;
+        return restaurantLedgerBlock(restaurantConfig(id).name, stats.revenue, stats.supplyCost, wageCost);
+      })
+      .join("");
+
+    const wage = liveWage ? gameState.dailyWageTotal() : l.wageCost;
     const expense = l.supplyCost + wage;
     const profit = l.revenue - expense;
-    return `
+    const totalBlock = `
+      <h3>전체 매출현황</h3>
       <div class="ledger">
         <div class="ledger-row">
           <span>매출</span><b class="plus">+${num(l.revenue)}</b>
@@ -959,6 +1001,8 @@ export function mountUI(root: HTMLElement) {
           <span>순이익</span><b>${profit < 0 ? "" : "+"}${num(profit)}</b>
         </div>
       </div>`;
+
+    return `${restaurantRows}${totalBlock}`;
   }
 
   /** 배열을 앞에서부터 size개씩 잘라 묶습니다 (매출표를 일주일 단위로 나눌 때 씁니다) */
@@ -984,7 +1028,6 @@ export function mountUI(root: HTMLElement) {
 
   function renderSalesPanel() {
     const today = gameState.data.today;
-    const wageNow = gameState.dailyWageTotal();
     const history = gameState.data.history;
 
     const weeks = chunk(history, 7);
@@ -1036,7 +1079,7 @@ export function mountUI(root: HTMLElement) {
 
       <h3>오늘 (${gameState.data.day}일차 · ${clockText(gameState.data.clock)})</h3>
       <div class="row-plain"><span class="muted">받은 손님</span><b>${today.served}명</b></div>
-      ${ledgerTable(today, wageNow)}
+      ${ledgerTable(today, true)}
       <p class="muted small">아직 마감 전이라, 인건비는 지금 인원 기준으로 미리 보여드리는 금액이에요.</p>
 
       <h3>지난 매출 (주간)</h3>

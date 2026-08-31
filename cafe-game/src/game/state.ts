@@ -83,7 +83,20 @@ export interface FloorData {
   equipment: string[];
 }
 
-/** 하루치 장부 — 매출표에 그대로 보여줍니다. 가게 전체(카페+분식집+포차) 합산입니다 */
+/** 가게 하나만의 하루치 매출 (카페/분식집/포차 각각) */
+export interface RestaurantDayStats {
+  revenue: number;
+  supplyCost: number;
+  wageCost: number;
+  served: number;
+}
+
+function emptyRestaurantDayStats(): RestaurantDayStats {
+  return { revenue: 0, supplyCost: 0, wageCost: 0, served: 0 };
+}
+
+/** 하루치 장부 — 매출표에 그대로 보여줍니다. 가게 전체(카페+분식집+포차) 합산이면서,
+ * byRestaurant 에 가게별로도 나눠 담아둡니다. */
 export interface DayLedger {
   day: number;
   /** 손님에게 받은 돈 */
@@ -94,6 +107,13 @@ export interface DayLedger {
   wageCost: number;
   /** 그날 응대한 손님 수 */
   served: number;
+  /** 가게별로 나눈 그날 매출. 이 기능이 생기기 전에 마감된 지난 날들은 없을 수 있습니다 */
+  byRestaurant?: Record<RestaurantId, RestaurantDayStats>;
+}
+
+/** 지난 날짜라 byRestaurant가 없을 수도 있는 장부에서, 안전하게 가게별 몫을 꺼냅니다 */
+export function restaurantStatsOf(l: DayLedger, id: RestaurantId): RestaurantDayStats {
+  return l.byRestaurant?.[id] ?? emptyRestaurantDayStats();
 }
 
 /** 세트 메뉴의 레벨 (재고는 단품 쪽에서 빠지므로 따로 없습니다) */
@@ -236,7 +256,9 @@ function defaultSave(): SaveData {
 }
 
 export function emptyLedger(day: number): DayLedger {
-  return { day, revenue: 0, supplyCost: 0, wageCost: 0, served: 0 };
+  const byRestaurant = {} as Record<RestaurantId, RestaurantDayStats>;
+  for (const id of RESTAURANT_ORDER) byRestaurant[id] = emptyRestaurantDayStats();
+  return { day, revenue: 0, supplyCost: 0, wageCost: 0, served: 0, byRestaurant };
 }
 
 /** 장부 한 줄의 지출 합계와 순이익 */
@@ -514,10 +536,15 @@ class GameState {
 
   /* --------------------------- 하루 / 장부 --------------------------- */
 
-  /** 손님에게 받은 돈을 오늘 매출에 적습니다 (가게 전체 합산) */
+  /** 손님에게 받은 돈을 오늘 매출에 적습니다 (가게 전체 합산 + 지금 활성 가게별) */
   recordSale(amount: number) {
     this.data.today.revenue += amount;
     this.data.today.served += 1;
+    const stats = this.data.today.byRestaurant?.[this.data.activeRestaurant];
+    if (stats) {
+      stats.revenue += amount;
+      stats.served += 1;
+    }
   }
 
   /* ----------------------------- 유니폼 ----------------------------- */
@@ -707,31 +734,34 @@ class GameState {
     return fame;
   }
 
-  /** 발주에 쓴 돈을 오늘 재료비에 적습니다 */
+  /** 발주에 쓴 돈을 오늘 재료비에 적습니다 (가게 전체 합산 + 지금 활성 가게별) */
   recordSupplyCost(amount: number) {
     this.data.today.supplyCost += amount;
+    const stats = this.data.today.byRestaurant?.[this.data.activeRestaurant];
+    if (stats) stats.supplyCost += amount;
+  }
+
+  /** 가게 하나의 하루 인건비 (그 가게가 안 지어졌으면 0) */
+  restaurantWageTotal(id: RestaurantId): number {
+    const r = this.data.restaurants[id];
+    if (!r.constructed) return 0;
+    const scale = restaurantConfig(id).costScale;
+    let total = 0;
+    r.floors.forEach((floor, i) => {
+      if (!floor.unlocked) return;
+      for (const role of ROLE_ORDER) total += floor[role] * roleWage(role, i, scale);
+    });
+    // 그 가게의 총괄 매니저가 입은 옷만큼, 그 가게 인건비만 깎입니다.
+    if (r.generalManager) {
+      const cut = Math.min(0.8, uniformById(r.equipped.gm)?.equip.wageCut ?? 0);
+      total = Math.round(total * (1 - cut));
+    }
+    return total;
   }
 
   /** 지금 고용한 사람들의 하루 인건비 합계 — 지어놓은 가게 전부를 더합니다 */
   dailyWageTotal(): number {
-    let total = 0;
-    for (const id of RESTAURANT_ORDER) {
-      const r = this.data.restaurants[id];
-      if (!r.constructed) continue;
-      const scale = restaurantConfig(id).costScale;
-      let restaurantTotal = 0;
-      r.floors.forEach((floor, i) => {
-        if (!floor.unlocked) return;
-        for (const role of ROLE_ORDER) restaurantTotal += floor[role] * roleWage(role, i, scale);
-      });
-      // 그 가게의 총괄 매니저가 입은 옷만큼, 그 가게 인건비만 깎입니다.
-      if (r.generalManager) {
-        const cut = Math.min(0.8, uniformById(r.equipped.gm)?.equip.wageCut ?? 0);
-        restaurantTotal = Math.round(restaurantTotal * (1 - cut));
-      }
-      total += restaurantTotal;
-    }
-    return total;
+    return RESTAURANT_ORDER.reduce((sum, id) => sum + this.restaurantWageTotal(id), 0);
   }
 
   /** 그 층 하루 인건비 (지금 활성화된 가게 기준) */
@@ -764,7 +794,13 @@ class GameState {
    * 돌려주는 값이 마감 정산 화면에 그대로 뜹니다.
    */
   closeDay(): DayLedger {
-    const wages = this.dailyWageTotal();
+    let wages = 0;
+    for (const id of RESTAURANT_ORDER) {
+      const wage = this.restaurantWageTotal(id);
+      wages += wage;
+      const stats = this.data.today.byRestaurant?.[id];
+      if (stats) stats.wageCost = wage;
+    }
     this.data.today.wageCost = wages;
     // 인건비는 가진 돈이 모자라도 그대로 나갑니다. 잔고가 마이너스로
     // 내려가면 다음 날은 빚을 지고 시작해요.
@@ -1126,14 +1162,17 @@ class GameState {
    * 다른 가게를 미리 살짝 보여줄 때 둘 다 이 계산을 함께 씁니다 (지금 활성
    * 가게 기준 — previewOfflineEarnings()는 잠깐 활성 가게를 바꿔서 씁니다).
    */
-  private estimateOfflineNet(elapsed: number): { serves: number; net: number } {
-    if (elapsed < OFFLINE_MIN_AWAY_MS) return { serves: 0, net: 0 };
+  private estimateOfflineNet(
+    elapsed: number,
+  ): { serves: number; revenue: number; supplySpent: number; net: number } {
+    const zero = { serves: 0, revenue: 0, supplySpent: 0, net: 0 };
+    if (elapsed < OFFLINE_MIN_AWAY_MS) return zero;
 
     const autoFloors = this.rdata()
       .floors.map((_, i) => i)
       .filter((i) => this.isFloorAutomated(i));
-    if (autoFloors.length === 0) return { serves: 0, net: 0 };
-    if (this.sellableAnywhere().length === 0) return { serves: 0, net: 0 };
+    if (autoFloors.length === 0) return zero;
+    if (this.sellableAnywhere().length === 0) return zero;
 
     const gm = this.hasGeneralManager();
 
@@ -1152,17 +1191,17 @@ class GameState {
     }
 
     let serves = Math.floor(servesPerMs * elapsed * OFFLINE_EARNINGS_RATE);
-    if (serves <= 0) return { serves: 0, net: 0 };
+    if (serves <= 0) return zero;
     // 총괄 매니저가 없으면 남아있던 재고만큼만 팔 수 있습니다.
     if (!gm) serves = Math.min(serves, this.totalStock());
-    if (serves <= 0) return { serves: 0, net: 0 };
+    if (serves <= 0) return zero;
 
     const avgPrice = this.averagePrice();
     const avgSupply = this.averageSupplyCost();
     // 총괄 매니저가 알아서 발주하지만, 그 원가는 매출에서 빠집니다.
     const supplySpent = gm ? Math.round(serves * avgSupply) : 0;
     const revenue = Math.round(serves * avgPrice);
-    return { serves, net: Math.max(0, revenue - supplySpent) };
+    return { serves, revenue, supplySpent, net: Math.max(0, revenue - supplySpent) };
   }
 
   /** applyOfflineEarnings()와 switchRestaurant() 둘 다 이 계산을 공유합니다 (지금 활성 가게 기준) */
@@ -1171,7 +1210,7 @@ class GameState {
     this.offlineDurationMs = 0;
     this.offlineServes = 0;
 
-    const { serves, net } = this.estimateOfflineNet(elapsed);
+    const { serves, revenue, supplySpent, net } = this.estimateOfflineNet(elapsed);
     if (serves <= 0) return;
 
     let actualServes = serves;
@@ -1187,6 +1226,17 @@ class GameState {
     this.offlineDurationMs = elapsed;
     this.offlineEarnings = net;
     if (net > 0) this.addCoins(net);
+
+    // 오늘 매출표에도 이 가게(자리 비운 동안 자동으로 번 것) 몫을 반영합니다.
+    this.data.today.revenue += revenue;
+    this.data.today.supplyCost += supplySpent;
+    this.data.today.served += actualServes;
+    const stats = this.data.today.byRestaurant?.[this.data.activeRestaurant];
+    if (stats) {
+      stats.revenue += revenue;
+      stats.supplyCost += supplySpent;
+      stats.served += actualServes;
+    }
   }
 
   /**
