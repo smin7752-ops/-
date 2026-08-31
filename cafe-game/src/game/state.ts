@@ -442,6 +442,32 @@ class GameState {
     this.save();
   }
 
+  /**
+   * 하루가 마감되기 직전에 호출합니다. 지금 들어가 있지 않은 다른
+   * 가게들은, 그 가게에 들어갔을 때(또는 앱을 다시 열었을 때)만 자리
+   * 비운 동안 번 돈이 들어오므로, 하루 종일 한 번도 안 들어갔다 오면
+   * 그 가게는 매출 0원인 채로 인건비만 나가는 것처럼 보일 수 있습니다.
+   * 그래서 마감 직전에 다른 가게들도 한 번씩 미리 정산해 넣어, 지어둔
+   * 가게 전부가 그날 매출표에 제대로 반영되게 합니다. 지금 활성 가게는
+   * 이미 실시간으로 반영되고 있으니 건드리지 않습니다.
+   */
+  settleInactiveRestaurantsForDayClose() {
+    const activeId = this.data.activeRestaurant;
+    for (const id of RESTAURANT_ORDER) {
+      if (id === activeId) continue;
+      const r = this.data.restaurants[id];
+      if (!r.constructed) continue;
+
+      const cap = r.generalManager ? OFFLINE_EARNINGS_CAP_MS : OFFLINE_NO_GM_CAP_MS;
+      const elapsed = Math.min(Math.max(0, Date.now() - r.lastVisitedAt), cap);
+
+      this.data.activeRestaurant = id;
+      this.applyOfflineEarningsFor(elapsed);
+      r.lastVisitedAt = Date.now();
+    }
+    this.data.activeRestaurant = activeId;
+  }
+
   /* ------------------------------ 저장 ------------------------------ */
 
   private load(): SaveData {

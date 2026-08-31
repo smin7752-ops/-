@@ -164,6 +164,10 @@ class Simulation {
     if (gameState.data.clock >= CLOSE_HOUR * 60) {
       gameState.data.clock = CLOSE_HOUR * 60;
       this.closed = true;
+      // 오늘 하루 동안 한 번도 안 들어가 본 다른 가게가 있으면, 마감하기
+      // 전에 그 가게들 몫도 미리 정산해 넣습니다 (안 그러면 인건비만
+      // 나가고 매출은 0원으로 남을 수 있어요).
+      gameState.settleInactiveRestaurantsForDayClose();
       const ledger = gameState.closeDay();
       gameState.save();
       bus.emit(EVENTS.DAY_CLOSED, ledger);
