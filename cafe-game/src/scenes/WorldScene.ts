@@ -30,11 +30,15 @@ function withParticle(word: string, withBatchim: string, withoutBatchim: string)
  * 있으면) 짓습니다(총괄 매니저를 고용했고 비용이 있으면).
  */
 export class WorldScene extends Phaser.Scene {
+  /** 지금 안 들어가 있는 가게마다, 쌓인 매출을 보여주는 글씨 (실시간으로 갱신) */
+  private pendingLabels: { id: RestaurantId; label: Phaser.GameObjects.Text }[] = [];
+
   constructor() {
     super("world");
   }
 
   create() {
+    this.pendingLabels = [];
     buildArt(this);
 
     this.add.image(0, 0, "world-bg").setOrigin(0, 0);
@@ -62,6 +66,18 @@ export class WorldScene extends Phaser.Scene {
       this.buildRestaurantSpot(tile, groundScreenX, groundScreenY, () => entering, (v) => {
         entering = v;
       });
+    }
+
+    // 다른 가게들의 쌓인 매출이 이 화면에 서 있는 동안에도 실시간으로
+    // 올라가는 것처럼 보이도록 주기적으로 다시 계산해서 갱신합니다.
+    this.time.addEvent({ delay: 1000, loop: true, callback: () => this.refreshPendingLabels() });
+  }
+
+  private refreshPendingLabels() {
+    for (const { id, label } of this.pendingLabels) {
+      const pending = gameState.previewOfflineEarnings(id);
+      label.setText(pending > 0 ? `쌓인 매출\n${coinText(pending)}` : "");
+      label.setVisible(pending > 0);
     }
   }
 
@@ -109,21 +125,23 @@ export class WorldScene extends Phaser.Scene {
       this.tweens.add({ targets: hint, alpha: 0.35, duration: 700, yoyo: true, repeat: -1 });
 
       // 지금 안 들어가 있는 동안 이 가게가 벌고 있을 것으로 보이는 돈을
-      // 살짝 보여줍니다 — 다른 가게에 있는 동안 여기는 그냥 멈춰 있는
-      // 것처럼 보이지 않도록.
+      // 크게 보여줍니다 — 다른 가게에 있는 동안 여기는 그냥 멈춰 있는
+      // 것처럼 보이지 않도록. 이 화면에 서 있는 동안은 refreshPendingLabels()가
+      // 주기적으로 다시 계산해서 실시간으로 오르는 것처럼 보여줍니다.
       const pending = gameState.previewOfflineEarnings(tile.id);
-      if (pending > 0) {
-        this.add
-          .text(buildingX, buildingY + 68, `쌓인 매출 ${coinText(pending)}`, {
-            fontSize: "16px",
-            fontStyle: "bold",
-            color: "#ffe6a3",
-            stroke: "#4a3226",
-            strokeThickness: 4,
-          })
-          .setOrigin(0.5)
-          .setDepth(buildingY + 1);
-      }
+      const pendingLabel = this.add
+        .text(buildingX, buildingY + 70, pending > 0 ? `쌓인 매출\n${coinText(pending)}` : "", {
+          fontSize: "26px",
+          fontStyle: "bold",
+          color: "#ffe066",
+          stroke: "#4a3226",
+          strokeThickness: 6,
+          align: "center",
+        })
+        .setOrigin(0.5, 0)
+        .setDepth(buildingY + 1)
+        .setVisible(pending > 0);
+      this.pendingLabels.push({ id: tile.id, label: pendingLabel });
 
       const hit = this.add
         .rectangle(buildingX, buildingY - 140, 280, 300, 0xffffff, 0)

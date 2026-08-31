@@ -1091,11 +1091,33 @@ class GameState {
    * 자리를 비운 동안 자동화된 층이 번 돈을 계산해서 넣어줍니다 (앱을 다시 열었을 때).
    * 완전 자동(바리스타+직원)인 층만 돈을 벌고, 총괄 매니저가 없으면
    * 재고가 떨어지므로 짧게 끊고 남은 재고만큼만 인정합니다.
+   * 지어둔 가게 전부를 각자 자리 비운 시간만큼 한꺼번에 계산해서, 앱을
+   * 완전히 껐다 켰을 때 굳이 하나하나 들어가 보지 않아도 다 받아집니다.
    */
   applyOfflineEarnings() {
-    const cap = this.hasGeneralManager() ? OFFLINE_EARNINGS_CAP_MS : OFFLINE_NO_GM_CAP_MS;
-    const elapsed = Math.min(Math.max(0, Date.now() - this.data.lastSavedAt), cap);
-    this.applyOfflineEarningsFor(elapsed);
+    const prevActive = this.data.activeRestaurant;
+    let totalNet = 0;
+    let totalServes = 0;
+    let longestAway = 0;
+
+    for (const id of RESTAURANT_ORDER) {
+      const r = this.data.restaurants[id];
+      if (!r.constructed) continue;
+      const cap = r.generalManager ? OFFLINE_EARNINGS_CAP_MS : OFFLINE_NO_GM_CAP_MS;
+      const elapsed = Math.min(Math.max(0, Date.now() - r.lastVisitedAt), cap);
+
+      this.data.activeRestaurant = id;
+      this.applyOfflineEarningsFor(elapsed);
+      totalNet += this.offlineEarnings;
+      totalServes += this.offlineServes;
+      longestAway = Math.max(longestAway, this.offlineDurationMs);
+      r.lastVisitedAt = Date.now();
+    }
+
+    this.data.activeRestaurant = prevActive;
+    this.offlineEarnings = totalNet;
+    this.offlineServes = totalServes;
+    this.offlineDurationMs = longestAway;
   }
 
   /**
@@ -1170,18 +1192,41 @@ class GameState {
   /**
    * 지금 안 들어가 있는 다른 가게가 자리를 비운 동안 어느 정도 벌었을지
    * 미리 보여줄 때 씁니다 (매장 화면에서, 실제로 넣지는 않고 숫자만 계산).
+   * estimateOfflineNet()과 달리 손님 수를 정수로 딱 떨어뜨리지 않고 매끄러운
+   * 값으로 계산해서, 화면에 서 있는 동안 초 단위로도 눈에 띄게 올라갑니다.
    */
   previewOfflineEarnings(id: RestaurantId): number {
     const r = this.data.restaurants[id];
     if (!r.constructed) return 0;
     const cap = r.generalManager ? OFFLINE_EARNINGS_CAP_MS : OFFLINE_NO_GM_CAP_MS;
     const elapsed = Math.min(Math.max(0, Date.now() - r.lastVisitedAt), cap);
+    if (elapsed < OFFLINE_MIN_AWAY_MS) return 0;
 
     const prevActive = this.data.activeRestaurant;
     if (prevActive === id) return 0;
     this.data.activeRestaurant = id;
     try {
-      return this.estimateOfflineNet(elapsed).net;
+      const autoFloors = r.floors.map((_, i) => i).filter((i) => this.isFloorAutomated(i));
+      if (autoFloors.length === 0) return 0;
+      if (this.sellableAnywhere().length === 0) return 0;
+
+      let servesPerMs = 0;
+      for (const i of autoFloors) {
+        const f = this.floor(i);
+        const cycleMs =
+          this.averageMakeTime() / baristaSpeed(f.barista) +
+          serveDelayMs(f.server) +
+          EAT_TIME_MS +
+          cleanDelayMs(f.server);
+        const tableThroughput = f.tables / cycleMs;
+        const spawnThroughput = 1 / spawnIntervalMs(f.manager);
+        servesPerMs += Math.min(tableThroughput, spawnThroughput);
+      }
+
+      const avgPrice = this.averagePrice();
+      const avgSupply = this.averageSupplyCost();
+      const netPerServe = r.generalManager ? Math.max(0, avgPrice - avgSupply) : avgPrice;
+      return servesPerMs * elapsed * OFFLINE_EARNINGS_RATE * netPerServe;
     } finally {
       this.data.activeRestaurant = prevActive;
     }
