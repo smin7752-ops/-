@@ -2036,13 +2036,18 @@ function buildRestaurantBuildings(scene: Phaser.Scene) {
     const ROOF_DARK = 0xa8331f;
     const WALL = 0xf4e8ca;
     const WALL_SHADE = 0xe7d6ac;
-    const LIFT_BACK = 150;
-    const LIFT_FRONT = 62;
-    const LIFT_SIDE = (LIFT_BACK + LIFT_FRONT) / 2;
-    const Tt = { x: T.x, y: T.y - LIFT_BACK };
-    const Rt = { x: R.x, y: R.y - LIFT_SIDE };
-    const Bt = { x: B.x, y: B.y - LIFT_FRONT };
-    const Lt = { x: L.x, y: L.y - LIFT_SIDE };
+    // 벽은 카페와 비슷한 높이로 반듯하게 세워서 문·창문이 눌리지 않게 하고,
+    // 지붕만 벽 위에서 뒤쪽이 더 높이 솟는 외발(한쪽으로 흐르는) 모양으로
+    // 얹습니다 — 이렇게 해야 앞쪽이 무너져 내려앉은 것처럼 보이지 않습니다.
+    const WALL_H = 112;
+    const up = (p: { x: number; y: number }) => ({ x: p.x, y: p.y - WALL_H });
+    const [Tt, Rt, Bt, Lt] = [up(T), up(R), up(B), up(L)];
+
+    const ROOF_RISE = 74; // 뒤쪽 지붕마루가 벽 끝보다 이만큼 더 솟습니다
+    const RTt = { x: Tt.x, y: Tt.y - ROOF_RISE };
+    const RRt = { x: Rt.x, y: Rt.y - ROOF_RISE * 0.48 };
+    const RLt = { x: Lt.x, y: Lt.y - ROOF_RISE * 0.48 };
+    const RBt = Bt; // 앞쪽 처마는 벽 끝과 같은 높이 — 여기가 문·창문 위 라인입니다.
 
     tex(scene, "world-bunsik-iso", BW, BH, (g) => {
       buildingGround(g, B, w2, h2);
@@ -2050,26 +2055,26 @@ function buildRestaurantBuildings(scene: Phaser.Scene) {
       poly(g, [B, L, Lt, Bt], WALL);
       groundContactLine(g, L, B, R);
 
-      // 외발 지붕 — 뒤가 높고 앞이 낮은 한 장의 판 (같은 2면 기법이지만
-      // 네 귀퉁이 높이가 서로 달라서 자연스럽게 기울어져 보입니다)
-      poly(g, [Tt, Bt, Rt], ROOF_DARK);
-      poly(g, [Tt, Lt, Bt], ROOF);
+      // 외발 지붕 — 뒤가 높고 앞이 낮은 한 장의 판. 벽과는 별개로 그 위에
+      // 얹히는 구조라, 문·창문이 있는 벽 비례는 그대로 유지됩니다.
+      poly(g, [RTt, RBt, RRt], ROOF_DARK);
+      poly(g, [RTt, RLt, RBt], ROOF);
       g.lineStyle(5, INK, 1);
-      g.lineBetween(Tt.x, Tt.y, Bt.x, Bt.y);
+      g.lineBetween(RTt.x, RTt.y, RBt.x, RBt.y);
       g.lineStyle(2, 0x000000, 0.14);
       for (let i = 1; i < 5; i++) {
         const t = i / 5;
-        const a = { x: Tt.x + (Lt.x - Tt.x) * t, y: Tt.y + (Lt.y - Tt.y) * t };
-        const b = { x: Bt.x + (Lt.x - Tt.x) * t, y: Bt.y + (Lt.y - Tt.y) * t };
+        const a = { x: RTt.x + (RLt.x - RTt.x) * t, y: RTt.y + (RLt.y - RTt.y) * t };
+        const b = { x: RBt.x + (RLt.x - RTt.x) * t, y: RBt.y + (RLt.y - RTt.y) * t };
         g.lineBetween(a.x, a.y, b.x, b.y);
       }
       // 처마 끝 물받이 홈통 느낌의 굵은 테두리
       g.lineStyle(5, ROOF_DARK, 1);
-      g.lineBetween(Lt.x, Lt.y, Bt.x, Bt.y);
-      g.lineBetween(Bt.x, Bt.y, Rt.x, Rt.y);
+      g.lineBetween(RLt.x, RLt.y, RBt.x, RBt.y);
+      g.lineBetween(RBt.x, RBt.y, RRt.x, RRt.y);
 
       // 지붕 위 환풍 배기구 + 몽글몽글 김
-      const ventBase = { x: Tt.x + (Rt.x - Tt.x) * 0.42, y: Tt.y + (Rt.y - Tt.y) * 0.42 };
+      const ventBase = { x: RTt.x + (RRt.x - RTt.x) * 0.42, y: RTt.y + (RRt.y - RTt.y) * 0.42 };
       blob(g, ventBase.x - 10, ventBase.y - 40, 20, 42, 8, S.steel, 5);
       blob(g, ventBase.x - 13, ventBase.y - 46, 26, 10, 5, S.steelDark, 5);
       g.fillStyle(0xffffff, 0.7);
@@ -2101,11 +2106,10 @@ function buildRestaurantBuildings(scene: Phaser.Scene) {
       leftWall.quad(g, 0.04, 0.96, 0.02, 0.09, S.woodDark, 3);
       leftWall.quad(g, 0.06, 0.94, 0.03, 0.075, 0xffffff, 0, 0);
 
-      // 간판 — 외발 지붕 앞쪽 처마가 낮아서 위아래 여유가 적으니, 처마 선에
-      // 걸치듯 작게 답니다.
+      // 간판
       g.fillStyle(0x000000, 0.1);
-      g.fillRoundedRect(Bt.x - 66, Bt.y - 12, 132, 24, 8);
-      blob(g, Bt.x - 68, Bt.y - 15, 132, 24, 8, S.paper, 5);
+      g.fillRoundedRect(Bt.x - 72, Bt.y - 26, 144, 32, 10);
+      blob(g, Bt.x - 74, Bt.y - 29, 144, 32, 10, S.paper, 5);
 
       hedgeRow(g, L, B);
       hedgeRow(g, B, R);

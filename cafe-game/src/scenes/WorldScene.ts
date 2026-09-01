@@ -138,9 +138,10 @@ export class WorldScene extends Phaser.Scene {
     const buildingX = groundScreenX + tileScreen.x;
     // 예전엔 타일의 "맨 앞 꼭짓점"(옆 타일들과 만나는 흙길 교차점)에 건물을
     // 앉혔더니, 건물이 잔디가 아니라 길 위에 걸쳐 있는 것처럼 보였습니다.
-    // 타일 중심에서 살짝만 앞으로 당겨서, 건물이 잔디 칸 안에 완전히
-    // 들어오게 합니다.
-    const buildingY = groundScreenY + tileScreen.y + ISO_TILE_H * 0.12;
+    // 건물 그림 자체가 위로 높이 솟아 있어서 타일 한가운데에 앉혀도 시각적
+    // 무게중심은 그보다 위쪽에 있는 것처럼 보이길래, 타일 중심보다 조금 더
+    // 앞으로 당겨서 잔디 칸 정중앙에 놓인 것처럼 보이게 합니다.
+    const buildingY = groundScreenY + tileScreen.y + ISO_TILE_H * 0.3;
 
     const constructed = gameState.isConstructed(tile.id);
     const requiredGmId = gameState.requiredGmFor(tile.id);
