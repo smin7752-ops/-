@@ -1528,6 +1528,86 @@ function isoTile(
   }
 }
 
+/**
+ * 벽 한 면(네 귀퉁이가 꼭 평행사변형이 아니어도 되는 사다리꼴까지 포함)
+ * 위에, 그 벽과 "같은 기울기"로 문·창문 같은 사각형을 얹을 때 씁니다.
+ * (u=0..1은 벽의 가로, v=0..1은 벽의 세로 — v=0이 바닥, v=1이 처마입니다.)
+ * 벽이 기울어진 사선인데 문은 똑바로 서 있는 것처럼 보이던 문제가,
+ * 이 매핑을 쓰면 문도 벽과 같은 사선을 따라가서 자연스러워집니다.
+ */
+function wallFace(
+  p00: { x: number; y: number },
+  p10: { x: number; y: number },
+  p01: { x: number; y: number },
+  p11: { x: number; y: number },
+) {
+  const map = (u: number, v: number) => ({
+    x:
+      (1 - u) * (1 - v) * p00.x +
+      u * (1 - v) * p10.x +
+      (1 - u) * v * p01.x +
+      u * v * p11.x,
+    y:
+      (1 - u) * (1 - v) * p00.y +
+      u * (1 - v) * p10.y +
+      (1 - u) * v * p01.y +
+      u * v * p11.y,
+  });
+  const quad = (
+    g: Phaser.GameObjects.Graphics,
+    u0: number,
+    u1: number,
+    v0: number,
+    v1: number,
+    fill: number,
+    line = 0,
+    lineColor = INK,
+  ) => {
+    const pts = [map(u0, v0), map(u1, v0), map(u1, v1), map(u0, v1)];
+    g.fillStyle(fill, 1);
+    g.beginPath();
+    g.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < 4; i++) g.lineTo(pts[i].x, pts[i].y);
+    g.closePath();
+    g.fillPath();
+    if (line > 0) {
+      g.lineStyle(line, lineColor, 1);
+      g.beginPath();
+      g.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < 4; i++) g.lineTo(pts[i].x, pts[i].y);
+      g.closePath();
+      g.strokePath();
+    }
+  };
+  const line = (
+    g: Phaser.GameObjects.Graphics,
+    u0: number,
+    v0: number,
+    u1: number,
+    v1: number,
+    color: number,
+    width: number,
+    alpha = 1,
+  ) => {
+    const a = map(u0, v0);
+    const b = map(u1, v1);
+    g.lineStyle(width, color, alpha);
+    g.lineBetween(a.x, a.y, b.x, b.y);
+  };
+  const dot = (
+    g: Phaser.GameObjects.Graphics,
+    u: number,
+    v: number,
+    r: number,
+    fill: number,
+    lineW = 0,
+  ) => {
+    const p = map(u, v);
+    disc(g, p.x, p.y, r, fill, lineW);
+  };
+  return { map, quad, line, dot };
+}
+
 /** 마름모 테두리만 그립니다 (채우기 없이) — 타일에 살짝 그림자/광택을 얹을 때 씁니다. */
 function strokeDiamond(
   g: Phaser.GameObjects.Graphics,
@@ -1793,41 +1873,35 @@ function buildWorldArt(scene: Phaser.Scene) {
     g.fillCircle(chimneyBase.x + 8, chimneyBase.y - 80, 7);
     g.fillCircle(chimneyBase.x - 5, chimneyBase.y - 90, 6);
 
-    // 문 위 차양(어닝) — 줄무늬 천막으로 입구를 도드라져 보이게 합니다.
-    const awningY = 168;
-    const awningColors = [0xe8973a, S.paper];
-    for (let i = 0; i < 6; i++) {
-      g.fillStyle(awningColors[i % 2], 1);
-      g.beginPath();
-      g.moveTo(145 + i * 15, awningY);
-      g.lineTo(160 + i * 15, awningY);
-      g.lineTo(163 + i * 15, awningY + 16);
-      g.lineTo(142 + i * 15, awningY + 16);
-      g.closePath();
-      g.fillPath();
+    // 벽면과 정확히 같은 기울기로 문·창문·차양을 얹습니다 (문이 벽과 따로 노는 문제 방지).
+    const rightWall = wallFace(B, R, Bt, Rt);
+    const leftWall = wallFace(B, L, Bt, Lt);
+
+    // 문 위 차양(어닝) — 오른쪽 벽 위, 문 폭보다 넉넉하게 걸쳐서 도드라져 보이게 합니다.
+    const awningStripes = 7;
+    for (let i = 0; i < awningStripes; i++) {
+      const u0 = 0.16 + (0.68 / awningStripes) * i;
+      const u1 = u0 + 0.68 / awningStripes;
+      rightWall.quad(g, u0, u1, 0.82, 0.97, i % 2 === 0 ? 0xe8973a : S.paper);
     }
-    g.lineStyle(4, INK, 1);
-    g.lineBetween(143, awningY, 233, awningY);
-    g.fillStyle(0x000000, 0.12);
-    g.fillRect(143, awningY + 16, 90, 4);
+    rightWall.line(g, 0.14, 0.97, 0.86, 0.97, INK, 4);
+    rightWall.quad(g, 0.14, 0.86, 0.78, 0.82, INK, 0);
 
     // 문 (오른쪽 벽) — 벽 위아래로 여백을 남겨 문틀처럼 보이게 합니다.
-    blob(g, 170, 213, 50, 94, 6, S.woodDark, 5);
-    blob(g, 178, 221, 34, 60, 5, GLASS, 4);
-    g.fillStyle(0xffffff, 0.35);
-    g.fillRect(184, 227, 8, 48);
-    disc(g, 205, 260, 4, S.steelDark, 0);
+    rightWall.quad(g, 0.32, 0.72, 0.05, 0.8, S.woodDark, 5);
+    rightWall.quad(g, 0.37, 0.67, 0.13, 0.68, GLASS, 4);
+    rightWall.quad(g, 0.4, 0.44, 0.16, 0.65, 0xffffff, 0, 0);
+    rightWall.dot(g, 0.62, 0.4, 4, S.steelDark, 0);
 
-    // 창문 (왼쪽 벽) + 창가 화분
-    blob(g, 80, 213, 50, 94, 6, S.woodDark, 5);
-    blob(g, 88, 221, 34, 60, 5, GLASS, 4);
-    g.lineStyle(3, S.woodDark, 1);
-    g.lineBetween(105, 221, 105, 281);
-    g.lineBetween(88, 251, 122, 251);
-    blob(g, 76, 289, 58, 16, 4, S.woodDark, 4);
-    disc(g, 86, 287, 7, 0xf4a9a8, 3);
-    disc(g, 100, 285, 7, 0xf7d08a, 3);
-    disc(g, 114, 287, 7, 0xffffff, 3);
+    // 창문 (왼쪽 벽) — 창틀과 십자 창살, 창가 화분까지 왼쪽 벽 기울기에 맞춥니다.
+    leftWall.quad(g, 0.28, 0.68, 0.05, 0.8, S.woodDark, 5);
+    leftWall.quad(g, 0.33, 0.63, 0.13, 0.68, GLASS, 4);
+    leftWall.line(g, 0.48, 0.13, 0.48, 0.68, S.woodDark, 3);
+    leftWall.line(g, 0.33, 0.4, 0.63, 0.4, S.woodDark, 3);
+    leftWall.quad(g, 0.24, 0.72, -0.06, 0.05, S.woodDark, 4);
+    leftWall.dot(g, 0.32, -0.005, 6, 0xf4a9a8, 3);
+    leftWall.dot(g, 0.48, -0.02, 6, 0xf7d08a, 3);
+    leftWall.dot(g, 0.64, -0.005, 6, 0xffffff, 3);
 
     // 간판 (글자는 화면에서 텍스트로 따로 얹습니다)
     g.fillStyle(0x000000, 0.1);
@@ -1896,76 +1970,183 @@ function hedgeRow(
   }
 }
 
-/** 카페 건물과 같은 아이소메트릭 박스 기법으로, 분식집·포차 건물을 그립니다. */
+/** 공통 뼈대(마름모 발자국, 그림자, 접지선, 화단)를 만들어 두면 분식집·포차가
+ * 서로 다른 지붕 모양이어도 함께 쓸 수 있습니다. */
+function buildingGround(
+  g: Phaser.GameObjects.Graphics,
+  B: { x: number; y: number },
+  w2: number,
+  h2: number,
+) {
+  g.fillStyle(0x000000, 0.08);
+  g.fillEllipse(B.x, B.y + 8, w2 * 1.3, h2 * 1.2);
+  g.fillStyle(0x000000, 0.2);
+  g.fillEllipse(B.x, B.y + 3, w2 * 0.9, h2 * 0.7);
+}
+
+function groundContactLine(
+  g: Phaser.GameObjects.Graphics,
+  L: { x: number; y: number },
+  B: { x: number; y: number },
+  R: { x: number; y: number },
+) {
+  g.lineStyle(4, 0x000000, 0.28);
+  g.lineBetween(L.x, L.y, B.x, B.y);
+  g.lineBetween(B.x, B.y, R.x, R.y);
+}
+
+/** 아이소메트릭 박스(지붕 2면 + 벽 2면)를 그리는 카페와 같은 기법으로,
+ * 분식집·포차는 지붕 모양과 문·창문 소재를 아예 다르게 그려서 한눈에
+ * 다른 가게로 보이게 합니다. */
 function buildRestaurantBuildings(scene: Phaser.Scene) {
   const S = ART_COLORS;
   const GLASS = 0xbfe6ef;
-
   const BW = 300;
   const BH = 380;
   const cx = BW / 2;
   const gcy = 290;
   const w2 = 105;
   const h2 = 52;
-  const WALL_H = 120;
   const T = { x: cx, y: gcy - h2 };
   const R = { x: cx + w2, y: gcy };
   const B = { x: cx, y: gcy + h2 };
   const L = { x: cx - w2, y: gcy };
-  const up = (p: { x: number; y: number }) => ({ x: p.x, y: p.y - WALL_H });
-  const [Tt, Rt, Bt, Lt] = [up(T), up(R), up(B), up(L)];
 
-  const buildBox = (
-    key: string,
-    roof: number,
-    roofDark: number,
-    wall: number,
-    wallShade: number,
-    topper: (g: Phaser.GameObjects.Graphics, chimneyBase: { x: number; y: number }) => void,
-  ) => {
-    tex(scene, key, BW, BH, (g) => {
-      const poly = (pts: { x: number; y: number }[], fill: number) => {
-        g.fillStyle(fill, 1);
-        g.beginPath();
-        g.moveTo(pts[0].x, pts[0].y);
-        for (let i = 1; i < pts.length; i++) g.lineTo(pts[i].x, pts[i].y);
-        g.closePath();
-        g.fillPath();
-        g.lineStyle(5, INK, 1);
-        g.beginPath();
-        g.moveTo(pts[0].x, pts[0].y);
-        for (let i = 1; i < pts.length; i++) g.lineTo(pts[i].x, pts[i].y);
-        g.closePath();
-        g.strokePath();
-      };
+  const poly = (g: Phaser.GameObjects.Graphics, pts: { x: number; y: number }[], fill: number) => {
+    g.fillStyle(fill, 1);
+    g.beginPath();
+    g.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) g.lineTo(pts[i].x, pts[i].y);
+    g.closePath();
+    g.fillPath();
+    g.lineStyle(5, INK, 1);
+    g.beginPath();
+    g.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) g.lineTo(pts[i].x, pts[i].y);
+    g.closePath();
+    g.strokePath();
+  };
 
-      // 바닥에 지는 그림자 — 그림 테두리 안에서만 번지도록 폭을 제한합니다.
-      g.fillStyle(0x000000, 0.08);
-      g.fillEllipse(B.x, B.y + 8, w2 * 1.3, h2 * 1.2);
-      g.fillStyle(0x000000, 0.2);
-      g.fillEllipse(B.x, B.y + 3, w2 * 0.9, h2 * 0.7);
+  /* -------------------------- 분식집: 외발지붕 매대 -------------------------- */
+  // 가게 뒤쪽은 높고 앞쪽은 낮은 외발 지붕(창고형 매대) — 카페의 오두막 지붕과는
+  // 아예 다른 실루엣이라 멀리서도 한눈에 구분됩니다. 왼쪽 벽 전체를 큰 통유리
+  // 진열창으로 열어서 매대 느낌을 살립니다.
+  {
+    const ROOF = 0xd0432f;
+    const ROOF_DARK = 0xa8331f;
+    const WALL = 0xf4e8ca;
+    const WALL_SHADE = 0xe7d6ac;
+    const LIFT_BACK = 150;
+    const LIFT_FRONT = 62;
+    const LIFT_SIDE = (LIFT_BACK + LIFT_FRONT) / 2;
+    const Tt = { x: T.x, y: T.y - LIFT_BACK };
+    const Rt = { x: R.x, y: R.y - LIFT_SIDE };
+    const Bt = { x: B.x, y: B.y - LIFT_FRONT };
+    const Lt = { x: L.x, y: L.y - LIFT_SIDE };
 
-      // 벽 두 면
-      poly([B, R, Rt, Bt], wallShade);
-      poly([B, L, Lt, Bt], wall);
+    tex(scene, "world-bunsik-iso", BW, BH, (g) => {
+      buildingGround(g, B, w2, h2);
+      poly(g, [B, R, Rt, Bt], WALL_SHADE);
+      poly(g, [B, L, Lt, Bt], WALL);
+      groundContactLine(g, L, B, R);
 
-      // 벽이 땅과 만나는 선을 짙게 그어 건물을 바닥에 단단히 붙여줍니다.
-      g.lineStyle(4, 0x000000, 0.28);
-      g.lineBetween(L.x, L.y, B.x, B.y);
-      g.lineBetween(B.x, B.y, R.x, R.y);
-
-      g.lineStyle(2, 0x000000, 0.06);
-      for (let i = 1; i < 4; i++) {
-        const t = i / 4;
-        g.lineBetween(L.x + (B.x - L.x) * t, L.y + (B.y - L.y) * t, Lt.x + (Bt.x - Lt.x) * t, Lt.y + (Bt.y - Lt.y) * t);
-      }
-
-      // 지붕 두 면 + 용마루 선 + 결 무늬
-      poly([Tt, Bt, Rt], roofDark);
-      poly([Tt, Lt, Bt], roof);
+      // 외발 지붕 — 뒤가 높고 앞이 낮은 한 장의 판 (같은 2면 기법이지만
+      // 네 귀퉁이 높이가 서로 달라서 자연스럽게 기울어져 보입니다)
+      poly(g, [Tt, Bt, Rt], ROOF_DARK);
+      poly(g, [Tt, Lt, Bt], ROOF);
       g.lineStyle(5, INK, 1);
       g.lineBetween(Tt.x, Tt.y, Bt.x, Bt.y);
-      g.lineStyle(2, 0x000000, 0.12);
+      g.lineStyle(2, 0x000000, 0.14);
+      for (let i = 1; i < 5; i++) {
+        const t = i / 5;
+        const a = { x: Tt.x + (Lt.x - Tt.x) * t, y: Tt.y + (Lt.y - Tt.y) * t };
+        const b = { x: Bt.x + (Lt.x - Tt.x) * t, y: Bt.y + (Lt.y - Tt.y) * t };
+        g.lineBetween(a.x, a.y, b.x, b.y);
+      }
+      // 처마 끝 물받이 홈통 느낌의 굵은 테두리
+      g.lineStyle(5, ROOF_DARK, 1);
+      g.lineBetween(Lt.x, Lt.y, Bt.x, Bt.y);
+      g.lineBetween(Bt.x, Bt.y, Rt.x, Rt.y);
+
+      // 지붕 위 환풍 배기구 + 몽글몽글 김
+      const ventBase = { x: Tt.x + (Rt.x - Tt.x) * 0.42, y: Tt.y + (Rt.y - Tt.y) * 0.42 };
+      blob(g, ventBase.x - 10, ventBase.y - 40, 20, 42, 8, S.steel, 5);
+      blob(g, ventBase.x - 13, ventBase.y - 46, 26, 10, 5, S.steelDark, 5);
+      g.fillStyle(0xffffff, 0.7);
+      g.fillCircle(ventBase.x, ventBase.y - 54, 8);
+      g.fillCircle(ventBase.x + 7, ventBase.y - 66, 6);
+      g.fillCircle(ventBase.x - 5, ventBase.y - 76, 5);
+
+      // 오른쪽 벽 — 좁은 출입문
+      const rightWall = wallFace(B, R, Bt, Rt);
+      const doorAwningColors = [ROOF, S.paper];
+      for (let i = 0; i < 5; i++) {
+        const u0 = 0.58 + (0.34 / 5) * i;
+        rightWall.quad(g, u0, u0 + 0.34 / 5, 0.82, 0.94, doorAwningColors[i % 2]);
+      }
+      rightWall.line(g, 0.56, 0.94, 0.94, 0.94, INK, 4);
+      rightWall.quad(g, 0.62, 0.92, 0.06, 0.8, S.woodDark, 5);
+      rightWall.quad(g, 0.67, 0.87, 0.14, 0.68, GLASS, 4);
+      rightWall.dot(g, 0.82, 0.42, 4, S.steelDark, 0);
+
+      // 왼쪽 벽 — 큰 통유리 진열창 (매대 느낌)
+      const leftWall = wallFace(B, L, Bt, Lt);
+      leftWall.quad(g, 0.06, 0.94, 0.1, 0.82, S.woodDark, 6);
+      leftWall.quad(g, 0.1, 0.9, 0.16, 0.76, GLASS, 4);
+      leftWall.line(g, 0.37, 0.16, 0.37, 0.76, S.woodDark, 3);
+      leftWall.line(g, 0.63, 0.16, 0.63, 0.76, S.woodDark, 3);
+      leftWall.dot(g, 0.235, 0.4, 7, 0xd0432f, 2);
+      leftWall.dot(g, 0.5, 0.42, 7, 0xf7d08a, 2);
+      leftWall.dot(g, 0.765, 0.4, 6, 0xffffff, 2);
+      leftWall.quad(g, 0.04, 0.96, 0.02, 0.09, S.woodDark, 3);
+      leftWall.quad(g, 0.06, 0.94, 0.03, 0.075, 0xffffff, 0, 0);
+
+      // 간판 — 외발 지붕 앞쪽 처마가 낮아서 위아래 여유가 적으니, 처마 선에
+      // 걸치듯 작게 답니다.
+      g.fillStyle(0x000000, 0.1);
+      g.fillRoundedRect(Bt.x - 66, Bt.y - 12, 132, 24, 8);
+      blob(g, Bt.x - 68, Bt.y - 15, 132, 24, 8, S.paper, 5);
+
+      hedgeRow(g, L, B);
+      hedgeRow(g, B, R);
+    });
+  }
+
+  /* ------------------------------ 포차: 낮은 천막 ------------------------------ */
+  // 벽을 낮춰 아담한 천막처럼 만들고, 처마엔 물결 모양 캔버스 술을 둘러
+  // 축제 포장마차 느낌을 냅니다. 문은 유리문 대신 갈라 묶은 포장 커튼,
+  // 창문 자리엔 돌돌 만 캔버스 차양으로 바꿔 카페·분식집과는 재질부터
+  // 다르게 보이게 합니다.
+  {
+    const ROOF = 0xd9743a;
+    const ROOF_DARK = 0xaa5426;
+    const WALL = 0xc9a97a;
+    const WALL_SHADE = 0xb08f60;
+    const WALL_H = 76;
+    const up = (p: { x: number; y: number }) => ({ x: p.x, y: p.y - WALL_H });
+    const [Tt, Rt, Bt, Lt] = [up(T), up(R), up(B), up(L)];
+
+    tex(scene, "world-pocha-iso", BW, BH, (g) => {
+      buildingGround(g, B, w2, h2);
+      poly(g, [B, R, Rt, Bt], WALL_SHADE);
+      poly(g, [B, L, Lt, Bt], WALL);
+      groundContactLine(g, L, B, R);
+
+      // 천막 벽 세로 재봉선
+      const rightWall = wallFace(B, R, Bt, Rt);
+      const leftWall = wallFace(B, L, Bt, Lt);
+      for (let i = 1; i < 4; i++) {
+        const u = i / 4;
+        rightWall.line(g, u, 0, u, 1, 0x000000, 2, 0.1);
+        leftWall.line(g, u, 0, u, 1, 0x000000, 2, 0.1);
+      }
+
+      // 지붕 (낮은 오두막 지붕 — 천막 캔버스 느낌으로 결을 성글게)
+      poly(g, [Tt, Bt, Rt], ROOF_DARK);
+      poly(g, [Tt, Lt, Bt], ROOF);
+      g.lineStyle(5, INK, 1);
+      g.lineBetween(Tt.x, Tt.y, Bt.x, Bt.y);
+      g.lineStyle(2, 0x000000, 0.1);
       for (let i = 1; i < 4; i++) {
         const t = i / 4;
         const a = { x: Tt.x + (Lt.x - Tt.x) * t, y: Tt.y + (Lt.y - Tt.y) * t };
@@ -1973,84 +2154,82 @@ function buildRestaurantBuildings(scene: Phaser.Scene) {
         g.lineBetween(a.x, a.y, b.x, b.y);
       }
 
-      // 처마에 두른 작은 깃발 줄
-      hangBunting(g, Lt, Rt, [roof, S.paper]);
+      // 처마 끝 물결 캔버스 술
+      const scallop = (from: { x: number; y: number }, to: { x: number; y: number }) => {
+        const n = 8;
+        for (let i = 0; i < n; i++) {
+          const t0 = i / n;
+          const t1 = (i + 1) / n;
+          const mid = (t0 + t1) / 2;
+          const x0 = from.x + (to.x - from.x) * t0;
+          const y0 = from.y + (to.y - from.y) * t0;
+          const x1 = from.x + (to.x - from.x) * t1;
+          const y1 = from.y + (to.y - from.y) * t1;
+          const mx = from.x + (to.x - from.x) * mid;
+          const my = from.y + (to.y - from.y) * mid;
+          g.fillStyle(i % 2 === 0 ? ROOF : S.paper, 1);
+          g.beginPath();
+          g.moveTo(x0, y0);
+          g.lineTo(x1, y1);
+          g.arc(mx, my + 3, 9, Phaser.Math.DegToRad(180), Phaser.Math.DegToRad(360), true);
+          g.closePath();
+          g.fillPath();
+          g.lineStyle(2, INK, 0.6);
+          g.strokePath();
+        }
+      };
+      scallop(Lt, Bt);
+      scallop(Bt, Rt);
 
-      const chimneyBase = { x: Tt.x + (Rt.x - Tt.x) * 0.4, y: Tt.y + (Rt.y - Tt.y) * 0.4 };
-      topper(g, chimneyBase);
+      // 처마에 매단 홍등 두 개
+      const paperLantern = (lx: number, ly: number, r: number) => {
+        g.lineStyle(3, S.woodDark, 1);
+        g.lineBetween(lx, ly - 14, lx, ly);
+        g.fillStyle(0xffcf6b, 0.35);
+        g.fillCircle(lx, ly + r * 0.1, r * 1.6);
+        disc(g, lx, ly + r * 0.1, r, 0xd0432f, 4);
+        g.fillStyle(S.woodDark, 1);
+        g.fillRect(lx - r * 0.3, ly - r * 0.75, r * 0.6, r * 0.5);
+        g.fillRect(lx - r * 0.25, ly + r * 1.2, r * 0.5, r * 0.4);
+      };
+      paperLantern(Bt.x - 34, Bt.y - 6, 12);
+      paperLantern(Bt.x + 30, Bt.y - 2, 10);
 
-      // 문 위 차양(어닝)
-      const awningY = 168;
-      const awningColors = [roofDark, S.paper];
-      for (let i = 0; i < 6; i++) {
-        g.fillStyle(awningColors[i % 2], 1);
-        g.beginPath();
-        g.moveTo(145 + i * 15, awningY);
-        g.lineTo(160 + i * 15, awningY);
-        g.lineTo(163 + i * 15, awningY + 16);
-        g.lineTo(142 + i * 15, awningY + 16);
-        g.closePath();
-        g.fillPath();
+      // 오른쪽 벽 — 갈라 묶은 포장 커튼 문
+      const stripColors = [0xd0432f, S.paper, 0xd0432f, S.paper, 0xd0432f];
+      for (let i = 0; i < 5; i++) {
+        const u0 = 0.34 + (0.5 / 5) * i;
+        rightWall.quad(g, u0, u0 + 0.5 / 5 - 0.01, 0.02, 0.86, stripColors[i]);
       }
-      g.lineStyle(4, INK, 1);
-      g.lineBetween(143, awningY, 233, awningY);
-      g.fillStyle(0x000000, 0.12);
-      g.fillRect(143, awningY + 16, 90, 4);
+      rightWall.quad(g, 0.34, 0.84, 0.86, 0.94, S.woodDark, 4);
+      rightWall.line(g, 0.34, 0.02, 0.5, 0.5, 0x000000, 2, 0.15);
+      rightWall.line(g, 0.84, 0.02, 0.68, 0.5, 0x000000, 2, 0.15);
 
-      // 문 (오른쪽 벽)
-      blob(g, 170, 213, 50, 94, 6, S.woodDark, 5);
-      blob(g, 178, 221, 34, 60, 5, GLASS, 4);
-      g.fillStyle(0xffffff, 0.35);
-      g.fillRect(184, 227, 8, 48);
-      disc(g, 205, 260, 4, S.steelDark, 0);
+      // 왼쪽 벽 — 돌돌 만 캔버스 차양 (열린 창 자리)
+      leftWall.quad(g, 0.24, 0.76, 0.08, 0.78, 0x3a2a1c, 5);
+      leftWall.quad(g, 0.29, 0.71, 0.14, 0.66, 0x2b1e14, 0, 0);
+      leftWall.quad(g, 0.2, 0.8, 0.72, 0.86, S.woodDark, 4);
+      leftWall.dot(g, 0.24, 0.79, 6, ROOF, 3);
+      leftWall.dot(g, 0.76, 0.79, 6, ROOF, 3);
 
-      // 창문 (왼쪽 벽) + 창가 화분
-      blob(g, 80, 213, 50, 94, 6, S.woodDark, 5);
-      blob(g, 88, 221, 34, 60, 5, GLASS, 4);
-      g.lineStyle(3, S.woodDark, 1);
-      g.lineBetween(105, 221, 105, 281);
-      g.lineBetween(88, 251, 122, 251);
-      blob(g, 76, 289, 58, 16, 4, S.woodDark, 4);
-      disc(g, 86, 287, 7, 0xf4a9a8, 3);
-      disc(g, 100, 285, 7, 0xf7d08a, 3);
-      disc(g, 114, 287, 7, 0xffffff, 3);
+      // 천막 지지끈 — 양 옆 벽 아래 귀퉁이에서 땅으로
+      const guyRope = (from: { x: number; y: number }, dx: number) => {
+        g.lineStyle(2, S.woodDark, 0.8);
+        g.lineBetween(from.x, from.y, from.x + dx, from.y + 26);
+        disc(g, from.x + dx, from.y + 26, 4, S.woodDark, 0);
+      };
+      guyRope(Lt, -18);
+      guyRope(Rt, 18);
 
-      // 간판 자리 (글자는 화면에서 따로 얹습니다)
+      // 간판
       g.fillStyle(0x000000, 0.1);
-      g.fillRoundedRect(Bt.x - 68, Bt.y - 25, 140, 32, 10);
-      blob(g, Bt.x - 70, Bt.y - 28, 140, 32, 10, S.paper, 5);
+      g.fillRoundedRect(Bt.x - 66, Bt.y - 22, 132, 30, 10);
+      blob(g, Bt.x - 68, Bt.y - 25, 132, 30, 10, S.paper, 5);
 
-      // 건물 앞 작은 화단
       hedgeRow(g, L, B);
       hedgeRow(g, B, R);
     });
-  };
-
-  // 분식집 — 떡볶이색 빨간 지붕, 동글동글한 환풍 배기구에서 몽글몽글 김이 납니다
-  buildBox("world-bunsik-iso", 0xd0432f, 0xa8331f, 0xf4e8ca, 0xe7d6ac, (g, base) => {
-    blob(g, base.x - 10, base.y - 42, 20, 44, 8, S.steel, 5); // 배기구 몸통 (둥글게)
-    blob(g, base.x - 13, base.y - 48, 26, 10, 5, S.steelDark, 5); // 배기구 모자
-    g.fillStyle(0xffffff, 0.7); // 김
-    g.fillCircle(base.x, base.y - 56, 8);
-    g.fillCircle(base.x + 7, base.y - 68, 6);
-    g.fillCircle(base.x - 5, base.y - 78, 5);
-  });
-
-  // 포차 — 주황 천막 지붕, 처마에 매단 홍등 두 개가 정겹게 흔들립니다
-  buildBox("world-pocha-iso", 0xd9743a, 0xaa5426, 0xc9a97a, 0xb08f60, (g, base) => {
-    const paperLantern = (lx: number, ly: number, r: number) => {
-      g.lineStyle(3, S.woodDark, 1);
-      g.lineBetween(lx, ly - 16, lx, ly);
-      g.fillStyle(0xffcf6b, 0.35);
-      g.fillCircle(lx, ly + r * 0.1, r * 1.6);
-      disc(g, lx, ly + r * 0.1, r, 0xd0432f, 4);
-      g.fillStyle(S.woodDark, 1);
-      g.fillRect(lx - r * 0.3, ly - r * 0.75, r * 0.6, r * 0.5);
-      g.fillRect(lx - r * 0.25, ly + r * 1.2, r * 0.5, r * 0.4);
-    };
-    paperLantern(base.x - 6, base.y - 30, 13);
-    paperLantern(base.x + 20, base.y - 14, 9);
-  });
+  }
 }
 
 let built = false;
