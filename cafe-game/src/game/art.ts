@@ -1742,15 +1742,22 @@ function buildWorldArt(scene: Phaser.Scene) {
       g.strokePath();
     };
 
-    // 바닥에 지는 그림자 — 두 겹으로 번지듯 깔아서 건물이 땅에 붙어 있게 합니다.
-    g.fillStyle(0x000000, 0.09);
-    g.fillEllipse(B.x, B.y + 10, w2 * 1.9, h2 * 1.4);
-    g.fillStyle(0x000000, 0.16);
-    g.fillEllipse(B.x, B.y + 6, w2 * 1.5, h2 * 1.1);
+    // 바닥에 지는 그림자 — 그림 테두리 안에서만 번지게 폭을 제한해서
+    // (테두리 밖으로 잘리면 그림자가 각지게 잘려 오히려 붕 떠 보입니다),
+    // 옅은 번짐 + 진한 접지 그림자를 겹쳐 건물이 땅에 눌러 붙은 느낌을 줍니다.
+    g.fillStyle(0x000000, 0.08);
+    g.fillEllipse(B.x, B.y + 8, w2 * 1.3, h2 * 1.2);
+    g.fillStyle(0x000000, 0.2);
+    g.fillEllipse(B.x, B.y + 3, w2 * 0.9, h2 * 0.7);
 
     // 벽 두 면 (오른쪽이 더 어둡게 — 그늘)
     poly([B, R, Rt, Bt], WALL_SHADE);
     poly([B, L, Lt, Bt], WALL);
+
+    // 벽이 땅과 만나는 선을 짙게 그어 건물을 바닥에 단단히 붙여줍니다.
+    g.lineStyle(4, 0x000000, 0.28);
+    g.lineBetween(L.x, L.y, B.x, B.y);
+    g.lineBetween(B.x, B.y, R.x, R.y);
 
     // 왼쪽(밝은) 벽에 은은한 세로결 — 판자벽 느낌을 살짝 줍니다.
     g.lineStyle(2, 0x000000, 0.06);
@@ -1773,9 +1780,18 @@ function buildWorldArt(scene: Phaser.Scene) {
       g.lineBetween(a.x, a.y, b.x, b.y);
     }
 
-    // 굴뚝 — 지붕 경사면 위에 실제로 얹혀 있도록, 오른쪽 지붕면 위의 한 점에서 세웁니다.
+    // 처마에 두른 작은 깃발 줄 — 통통 튀는 느낌을 더해 더 아기자기하게 보이게 합니다.
+    hangBunting(g, Lt, Rt, [ROOF, S.paper]);
+
+    // 굴뚝 — 지붕 경사면 위에 실제로 얹혀 있도록, 오른쪽 지붕면 위의 한 점에서 세우고,
+    // 통통하게+모자를 씌워 귀엽게, 몽글몽글 연기도 항상 피어오르게 합니다.
     const chimneyBase = { x: Tt.x + (Rt.x - Tt.x) * 0.4, y: Tt.y + (Rt.y - Tt.y) * 0.4 };
-    blob(g, chimneyBase.x - 11, chimneyBase.y - 46, 22, 48, 3, S.woodDark, 5);
+    blob(g, chimneyBase.x - 13, chimneyBase.y - 52, 26, 54, 8, S.woodDark, 5);
+    blob(g, chimneyBase.x - 17, chimneyBase.y - 58, 34, 12, 5, S.woodDark, 5);
+    g.fillStyle(0xffffff, 0.8);
+    g.fillCircle(chimneyBase.x, chimneyBase.y - 66, 9);
+    g.fillCircle(chimneyBase.x + 8, chimneyBase.y - 80, 7);
+    g.fillCircle(chimneyBase.x - 5, chimneyBase.y - 90, 6);
 
     // 문 위 차양(어닝) — 줄무늬 천막으로 입구를 도드라져 보이게 합니다.
     const awningY = 168;
@@ -1817,7 +1833,67 @@ function buildWorldArt(scene: Phaser.Scene) {
     g.fillStyle(0x000000, 0.1);
     g.fillRoundedRect(Bt.x - 68, Bt.y - 25, 140, 32, 10);
     blob(g, Bt.x - 70, Bt.y - 28, 140, 32, 10, S.paper, 5);
+
+    // 건물 앞 작은 화단 — 아늑한 느낌을 더하고, 벽 밑동을 가려 접지감도 더해줍니다.
+    hedgeRow(g, L, B);
+    hedgeRow(g, B, R);
   });
+}
+
+/** 처마 끝에서 처마 끝으로 늘어진 작은 삼각 깃발 줄. */
+function hangBunting(
+  g: Phaser.GameObjects.Graphics,
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+  colors: number[],
+) {
+  const sag = 16;
+  const at = (t: number) => ({
+    x: from.x + (to.x - from.x) * t,
+    y: from.y + (to.y - from.y) * t + Math.sin(t * Math.PI) * sag,
+  });
+  const n = 9;
+  for (let i = 0; i < n; i++) {
+    const a = at(i / n);
+    const b = at((i + 1) / n);
+    const mid = at((i + 0.5) / n);
+    g.fillStyle(colors[i % colors.length], 1);
+    g.beginPath();
+    g.moveTo(a.x, a.y);
+    g.lineTo(b.x, b.y);
+    g.lineTo(mid.x, mid.y + 13);
+    g.closePath();
+    g.fillPath();
+  }
+  g.lineStyle(2, ART_COLORS.woodDark, 0.8);
+  g.beginPath();
+  g.moveTo(from.x, from.y);
+  for (let i = 1; i <= 16; i++) {
+    const p = at(i / 16);
+    g.lineTo(p.x, p.y);
+  }
+  g.strokePath();
+}
+
+/** 건물 밑동을 따라 늘어선 작은 화단(덤불) 줄. */
+function hedgeRow(
+  g: Phaser.GameObjects.Graphics,
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+) {
+  const n = 4;
+  for (let i = 1; i < n; i++) {
+    const t = i / n;
+    const x = from.x + (to.x - from.x) * t;
+    const y = from.y + (to.y - from.y) * t;
+    g.fillStyle(0x000000, 0.1);
+    g.fillEllipse(x, y + 11, 22, 8);
+    g.fillStyle(0x6fae5a, 1);
+    g.fillCircle(x - 4, y + 6, 8);
+    g.fillCircle(x + 5, y + 7, 7);
+    g.fillStyle(0x84c26a, 1);
+    g.fillCircle(x, y + 3, 7);
+  }
 }
 
 /** 카페 건물과 같은 아이소메트릭 박스 기법으로, 분식집·포차 건물을 그립니다. */
@@ -1863,15 +1939,21 @@ function buildRestaurantBuildings(scene: Phaser.Scene) {
         g.strokePath();
       };
 
-      // 바닥에 지는 그림자 — 두 겹으로 번지듯 깔아줍니다.
-      g.fillStyle(0x000000, 0.09);
-      g.fillEllipse(B.x, B.y + 10, w2 * 1.9, h2 * 1.4);
-      g.fillStyle(0x000000, 0.16);
-      g.fillEllipse(B.x, B.y + 6, w2 * 1.5, h2 * 1.1);
+      // 바닥에 지는 그림자 — 그림 테두리 안에서만 번지도록 폭을 제한합니다.
+      g.fillStyle(0x000000, 0.08);
+      g.fillEllipse(B.x, B.y + 8, w2 * 1.3, h2 * 1.2);
+      g.fillStyle(0x000000, 0.2);
+      g.fillEllipse(B.x, B.y + 3, w2 * 0.9, h2 * 0.7);
 
       // 벽 두 면
       poly([B, R, Rt, Bt], wallShade);
       poly([B, L, Lt, Bt], wall);
+
+      // 벽이 땅과 만나는 선을 짙게 그어 건물을 바닥에 단단히 붙여줍니다.
+      g.lineStyle(4, 0x000000, 0.28);
+      g.lineBetween(L.x, L.y, B.x, B.y);
+      g.lineBetween(B.x, B.y, R.x, R.y);
+
       g.lineStyle(2, 0x000000, 0.06);
       for (let i = 1; i < 4; i++) {
         const t = i / 4;
@@ -1890,6 +1972,9 @@ function buildRestaurantBuildings(scene: Phaser.Scene) {
         const b = { x: Bt.x + (Lt.x - Tt.x) * t, y: Bt.y + (Lt.y - Tt.y) * t };
         g.lineBetween(a.x, a.y, b.x, b.y);
       }
+
+      // 처마에 두른 작은 깃발 줄
+      hangBunting(g, Lt, Rt, [roof, S.paper]);
 
       const chimneyBase = { x: Tt.x + (Rt.x - Tt.x) * 0.4, y: Tt.y + (Rt.y - Tt.y) * 0.4 };
       topper(g, chimneyBase);
@@ -1934,24 +2019,37 @@ function buildRestaurantBuildings(scene: Phaser.Scene) {
       g.fillStyle(0x000000, 0.1);
       g.fillRoundedRect(Bt.x - 68, Bt.y - 25, 140, 32, 10);
       blob(g, Bt.x - 70, Bt.y - 28, 140, 32, 10, S.paper, 5);
+
+      // 건물 앞 작은 화단
+      hedgeRow(g, L, B);
+      hedgeRow(g, B, R);
     });
   };
 
-  // 분식집 — 떡볶이색 빨간 지붕, 조리용 환풍 배기구
+  // 분식집 — 떡볶이색 빨간 지붕, 동글동글한 환풍 배기구에서 몽글몽글 김이 납니다
   buildBox("world-bunsik-iso", 0xd0432f, 0xa8331f, 0xf4e8ca, 0xe7d6ac, (g, base) => {
-    blob(g, base.x - 9, base.y - 40, 18, 42, 3, S.steel, 5); // 배기구 몸통
-    g.fillStyle(0xffffff, 0.55); // 김
-    g.fillEllipse(base.x, base.y - 48, 12, 18);
+    blob(g, base.x - 10, base.y - 42, 20, 44, 8, S.steel, 5); // 배기구 몸통 (둥글게)
+    blob(g, base.x - 13, base.y - 48, 26, 10, 5, S.steelDark, 5); // 배기구 모자
+    g.fillStyle(0xffffff, 0.7); // 김
+    g.fillCircle(base.x, base.y - 56, 8);
+    g.fillCircle(base.x + 7, base.y - 68, 6);
+    g.fillCircle(base.x - 5, base.y - 78, 5);
   });
 
-  // 포차 — 주황 천막 지붕, 처마에 매단 홍등
+  // 포차 — 주황 천막 지붕, 처마에 매단 홍등 두 개가 정겹게 흔들립니다
   buildBox("world-pocha-iso", 0xd9743a, 0xaa5426, 0xc9a97a, 0xb08f60, (g, base) => {
-    g.lineStyle(3, S.woodDark, 1); // 등을 매단 줄
-    g.lineBetween(base.x, base.y - 8, base.x, base.y - 30);
-    disc(g, base.x, base.y - 38, 13, 0xd0432f, 4); // 홍등
-    g.fillStyle(S.woodDark, 1);
-    g.fillRect(base.x - 4, base.y - 48, 8, 8); // 등 꼭지
-    g.fillRect(base.x - 3, base.y - 26, 6, 6); // 등 술
+    const paperLantern = (lx: number, ly: number, r: number) => {
+      g.lineStyle(3, S.woodDark, 1);
+      g.lineBetween(lx, ly - 16, lx, ly);
+      g.fillStyle(0xffcf6b, 0.35);
+      g.fillCircle(lx, ly + r * 0.1, r * 1.6);
+      disc(g, lx, ly + r * 0.1, r, 0xd0432f, 4);
+      g.fillStyle(S.woodDark, 1);
+      g.fillRect(lx - r * 0.3, ly - r * 0.75, r * 0.6, r * 0.5);
+      g.fillRect(lx - r * 0.25, ly + r * 1.2, r * 0.5, r * 0.4);
+    };
+    paperLantern(base.x - 6, base.y - 30, 13);
+    paperLantern(base.x + 20, base.y - 14, 9);
   });
 }
 

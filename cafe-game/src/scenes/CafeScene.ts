@@ -251,33 +251,18 @@ export class CafeScene extends Phaser.Scene {
     const floorTop = COUNTER_Y + COUNTER_H - 6;
     const wallColor = gameState.decorColors("wallpaper").primary;
     const floorColors = gameState.decorColors("floor");
+    const rid = gameState.data.activeRestaurant;
 
-    // 카운터 뒤쪽 벽 — 위는 밝게, 아래로 갈수록 살짝 그늘져서 입체감을 줍니다.
-    g.fillStyle(wallColor, 1);
-    g.fillRect(0, 0, VIRTUAL_WIDTH, floorTop);
-    g.fillStyle(0xffffff, 0.06);
-    g.fillRect(0, 0, VIRTUAL_WIDTH, floorTop * 0.4);
-    g.fillStyle(0x000000, 0.05);
-    g.fillRect(0, floorTop * 0.75, VIRTUAL_WIDTH, floorTop * 0.25);
-    // 걸레받이(벽·바닥 경계선) — 벽과 바닥이 자연스럽게 이어지게 합니다.
-    g.fillStyle(0x000000, 0.14);
-    g.fillRect(0, floorTop - 6, VIRTUAL_WIDTH, 6);
-
-    // 바닥 (체크 무늬)
-    g.fillStyle(floorColors.primary, 1);
-    g.fillRect(0, floorTop, VIRTUAL_WIDTH, VIRTUAL_HEIGHT);
-    g.fillStyle(floorColors.secondary, 1);
-    for (let y = floorTop; y < VIRTUAL_HEIGHT; y += 96) {
-      for (let x = 0; x < VIRTUAL_WIDTH; x += 96) {
-        const shift = Math.floor((y - floorTop) / 96) % 2 === 0 ? 0 : 48;
-        g.fillRect(x + shift, y, 48, 48);
-      }
+    if (rid === "bunsik") {
+      this.drawBunsikWall(g, floorTop, wallColor);
+      this.drawBunsikFloor(g, floorTop, floorColors);
+    } else if (rid === "pocha") {
+      this.drawPochaWall(g, floorTop, wallColor);
+      this.drawPochaFloor(g, floorTop, floorColors);
+    } else {
+      this.drawCafeWall(g, floorTop, wallColor);
+      this.drawCafeFloor(g, floorTop, floorColors);
     }
-    // 바닥에 은은한 세로 광택 — 안쪽(카운터 쪽)이 살짝 밝아 보이게 합니다.
-    g.fillStyle(0x000000, 0.05);
-    g.fillRect(0, floorTop, VIRTUAL_WIDTH, 40);
-    g.fillStyle(0xffffff, 0.04);
-    g.fillRect(0, floorTop + 40, VIRTUAL_WIDTH, 60);
 
     // 문 앞 바닥 매트 — 입구를 눈에 띄게 해줍니다
     g.fillStyle(0x000000, 0.12);
@@ -292,6 +277,154 @@ export class CafeScene extends Phaser.Scene {
       .image(DOOR.x, DOOR.y, entranceKey)
       .setScale(ART_SCALE * 1.4)
       .setDepth(-5);
+  }
+
+  /** 카페 — 크림색 벽지 + 은은한 음영, 살구색 체크 바닥 (기존 분위기 그대로) */
+  private drawCafeWall(g: Phaser.GameObjects.Graphics, floorTop: number, wallColor: number) {
+    g.fillStyle(wallColor, 1);
+    g.fillRect(0, 0, VIRTUAL_WIDTH, floorTop);
+    g.fillStyle(0xffffff, 0.06);
+    g.fillRect(0, 0, VIRTUAL_WIDTH, floorTop * 0.4);
+    g.fillStyle(0x000000, 0.05);
+    g.fillRect(0, floorTop * 0.75, VIRTUAL_WIDTH, floorTop * 0.25);
+    g.fillStyle(0x000000, 0.14);
+    g.fillRect(0, floorTop - 6, VIRTUAL_WIDTH, 6);
+  }
+
+  private drawCafeFloor(
+    g: Phaser.GameObjects.Graphics,
+    floorTop: number,
+    floorColors: { primary: number; secondary: number; accent: number },
+  ) {
+    g.fillStyle(floorColors.primary, 1);
+    g.fillRect(0, floorTop, VIRTUAL_WIDTH, VIRTUAL_HEIGHT);
+    g.fillStyle(floorColors.secondary, 1);
+    for (let y = floorTop; y < VIRTUAL_HEIGHT; y += 96) {
+      for (let x = 0; x < VIRTUAL_WIDTH; x += 96) {
+        const shift = Math.floor((y - floorTop) / 96) % 2 === 0 ? 0 : 48;
+        g.fillRect(x + shift, y, 48, 48);
+      }
+    }
+    g.fillStyle(0x000000, 0.05);
+    g.fillRect(0, floorTop, VIRTUAL_WIDTH, 40);
+    g.fillStyle(0xffffff, 0.04);
+    g.fillRect(0, floorTop + 40, VIRTUAL_WIDTH, 60);
+  }
+
+  /** 분식집 — 하얀 타일 벽 + 빨간 간판 띠, 굵은 빨강·하양 체크 바닥 */
+  private drawBunsikWall(g: Phaser.GameObjects.Graphics, floorTop: number, wallColor: number) {
+    g.fillStyle(wallColor, 1);
+    g.fillRect(0, 0, VIRTUAL_WIDTH, floorTop);
+    // 타일 벽 — 반듯한 격자 줄눈
+    g.lineStyle(2, 0x000000, 0.09);
+    const T = 44;
+    for (let y = 0; y < floorTop; y += T) g.lineBetween(0, y, VIRTUAL_WIDTH, y);
+    for (let x = 0; x < VIRTUAL_WIDTH; x += T) g.lineBetween(x, 0, x, floorTop);
+    g.fillStyle(0xffffff, 0.05);
+    g.fillRect(0, 0, VIRTUAL_WIDTH, floorTop * 0.4);
+    // 위쪽 빨간 간판 띠
+    g.fillStyle(0xd0432f, 1);
+    g.fillRect(0, 0, VIRTUAL_WIDTH, 32);
+    g.fillStyle(0xffffff, 0.14);
+    g.fillRect(0, 0, VIRTUAL_WIDTH, 8);
+    g.fillStyle(0x000000, 0.16);
+    g.fillRect(0, 26, VIRTUAL_WIDTH, 6);
+    g.fillStyle(0x000000, 0.14);
+    g.fillRect(0, floorTop - 6, VIRTUAL_WIDTH, 6);
+  }
+
+  private drawBunsikFloor(
+    g: Phaser.GameObjects.Graphics,
+    floorTop: number,
+    floorColors: { primary: number; secondary: number; accent: number },
+  ) {
+    g.fillStyle(floorColors.primary, 1);
+    g.fillRect(0, floorTop, VIRTUAL_WIDTH, VIRTUAL_HEIGHT);
+    g.fillStyle(floorColors.secondary, 1);
+    const T = 64;
+    for (let y = floorTop, row = 0; y < VIRTUAL_HEIGHT; y += T, row++) {
+      for (let x = row % 2 === 0 ? 0 : T; x < VIRTUAL_WIDTH; x += T * 2) {
+        g.fillRect(x, y, T, T);
+      }
+    }
+    g.lineStyle(2, 0x000000, 0.1);
+    for (let y = floorTop; y < VIRTUAL_HEIGHT; y += T) g.lineBetween(0, y, VIRTUAL_WIDTH, y);
+    for (let x = 0; x < VIRTUAL_WIDTH; x += T) g.lineBetween(x, floorTop, x, VIRTUAL_HEIGHT);
+  }
+
+  /** 포차 — 어두운 천 벽 + 알전구 줄 + 홍등, 가로 나무 널빤지 바닥 */
+  private drawPochaWall(g: Phaser.GameObjects.Graphics, floorTop: number, wallColor: number) {
+    for (let x = 0; x < VIRTUAL_WIDTH; x += 46) {
+      g.fillStyle(wallColor, 1);
+      g.fillRect(x, 0, 46, floorTop);
+      if (Math.floor(x / 46) % 2 === 0) {
+        g.fillStyle(0x000000, 0.07);
+        g.fillRect(x, 0, 46, floorTop);
+      }
+    }
+    g.fillStyle(0x000000, 0.24);
+    g.fillRect(0, 0, VIRTUAL_WIDTH, floorTop * 0.32);
+    g.fillStyle(0x000000, 0.16);
+    g.fillRect(0, floorTop - 6, VIRTUAL_WIDTH, 6);
+
+    // 알전구 줄
+    const sagLine = (y0: number, sag: number) => {
+      g.lineStyle(3, 0x3a2617, 0.8);
+      g.beginPath();
+      g.moveTo(16, y0);
+      for (let i = 1; i <= 20; i++) {
+        const t = i / 20;
+        g.lineTo(16 + (VIRTUAL_WIDTH - 32) * t, y0 + Math.sin(t * Math.PI) * sag);
+      }
+      g.strokePath();
+      for (let i = 0; i <= 12; i++) {
+        const t = i / 12;
+        const x = 16 + (VIRTUAL_WIDTH - 32) * t;
+        const y = y0 + Math.sin(t * Math.PI) * sag;
+        g.fillStyle(0xffe08a, 0.4);
+        g.fillCircle(x, y + 5, 9);
+        g.fillStyle(0xffe08a, 0.95);
+        g.fillCircle(x, y + 5, 4);
+      }
+    };
+    sagLine(26, 34);
+
+    // 홍등 두 개
+    const lantern = (lx: number, ly: number) => {
+      g.lineStyle(3, 0x3a2617, 1);
+      g.lineBetween(lx, ly - 14, lx, ly);
+      g.fillStyle(0xd0432f, 1);
+      g.fillEllipse(lx, ly + 16, 26, 34);
+      g.lineStyle(2, 0x8a3b34, 1);
+      g.strokeEllipse(lx, ly + 16, 26, 34);
+      g.fillStyle(0xf5c542, 1);
+      g.fillRect(lx - 3, ly + 32, 6, 6);
+    };
+    lantern(60, 40);
+    lantern(VIRTUAL_WIDTH - 60, 40);
+  }
+
+  private drawPochaFloor(
+    g: Phaser.GameObjects.Graphics,
+    floorTop: number,
+    floorColors: { primary: number; secondary: number; accent: number },
+  ) {
+    g.fillStyle(floorColors.primary, 1);
+    g.fillRect(0, floorTop, VIRTUAL_WIDTH, VIRTUAL_HEIGHT);
+    const plankH = 46;
+    for (let y = floorTop, i = 0; y < VIRTUAL_HEIGHT; y += plankH, i++) {
+      g.fillStyle(i % 2 === 0 ? floorColors.secondary : floorColors.accent, 0.55);
+      g.fillRect(0, y, VIRTUAL_WIDTH, plankH - 4);
+      g.fillStyle(0x000000, 0.12);
+      g.fillRect(0, y + plankH - 4, VIRTUAL_WIDTH, 4);
+    }
+    g.lineStyle(1, 0x000000, 0.1);
+    for (let y = floorTop, i = 0; y < VIRTUAL_HEIGHT; y += plankH, i++) {
+      const shift = i % 2 === 0 ? 0 : 70;
+      for (let x = 40 + shift; x < VIRTUAL_WIDTH; x += 140) {
+        g.lineBetween(x, y + 4, x, y + plankH - 8);
+      }
+    }
   }
 
   /** 인테리어를 사거나 바꿔 입으면 바닥·벽지·문·주방 테이블·테이블·의자·포스기를 새로 그립니다 */
@@ -310,16 +443,46 @@ export class CafeScene extends Phaser.Scene {
     this.counterGraphics?.destroy();
     const g = this.add.graphics().setDepth(1);
     const colors = gameState.decorColors("counter");
+    const rid = gameState.data.activeRestaurant;
+    const x = 30;
+    const w = VIRTUAL_WIDTH - 60;
+
     g.fillStyle(0x000000, 0.12);
-    g.fillRoundedRect(30, COUNTER_Y + COUNTER_H - 4, VIRTUAL_WIDTH - 60, 14, 8);
-    g.fillStyle(colors.primary, 1);
-    g.fillRoundedRect(30, COUNTER_Y, VIRTUAL_WIDTH - 60, COUNTER_H, 14);
-    g.fillStyle(colors.secondary, 1);
-    g.fillRoundedRect(30, COUNTER_Y, VIRTUAL_WIDTH - 60, 34, 14);
-    g.fillStyle(0xffffff, 0.18);
-    g.fillRoundedRect(34, COUNTER_Y + 3, VIRTUAL_WIDTH - 68, 8, 6);
-    g.lineStyle(5, colors.accent, 1);
-    g.strokeRoundedRect(30, COUNTER_Y, VIRTUAL_WIDTH - 60, COUNTER_H, 14);
+    g.fillRoundedRect(x, COUNTER_Y + COUNTER_H - 4, w, 14, 8);
+
+    if (rid === "bunsik") {
+      // 분식집 — 각진 스테인리스 카운터, 대각선 광택
+      g.fillStyle(colors.primary, 1);
+      g.fillRoundedRect(x, COUNTER_Y, w, COUNTER_H, 4);
+      g.fillStyle(colors.secondary, 1);
+      g.fillRoundedRect(x, COUNTER_Y, w, 28, 4);
+      g.lineStyle(3, 0xffffff, 0.3);
+      for (let i = 0; i < 6; i++) {
+        g.lineBetween(x + 10 + i * 110, COUNTER_Y + 4, x + 55 + i * 110, COUNTER_Y + COUNTER_H - 4);
+      }
+      g.lineStyle(5, colors.accent, 1);
+      g.strokeRoundedRect(x, COUNTER_Y, w, COUNTER_H, 4);
+    } else if (rid === "pocha") {
+      // 포차 — 나무 궤짝을 이어붙인 카운터
+      g.fillStyle(colors.primary, 1);
+      g.fillRoundedRect(x, COUNTER_Y, w, COUNTER_H, 4);
+      g.fillStyle(colors.secondary, 1);
+      g.fillRoundedRect(x, COUNTER_Y, w, 12, 4);
+      g.lineStyle(3, 0x000000, 0.16);
+      for (let px = x + 90; px < x + w; px += 90) g.lineBetween(px, COUNTER_Y, px, COUNTER_Y + COUNTER_H);
+      g.lineStyle(5, colors.accent, 1);
+      g.strokeRoundedRect(x, COUNTER_Y, w, COUNTER_H, 4);
+    } else {
+      // 카페 — 둥근 원목 카운터
+      g.fillStyle(colors.primary, 1);
+      g.fillRoundedRect(x, COUNTER_Y, w, COUNTER_H, 14);
+      g.fillStyle(colors.secondary, 1);
+      g.fillRoundedRect(x, COUNTER_Y, w, 34, 14);
+      g.fillStyle(0xffffff, 0.18);
+      g.fillRoundedRect(x + 4, COUNTER_Y + 3, w - 8, 8, 6);
+      g.lineStyle(5, colors.accent, 1);
+      g.strokeRoundedRect(x, COUNTER_Y, w, COUNTER_H, 14);
+    }
     this.counterGraphics = g;
   }
 

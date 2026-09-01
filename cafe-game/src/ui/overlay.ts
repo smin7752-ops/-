@@ -1515,6 +1515,9 @@ export function mountUI(root: HTMLElement) {
   const offlineModal = root.querySelector("#offline-modal") as HTMLElement;
   root.querySelector("#offline-close")?.addEventListener("click", () => {
     offlineModal.classList.add("hidden");
+    // 확인을 눌러 봤으니, 같은 가게에 다시 들어올 때 이 오래된 값이
+    // 또 뜨지 않도록 비워둡니다.
+    gameState.clearOfflineEarnings();
   });
 
   function showOfflineIfAny() {

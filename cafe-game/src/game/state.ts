@@ -362,6 +362,14 @@ class GameState {
   offlineDurationMs = 0;
   offlineServes = 0;
 
+  /** "다시 오셨네요" 팝업을 한 번 보여준 뒤에는 반드시 불러서, 같은 가게를
+   * 다시 들어올 때(자리를 비운 게 아닌데도) 이 오래된 값이 또 뜨지 않게 합니다. */
+  clearOfflineEarnings() {
+    this.offlineEarnings = 0;
+    this.offlineDurationMs = 0;
+    this.offlineServes = 0;
+  }
+
   constructor() {
     this.data = this.load();
   }
