@@ -11,6 +11,8 @@ const BUILDING_TEXTURE: Record<RestaurantId, string> = {
   cafe: "world-cafe-iso",
   bunsik: "world-bunsik-iso",
   pocha: "world-pocha-iso",
+  chicken: "world-chicken-iso",
+  mart: "world-mart-iso",
 };
 
 function coinText(amount: number): string {

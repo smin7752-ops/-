@@ -259,6 +259,12 @@ export class CafeScene extends Phaser.Scene {
     } else if (rid === "pocha") {
       this.drawPochaWall(g, floorTop, wallColor);
       this.drawPochaFloor(g, floorTop, floorColors);
+    } else if (rid === "chicken") {
+      this.drawChickenWall(g, floorTop, wallColor);
+      this.drawChickenFloor(g, floorTop, floorColors);
+    } else if (rid === "mart") {
+      this.drawMartWall(g, floorTop, wallColor);
+      this.drawMartFloor(g, floorTop, floorColors);
     } else {
       this.drawCafeWall(g, floorTop, wallColor);
       this.drawCafeFloor(g, floorTop, floorColors);
@@ -427,6 +433,77 @@ export class CafeScene extends Phaser.Scene {
     }
   }
 
+  /** 치킨집 — 따뜻한 골드 톤 벽 + 위쪽 골드 간판 띠, 크림·주황 체크 바닥 */
+  private drawChickenWall(g: Phaser.GameObjects.Graphics, floorTop: number, wallColor: number) {
+    g.fillStyle(wallColor, 1);
+    g.fillRect(0, 0, VIRTUAL_WIDTH, floorTop);
+    g.fillStyle(0xffffff, 0.06);
+    g.fillRect(0, 0, VIRTUAL_WIDTH, floorTop * 0.4);
+    // 위쪽 골드 간판 띠
+    g.fillStyle(0xf0a83a, 1);
+    g.fillRect(0, 0, VIRTUAL_WIDTH, 32);
+    g.fillStyle(0xffffff, 0.16);
+    g.fillRect(0, 0, VIRTUAL_WIDTH, 8);
+    g.fillStyle(0x000000, 0.16);
+    g.fillRect(0, 26, VIRTUAL_WIDTH, 6);
+    g.fillStyle(0x000000, 0.14);
+    g.fillRect(0, floorTop - 6, VIRTUAL_WIDTH, 6);
+  }
+
+  private drawChickenFloor(
+    g: Phaser.GameObjects.Graphics,
+    floorTop: number,
+    floorColors: { primary: number; secondary: number; accent: number },
+  ) {
+    g.fillStyle(floorColors.primary, 1);
+    g.fillRect(0, floorTop, VIRTUAL_WIDTH, VIRTUAL_HEIGHT);
+    g.fillStyle(floorColors.secondary, 1);
+    for (let y = floorTop; y < VIRTUAL_HEIGHT; y += 80) {
+      for (let x = 0; x < VIRTUAL_WIDTH; x += 80) {
+        const shift = Math.floor((y - floorTop) / 80) % 2 === 0 ? 0 : 40;
+        g.fillRect(x + shift, y, 40, 40);
+      }
+    }
+    g.fillStyle(0x000000, 0.05);
+    g.fillRect(0, floorTop, VIRTUAL_WIDTH, 40);
+    g.fillStyle(0xffffff, 0.05);
+    g.fillRect(0, floorTop + 40, VIRTUAL_WIDTH, 60);
+  }
+
+  /** 편의점 — 화이트 벽 + 위쪽 파란 간판 띠, 밝은 그레이 그리드 바닥 */
+  private drawMartWall(g: Phaser.GameObjects.Graphics, floorTop: number, wallColor: number) {
+    g.fillStyle(wallColor, 1);
+    g.fillRect(0, 0, VIRTUAL_WIDTH, floorTop);
+    g.fillStyle(0x000000, 0.04);
+    g.fillRect(0, 0, VIRTUAL_WIDTH, floorTop * 0.4);
+    // 위쪽 파란 간판 띠
+    g.fillStyle(0x2f6f6a, 1);
+    g.fillRect(0, 0, VIRTUAL_WIDTH, 32);
+    g.fillStyle(0xffffff, 0.14);
+    g.fillRect(0, 0, VIRTUAL_WIDTH, 8);
+    g.fillStyle(0x000000, 0.16);
+    g.fillRect(0, 26, VIRTUAL_WIDTH, 6);
+    g.fillStyle(0x000000, 0.12);
+    g.fillRect(0, floorTop - 6, VIRTUAL_WIDTH, 6);
+  }
+
+  private drawMartFloor(
+    g: Phaser.GameObjects.Graphics,
+    floorTop: number,
+    floorColors: { primary: number; secondary: number; accent: number },
+  ) {
+    g.fillStyle(floorColors.primary, 1);
+    g.fillRect(0, floorTop, VIRTUAL_WIDTH, VIRTUAL_HEIGHT);
+    g.lineStyle(2, 0x000000, 0.08);
+    const T = 56;
+    for (let y = floorTop; y < VIRTUAL_HEIGHT; y += T) g.lineBetween(0, y, VIRTUAL_WIDTH, y);
+    for (let x = 0; x < VIRTUAL_WIDTH; x += T) g.lineBetween(x, floorTop, x, VIRTUAL_HEIGHT);
+    g.fillStyle(0x000000, 0.05);
+    g.fillRect(0, floorTop, VIRTUAL_WIDTH, 36);
+    g.fillStyle(0xffffff, 0.05);
+    g.fillRect(0, floorTop + 36, VIRTUAL_WIDTH, 60);
+  }
+
   /** 인테리어를 사거나 바꿔 입으면 바닥·벽지·문·주방 테이블·테이블·의자·포스기를 새로 그립니다 */
   private applyDecor() {
     this.drawRoom();
@@ -472,6 +549,28 @@ export class CafeScene extends Phaser.Scene {
       for (let px = x + 90; px < x + w; px += 90) g.lineBetween(px, COUNTER_Y, px, COUNTER_Y + COUNTER_H);
       g.lineStyle(5, colors.accent, 1);
       g.strokeRoundedRect(x, COUNTER_Y, w, COUNTER_H, 4);
+    } else if (rid === "chicken") {
+      // 치킨집 — 골드 테두리를 두른 튀김대 카운터
+      g.fillStyle(colors.primary, 1);
+      g.fillRoundedRect(x, COUNTER_Y, w, COUNTER_H, 6);
+      g.fillStyle(colors.secondary, 1);
+      g.fillRoundedRect(x, COUNTER_Y, w, 24, 6);
+      g.lineStyle(3, 0xf0a83a, 0.6);
+      for (let i = 0; i < 6; i++) {
+        g.lineBetween(x + 10 + i * 110, COUNTER_Y + 4, x + 55 + i * 110, COUNTER_Y + COUNTER_H - 4);
+      }
+      g.lineStyle(5, colors.accent, 1);
+      g.strokeRoundedRect(x, COUNTER_Y, w, COUNTER_H, 6);
+    } else if (rid === "mart") {
+      // 편의점 — 각진 계산대(포스기 카운터), 파란 포인트 라인
+      g.fillStyle(colors.primary, 1);
+      g.fillRoundedRect(x, COUNTER_Y, w, COUNTER_H, 2);
+      g.fillStyle(colors.secondary, 1);
+      g.fillRoundedRect(x, COUNTER_Y, w, 20, 2);
+      g.lineStyle(3, 0x2f6f6a, 0.7);
+      g.lineBetween(x, COUNTER_Y + 20, x + w, COUNTER_Y + 20);
+      g.lineStyle(5, colors.accent, 1);
+      g.strokeRoundedRect(x, COUNTER_Y, w, COUNTER_H, 2);
     } else {
       // 카페 — 둥근 원목 카운터
       g.fillStyle(colors.primary, 1);

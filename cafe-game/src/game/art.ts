@@ -2235,6 +2235,146 @@ function buildRestaurantBuildings(scene: Phaser.Scene) {
       hedgeRow(g, B, R);
     });
   }
+
+  /* ------------------------------ 치킨집: 골든 후라이드 매장 ------------------------------ */
+  // 카페·분식집과 같은 오두막 박스 기법이지만, 황금빛 지붕과 지붕 위 통닭
+  // 버킷 사인으로 한눈에 치킨집임을 알아볼 수 있게 합니다.
+  {
+    const ROOF = 0xf0a83a;
+    const ROOF_DARK = 0xc9861f;
+    const WALL = 0xf7ddb0;
+    const WALL_SHADE = 0xe8c48a;
+    const WALL_H = 120;
+    const up = (p: { x: number; y: number }) => ({ x: p.x, y: p.y - WALL_H });
+    const [Tt, Rt, Bt, Lt] = [up(T), up(R), up(B), up(L)];
+
+    tex(scene, "world-chicken-iso", BW, BH, (g) => {
+      buildingGround(g, B, w2, h2);
+      poly(g, [B, R, Rt, Bt], WALL_SHADE);
+      poly(g, [B, L, Lt, Bt], WALL);
+      groundContactLine(g, L, B, R);
+
+      // 지붕 두 면 (카페·분식집과 같은 좌우 대칭 오두막 지붕) + 용마루 선
+      poly(g, [Tt, Bt, Rt], ROOF_DARK);
+      poly(g, [Tt, Lt, Bt], ROOF);
+      g.lineStyle(5, INK, 1);
+      g.lineBetween(Tt.x, Tt.y, Bt.x, Bt.y);
+      g.lineStyle(2, 0x000000, 0.12);
+      for (let i = 1; i < 4; i++) {
+        const t = i / 4;
+        const a = { x: Tt.x + (Lt.x - Tt.x) * t, y: Tt.y + (Lt.y - Tt.y) * t };
+        const b = { x: Bt.x + (Lt.x - Tt.x) * t, y: Bt.y + (Lt.y - Tt.y) * t };
+        g.lineBetween(a.x, a.y, b.x, b.y);
+      }
+
+      // 지붕 위 통닭 버킷 사인 — 치킨집임을 한눈에 알아볼 수 있게
+      const bucketBase = { x: Tt.x + (Rt.x - Tt.x) * 0.4, y: Tt.y + (Rt.y - Tt.y) * 0.4 };
+      g.lineStyle(3, S.woodDark, 1);
+      g.lineBetween(bucketBase.x, bucketBase.y - 14, bucketBase.x, bucketBase.y);
+      blob(g, bucketBase.x - 16, bucketBase.y - 52, 32, 40, 6, 0xd0432f, 5);
+      g.fillStyle(0xffffff, 1);
+      g.fillRoundedRect(bucketBase.x - 13, bucketBase.y - 46, 26, 14, 3);
+      g.fillStyle(0xd0432f, 1);
+      g.fillCircle(bucketBase.x, bucketBase.y - 39, 5);
+      g.fillStyle(0xd8934a, 1);
+      g.fillCircle(bucketBase.x - 8, bucketBase.y - 56, 7);
+      g.fillCircle(bucketBase.x + 7, bucketBase.y - 58, 7);
+
+      const rightWall = wallFace(B, R, Bt, Rt);
+      const leftWall = wallFace(B, L, Bt, Lt);
+
+      // 문 위 차양(어닝) — 골드·화이트 줄무늬
+      const awningStripes = 7;
+      for (let i = 0; i < awningStripes; i++) {
+        const u0 = 0.16 + (0.68 / awningStripes) * i;
+        const u1 = u0 + 0.68 / awningStripes;
+        rightWall.quad(g, u0, u1, 0.82, 0.97, i % 2 === 0 ? ROOF : S.paper);
+      }
+      rightWall.line(g, 0.14, 0.97, 0.86, 0.97, INK, 4);
+
+      // 문 (오른쪽 벽)
+      rightWall.quad(g, 0.32, 0.72, 0.05, 0.8, S.woodDark, 5);
+      rightWall.quad(g, 0.37, 0.67, 0.13, 0.68, GLASS, 4);
+      rightWall.dot(g, 0.62, 0.4, 4, S.steelDark, 0);
+
+      // 왼쪽 벽 — 큰 통유리 진열창, 튀김기의 따뜻한 불빛이 은은히 비칩니다
+      leftWall.quad(g, 0.28, 0.68, 0.05, 0.8, S.woodDark, 5);
+      leftWall.quad(g, 0.33, 0.63, 0.13, 0.68, 0xffd9a0, 4);
+      leftWall.line(g, 0.48, 0.13, 0.48, 0.68, S.woodDark, 3);
+      leftWall.line(g, 0.33, 0.4, 0.63, 0.4, S.woodDark, 3);
+
+      // 간판
+      g.fillStyle(0x000000, 0.1);
+      g.fillRoundedRect(Bt.x - 70, Bt.y - 26, 140, 32, 10);
+      blob(g, Bt.x - 72, Bt.y - 29, 140, 32, 10, S.paper, 5);
+
+      hedgeRow(g, L, B);
+      hedgeRow(g, B, R);
+    });
+  }
+
+  /* ------------------------------ 편의점: 모던 박스 매장 ------------------------------ */
+  // 다른 가게들과 달리 뾰족지붕 대신 평평한 지붕을 얹어 "모던한 편의점"
+  // 느낌을 내고, 벽 위쪽에 두른 파란 사인 띠로 정체성을 살립니다.
+  {
+    const WALL = 0xeef1f3;
+    const WALL_SHADE = 0xd7dde2;
+    const SIGN = 0x2f6f6a;
+    const WALL_H = 130;
+    const ROOF_H = 16;
+    const up = (p: { x: number; y: number }) => ({ x: p.x, y: p.y - WALL_H });
+    const upRoof = (p: { x: number; y: number }) => ({ x: p.x, y: p.y - WALL_H - ROOF_H });
+    const [, Rt, Bt, Lt] = [up(T), up(R), up(B), up(L)];
+    const [Tr, Rr, Br, Lr] = [upRoof(T), upRoof(R), upRoof(B), upRoof(L)];
+
+    tex(scene, "world-mart-iso", BW, BH, (g) => {
+      buildingGround(g, B, w2, h2);
+      poly(g, [B, R, Rt, Bt], WALL_SHADE);
+      poly(g, [B, L, Lt, Bt], WALL);
+      groundContactLine(g, L, B, R);
+
+      // 평평한 지붕 — 옆면(파샤) 두 면 + 윗면, 각지고 모던하게
+      poly(g, [Bt, Rt, Rr, Br], 0xb9c0c7);
+      poly(g, [Bt, Lt, Lr, Br], 0xcfd5da);
+      poly(g, [Tr, Lr, Br, Rr], 0xe4e8eb);
+      g.lineStyle(3, INK, 0.6);
+      g.lineBetween(Tr.x, Tr.y, Br.x, Br.y);
+
+      const rightWall = wallFace(B, R, Bt, Rt);
+      const leftWall = wallFace(B, L, Bt, Lt);
+
+      // 벽 위쪽에 두른 편의점 사인 띠
+      rightWall.quad(g, 0, 1, 0, 0.2, SIGN);
+      leftWall.quad(g, 0, 1, 0, 0.2, SIGN);
+      rightWall.line(g, 0, 0.2, 1, 0.2, INK, 3);
+      leftWall.line(g, 0, 0.2, 1, 0.2, INK, 3);
+
+      // 큰 통유리 자동문 (오른쪽 벽)
+      rightWall.quad(g, 0.1, 0.9, 0.24, 0.94, S.steelDark, 5);
+      rightWall.quad(g, 0.14, 0.86, 0.28, 0.9, 0xdff0f5, 4);
+      rightWall.line(g, 0.5, 0.28, 0.5, 0.9, S.steelDark, 3);
+
+      // 왼쪽 벽 — 큰 진열창(냉장고 불빛이 비치는 느낌)
+      leftWall.quad(g, 0.1, 0.9, 0.24, 0.94, S.steelDark, 5);
+      leftWall.quad(g, 0.14, 0.86, 0.28, 0.9, 0xdff0f5, 4);
+      leftWall.line(g, 0.35, 0.28, 0.35, 0.9, S.steelDark, 2);
+      leftWall.line(g, 0.65, 0.28, 0.65, 0.9, S.steelDark, 2);
+
+      // 문 앞 작은 입간판 스탠드
+      const standBase = { x: Bt.x + 58, y: Bt.y + 4 };
+      blob(g, standBase.x - 12, standBase.y - 40, 24, 40, 4, 0xffffff, 4);
+      g.fillStyle(SIGN, 1);
+      g.fillRect(standBase.x - 12, standBase.y - 40, 24, 8);
+
+      // 간판
+      g.fillStyle(0x000000, 0.1);
+      g.fillRoundedRect(Bt.x - 64, Bt.y - 22, 128, 30, 10);
+      blob(g, Bt.x - 66, Bt.y - 25, 128, 30, 10, S.paper, 5);
+
+      hedgeRow(g, L, B);
+      hedgeRow(g, B, R);
+    });
+  }
 }
 
 let built = false;

@@ -809,9 +809,9 @@ export function hobbyEffectText(e: HobbyEffect): string {
    가게를 지을 때마다 그 가게 안의 모든 값(설비·메뉴·직원)도 한 단계
    위로 뛰어오릅니다. */
 
-export type RestaurantId = "cafe" | "bunsik" | "pocha";
+export type RestaurantId = "cafe" | "bunsik" | "pocha" | "chicken" | "mart";
 
-export const RESTAURANT_ORDER: RestaurantId[] = ["cafe", "bunsik", "pocha"];
+export const RESTAURANT_ORDER: RestaurantId[] = ["cafe", "bunsik", "pocha", "chicken", "mart"];
 
 export interface RestaurantConfig {
   id: RestaurantId;
@@ -927,6 +927,97 @@ export const POCHA_SETS: SetDef[] = [
   { id: "pocha_signature_set", name: "해물파전모둠전세트", emoji: "👑", drinkId: "pocha_haemul_pajeon", dessertId: "pocha_modum_jeon", bonusRate: 1.45 },
 ];
 
+/** 치킨집의 4층 증축 비용 — 편의점을 짓는 기준값이 됩니다 */
+const POCHA_TOP_FLOOR_COST = floorUnlockCost(3, POCHA_COST_SCALE);
+const CHICKEN_COST_SCALE = Math.round(POCHA_TOP_FLOOR_COST / 20000);
+const CHICKEN_TOP_FLOOR_COST = floorUnlockCost(3, CHICKEN_COST_SCALE);
+const MART_COST_SCALE = Math.round(CHICKEN_TOP_FLOOR_COST / 20000);
+
+/** 치킨집 설비 */
+export const CHICKEN_EQUIPMENT: EquipmentDef[] = [
+  { id: "chicken_fryer", name: "후라이드 튀김기", emoji: "🍗", cost: 0,
+    desc: "기본으로 드려요. 후라이드치킨을 만들 수 있어요" },
+  { id: "chicken_display", name: "치킨 진열대", emoji: "🍢", cost: Math.round(900 * CHICKEN_COST_SCALE),
+    desc: "치킨무·닭껍질튀김 같은 사이드를 진열해서 팔 수 있어요" },
+  { id: "chicken_sauce_pot", name: "양념 소스팟", emoji: "🌶️", cost: Math.round(7000 * CHICKEN_COST_SCALE),
+    desc: "양념·간장치킨을 만들 수 있어요" },
+  { id: "chicken_charcoal_grill", name: "숯불 그릴", emoji: "🔥", cost: Math.round(26000 * CHICKEN_COST_SCALE),
+    desc: "숯불치킨을 만들 수 있어요" },
+  { id: "chicken_special_station", name: "특제 조리대", emoji: "🧂", cost: Math.round(80000 * CHICKEN_COST_SCALE),
+    desc: "프리미엄 치킨 메뉴를 만들 수 있어요" },
+];
+
+// 판매가·원가는 다른 가게와 같은 값으로 맞췄습니다 (모든 가게가 같은 기준으로
+// 팔리도록). 발주비(launchCost)는 카페 발주비에 이 가게의 값 단위(costScale)를
+// 곱해서 구합니다 (분식집·포차와 같은 방식).
+export const CHICKEN_MAIN: MenuDef[] = [
+  { id: "chicken_fried", name: "후라이드치킨", emoji: "🍗", category: "drink", equipmentId: "chicken_fryer", basePrice: 792, supplyCost: 144, makeTimeMs: 1200, launchCost: 0 },
+  { id: "chicken_yangnyeom", name: "양념치킨", emoji: "🌶️", category: "drink", equipmentId: "chicken_sauce_pot", basePrice: 1368, supplyCost: 288, makeTimeMs: 1600, launchCost: Math.round(DRINKS[1].launchCost * CHICKEN_COST_SCALE) },
+  { id: "chicken_ganjang", name: "간장치킨", emoji: "🥢", category: "drink", equipmentId: "chicken_sauce_pot", basePrice: 2088, supplyCost: 468, makeTimeMs: 1400, launchCost: Math.round(DRINKS[2].launchCost * CHICKEN_COST_SCALE) },
+  { id: "chicken_banban", name: "반반치킨", emoji: "🍗", category: "drink", equipmentId: "chicken_fryer", basePrice: 3024, supplyCost: 684, makeTimeMs: 1800, launchCost: Math.round(DRINKS[3].launchCost * CHICKEN_COST_SCALE) },
+  { id: "chicken_padak", name: "파닭", emoji: "🥬", category: "drink", equipmentId: "chicken_charcoal_grill", basePrice: 4464, supplyCost: 1008, makeTimeMs: 2200, launchCost: Math.round(DRINKS[4].launchCost * CHICKEN_COST_SCALE) },
+  { id: "chicken_hot", name: "핫치킨", emoji: "🔥", category: "drink", equipmentId: "chicken_special_station", basePrice: 6480, supplyCost: 1512, makeTimeMs: 2000, launchCost: Math.round(DRINKS[5].launchCost * CHICKEN_COST_SCALE) },
+];
+
+export const CHICKEN_SIDE: MenuDef[] = [
+  { id: "chicken_mu", name: "치킨무", emoji: "🥒", category: "dessert", equipmentId: "chicken_display", basePrice: 1008, supplyCost: 216, makeTimeMs: 600, launchCost: Math.round(DESSERTS[0].launchCost * CHICKEN_COST_SCALE) },
+  { id: "chicken_cheese_ball", name: "치즈볼", emoji: "🧀", category: "dessert", equipmentId: "chicken_display", basePrice: 1728, supplyCost: 396, makeTimeMs: 900, launchCost: Math.round(DESSERTS[1].launchCost * CHICKEN_COST_SCALE) },
+  { id: "chicken_wedge", name: "웨지감자", emoji: "🥔", category: "dessert", equipmentId: "chicken_display", basePrice: 2664, supplyCost: 612, makeTimeMs: 800, launchCost: Math.round(DESSERTS[2].launchCost * CHICKEN_COST_SCALE) },
+  { id: "chicken_gizzard", name: "닭껍질튀김", emoji: "🍤", category: "dessert", equipmentId: "chicken_special_station", basePrice: 3960, supplyCost: 900, makeTimeMs: 700, launchCost: Math.round(DESSERTS[3].launchCost * CHICKEN_COST_SCALE) },
+  { id: "chicken_bbq_wing", name: "바비큐윙", emoji: "🍖", category: "dessert", equipmentId: "chicken_charcoal_grill", basePrice: 5760, supplyCost: 1332, makeTimeMs: 1000, launchCost: Math.round(DESSERTS[4].launchCost * CHICKEN_COST_SCALE) },
+  { id: "chicken_tteokbokki_combo", name: "떡볶이", emoji: "🍢", category: "dessert", equipmentId: "chicken_sauce_pot", basePrice: 8640, supplyCost: 2016, makeTimeMs: 1100, launchCost: Math.round(DESSERTS[5].launchCost * CHICKEN_COST_SCALE) },
+];
+
+export const CHICKEN_SETS: SetDef[] = [
+  { id: "chicken_basic_set", name: "후라이드치킨무세트", emoji: "🍗", drinkId: "chicken_fried", dessertId: "chicken_mu", bonusRate: 1.15 },
+  { id: "chicken_cheese_set", name: "양념치즈볼세트", emoji: "🧀", drinkId: "chicken_yangnyeom", dessertId: "chicken_cheese_ball", bonusRate: 1.2 },
+  { id: "chicken_wedge_set", name: "간장웨지세트", emoji: "🥔", drinkId: "chicken_ganjang", dessertId: "chicken_wedge", bonusRate: 1.25 },
+  { id: "chicken_gizzard_set", name: "반반닭껍질세트", emoji: "🍤", drinkId: "chicken_banban", dessertId: "chicken_gizzard", bonusRate: 1.3 },
+  { id: "chicken_bbq_set", name: "파닭바비큐세트", emoji: "🍖", drinkId: "chicken_padak", dessertId: "chicken_bbq_wing", bonusRate: 1.35 },
+  { id: "chicken_signature_set", name: "핫치킨스페셜세트", emoji: "👑", drinkId: "chicken_hot", dessertId: "chicken_tteokbokki_combo", bonusRate: 1.45 },
+];
+
+/** 편의점 설비 */
+export const MART_EQUIPMENT: EquipmentDef[] = [
+  { id: "mart_warmer", name: "즉석조리 워머", emoji: "🌭", cost: 0,
+    desc: "기본으로 드려요. 핫도그를 만들 수 있어요" },
+  { id: "mart_shelf", name: "스낵 진열대", emoji: "🥤", cost: Math.round(900 * MART_COST_SCALE),
+    desc: "과자·음료 같은 스낵을 진열해서 팔 수 있어요" },
+  { id: "mart_rice_cooker", name: "즉석밥 코너", emoji: "🍙", cost: Math.round(7000 * MART_COST_SCALE),
+    desc: "삼각김밥·주먹밥·김밥을 만들 수 있어요" },
+  { id: "mart_noodle_station", name: "즉석라면 코너", emoji: "🍜", cost: Math.round(26000 * MART_COST_SCALE),
+    desc: "즉석라면을 만들 수 있어요" },
+  { id: "mart_deluxe_station", name: "도시락 코너", emoji: "🍱", cost: Math.round(80000 * MART_COST_SCALE),
+    desc: "고급 도시락·캔맥주를 팔 수 있어요" },
+];
+
+export const MART_MAIN: MenuDef[] = [
+  { id: "mart_hotdog", name: "핫도그", emoji: "🌭", category: "drink", equipmentId: "mart_warmer", basePrice: 792, supplyCost: 144, makeTimeMs: 1200, launchCost: 0 },
+  { id: "mart_samgak_gimbap", name: "삼각김밥", emoji: "🍙", category: "drink", equipmentId: "mart_rice_cooker", basePrice: 1368, supplyCost: 288, makeTimeMs: 1600, launchCost: Math.round(DRINKS[1].launchCost * MART_COST_SCALE) },
+  { id: "mart_cup_ramen", name: "즉석라면", emoji: "🍜", category: "drink", equipmentId: "mart_noodle_station", basePrice: 2088, supplyCost: 468, makeTimeMs: 1400, launchCost: Math.round(DRINKS[2].launchCost * MART_COST_SCALE) },
+  { id: "mart_jumeok_bap", name: "주먹밥", emoji: "🍚", category: "drink", equipmentId: "mart_rice_cooker", basePrice: 3024, supplyCost: 684, makeTimeMs: 1800, launchCost: Math.round(DRINKS[3].launchCost * MART_COST_SCALE) },
+  { id: "mart_gimbap", name: "김밥", emoji: "🍱", category: "drink", equipmentId: "mart_rice_cooker", basePrice: 4464, supplyCost: 1008, makeTimeMs: 2200, launchCost: Math.round(DRINKS[4].launchCost * MART_COST_SCALE) },
+  { id: "mart_dosirak", name: "도시락", emoji: "🍱", category: "drink", equipmentId: "mart_deluxe_station", basePrice: 6480, supplyCost: 1512, makeTimeMs: 2000, launchCost: Math.round(DRINKS[5].launchCost * MART_COST_SCALE) },
+];
+
+export const MART_SIDE: MenuDef[] = [
+  { id: "mart_chips", name: "과자", emoji: "🍟", category: "dessert", equipmentId: "mart_shelf", basePrice: 1008, supplyCost: 216, makeTimeMs: 600, launchCost: Math.round(DESSERTS[0].launchCost * MART_COST_SCALE) },
+  { id: "mart_icecream", name: "아이스크림", emoji: "🍦", category: "dessert", equipmentId: "mart_shelf", basePrice: 1728, supplyCost: 396, makeTimeMs: 900, launchCost: Math.round(DESSERTS[1].launchCost * MART_COST_SCALE) },
+  { id: "mart_soda", name: "탄산음료", emoji: "🥤", category: "dessert", equipmentId: "mart_shelf", basePrice: 2664, supplyCost: 612, makeTimeMs: 800, launchCost: Math.round(DESSERTS[2].launchCost * MART_COST_SCALE) },
+  { id: "mart_coffee", name: "캔커피", emoji: "☕", category: "dessert", equipmentId: "mart_shelf", basePrice: 3960, supplyCost: 900, makeTimeMs: 700, launchCost: Math.round(DESSERTS[3].launchCost * MART_COST_SCALE) },
+  { id: "mart_chocolate", name: "초콜릿", emoji: "🍫", category: "dessert", equipmentId: "mart_shelf", basePrice: 5760, supplyCost: 1332, makeTimeMs: 1000, launchCost: Math.round(DESSERTS[4].launchCost * MART_COST_SCALE) },
+  { id: "mart_beer", name: "캔맥주", emoji: "🍺", category: "dessert", equipmentId: "mart_deluxe_station", basePrice: 8640, supplyCost: 2016, makeTimeMs: 1100, launchCost: Math.round(DESSERTS[5].launchCost * MART_COST_SCALE) },
+];
+
+export const MART_SETS: SetDef[] = [
+  { id: "mart_basic_set", name: "핫도그과자세트", emoji: "🌭", drinkId: "mart_hotdog", dessertId: "mart_chips", bonusRate: 1.15 },
+  { id: "mart_icecream_set", name: "삼각김밥아이스크림세트", emoji: "🍦", drinkId: "mart_samgak_gimbap", dessertId: "mart_icecream", bonusRate: 1.2 },
+  { id: "mart_soda_set", name: "라면탄산세트", emoji: "🥤", drinkId: "mart_cup_ramen", dessertId: "mart_soda", bonusRate: 1.25 },
+  { id: "mart_coffee_set", name: "주먹밥커피세트", emoji: "☕", drinkId: "mart_jumeok_bap", dessertId: "mart_coffee", bonusRate: 1.3 },
+  { id: "mart_choco_set", name: "김밥초콜릿세트", emoji: "🍫", drinkId: "mart_gimbap", dessertId: "mart_chocolate", bonusRate: 1.35 },
+  { id: "mart_signature_set", name: "도시락맥주세트", emoji: "👑", drinkId: "mart_dosirak", dessertId: "mart_beer", bonusRate: 1.45 },
+];
+
 export const RESTAURANTS: Record<RestaurantId, RestaurantConfig> = {
   cafe: {
     id: "cafe", name: "카페", mainLabel: "음료", sideLabel: "디저트",
@@ -948,6 +1039,20 @@ export const RESTAURANTS: Record<RestaurantId, RestaurantConfig> = {
     drinks: POCHA_MAIN, desserts: POCHA_SIDE, sets: POCHA_SETS, equipment: POCHA_EQUIPMENT,
     startingEquipment: [POCHA_EQUIPMENT[0].id], startingLaunched: [POCHA_MAIN[0].id],
     costScale: POCHA_COST_SCALE, buildCost: BUNSIK_TOP_FLOOR_COST, kitchenRoleName: "주방 직원",
+    revenueScale: 1,
+  },
+  chicken: {
+    id: "chicken", name: "치킨집", mainLabel: "메인", sideLabel: "사이드",
+    drinks: CHICKEN_MAIN, desserts: CHICKEN_SIDE, sets: CHICKEN_SETS, equipment: CHICKEN_EQUIPMENT,
+    startingEquipment: [CHICKEN_EQUIPMENT[0].id], startingLaunched: [CHICKEN_MAIN[0].id],
+    costScale: CHICKEN_COST_SCALE, buildCost: POCHA_TOP_FLOOR_COST, kitchenRoleName: "주방 직원",
+    revenueScale: 1,
+  },
+  mart: {
+    id: "mart", name: "편의점", mainLabel: "간편식", sideLabel: "스낵",
+    drinks: MART_MAIN, desserts: MART_SIDE, sets: MART_SETS, equipment: MART_EQUIPMENT,
+    startingEquipment: [MART_EQUIPMENT[0].id], startingLaunched: [MART_MAIN[0].id],
+    costScale: MART_COST_SCALE, buildCost: CHICKEN_TOP_FLOOR_COST, kitchenRoleName: "매장 직원",
     revenueScale: 1,
   },
 };

@@ -366,6 +366,11 @@ function mergeRestaurantData(
     cafe: { gx: 0, gy: 0 },
     pocha: { gx: -2, gy: -2 },
     bunsik: { gx: 2, gy: 2 },
+    // 치킨집·편의점은 자유 배치가 생긴 뒤에 추가된 가게라 "고정 자리"였던
+    // 적이 없습니다 — 옛날 저장본이 이 두 가게를 지은 상태로 가져올 일도
+    // 없지만, 타입을 맞추기 위해 자리만 채워둡니다.
+    chicken: { gx: 3, gy: -3 },
+    mart: { gx: -3, gy: 3 },
   };
   const savedPlot = (saved as { plot?: { gx: number; gy: number } | null }).plot;
   if (savedPlot && typeof savedPlot.gx === "number" && typeof savedPlot.gy === "number") {
