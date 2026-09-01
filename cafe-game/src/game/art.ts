@@ -2043,12 +2043,12 @@ function buildRestaurantBuildings(scene: Phaser.Scene) {
     const up = (p: { x: number; y: number }) => ({ x: p.x, y: p.y - WALL_H });
     const [Tt, Rt, Bt, Lt] = [up(T), up(R), up(B), up(L)];
 
-    // 뒤쪽이 앞쪽보다 살짝만 더 높게 — 다른 두 매장과 지붕 높이가
-    // 비슷해지도록 기울기를 얕게 잡되(너무 길쭉해 보이지 않게), 앞쪽도
-    // 벽 끝보다 한 뼘 더 올라온 처마 턱(파샤판)을 둬서 지붕과 벽 사이
-    // 경계는 분명하게 남겨둡니다.
-    const ROOF_RISE_BACK = 34;
-    const ROOF_RISE_FRONT = 10;
+    // 뒤쪽이 앞쪽보다 살짝 더 높은 외발 지붕 — 카페·포차와 지붕 높이가
+    // 비슷해지도록 낮게 잡습니다. (전에는 지붕과 벽 사이에 별도 처마 턱을
+    // 끼워 넣었더니, 얇은 판이 지붕 삼각형과 테두리선이 겹쳐서 그 자리가
+    // 지저분하게 보였습니다 — 카페처럼 지붕 한 장으로 단순하게 그립니다.)
+    const ROOF_RISE_BACK = 48;
+    const ROOF_RISE_FRONT = 16;
     const ROOF_RISE_SIDE = (ROOF_RISE_BACK + ROOF_RISE_FRONT) / 2;
     const RTt = { x: Tt.x, y: Tt.y - ROOF_RISE_BACK };
     const RRt = { x: Rt.x, y: Rt.y - ROOF_RISE_SIDE };
@@ -2057,17 +2057,15 @@ function buildRestaurantBuildings(scene: Phaser.Scene) {
 
     tex(scene, "world-bunsik-iso", BW, BH, (g) => {
       buildingGround(g, B, w2, h2);
-      poly(g, [B, R, Rt, Bt], WALL_SHADE);
-      poly(g, [B, L, Lt, Bt], WALL);
+      // 벽은 지붕이 시작하는 높이(RBt·RRt·RLt)까지 곧바로 이어 그려서,
+      // 벽과 지붕 사이에 빈틈(파샤판을 따로 끼워 넣다 생기던 지저분한
+      // 겹침)이 없게 합니다. 문·창문은 이 중 낮은 구간(Bt·Rt·Lt 아래)에만
+      // 얹으니 비례는 그대로입니다.
+      poly(g, [B, R, RRt, RBt], WALL_SHADE);
+      poly(g, [B, L, RLt, RBt], WALL);
       groundContactLine(g, L, B, R);
 
-      // 처마 턱(파샤판) — 지붕과 벽 사이에 두께가 있는 판을 하나 끼워서
-      // 지붕이 벽 위에 실제로 얹혀 있는 것처럼 보이게 합니다.
-      poly(g, [Bt, Rt, RRt, RBt], ROOF_DARK);
-      poly(g, [Bt, Lt, RLt, RBt], ROOF);
-
-      // 외발 지붕 — 뒤가 높고 앞이 낮은 한 장의 판. 벽과는 별개로 그 위에
-      // 얹히는 구조라, 문·창문이 있는 벽 비례는 그대로 유지됩니다.
+      // 외발 지붕 — 뒤가 높고 앞이 낮은 한 장의 판.
       poly(g, [RTt, RBt, RRt], ROOF_DARK);
       poly(g, [RTt, RLt, RBt], ROOF);
       g.lineStyle(5, INK, 1);
@@ -2079,10 +2077,6 @@ function buildRestaurantBuildings(scene: Phaser.Scene) {
         const b = { x: RBt.x + (RLt.x - RTt.x) * t, y: RBt.y + (RLt.y - RTt.y) * t };
         g.lineBetween(a.x, a.y, b.x, b.y);
       }
-      // 처마 끝 물받이 홈통 느낌의 굵은 테두리
-      g.lineStyle(5, ROOF_DARK, 1);
-      g.lineBetween(RLt.x, RLt.y, RBt.x, RBt.y);
-      g.lineBetween(RBt.x, RBt.y, RRt.x, RRt.y);
 
       // 지붕 위 환풍 배기구 + 몽글몽글 김
       const ventBase = { x: RTt.x + (RRt.x - RTt.x) * 0.42, y: RTt.y + (RRt.y - RTt.y) * 0.42 };
