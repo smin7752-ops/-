@@ -828,6 +828,8 @@ export interface RestaurantConfig {
   buildCost: number;
   /** "바리스타" 직급을 이 가게에서 부르는 이름 (분식집·포차는 "주방 직원") */
   kitchenRoleName: string;
+  /** 이 가게에서 파는 메뉴의 판매가에 곱해지는 배수 (카페 = 1) */
+  revenueScale: number;
 }
 
 /** 카페의 4층(floorIndex=3) 증축 비용 — 분식집을 짓는 기준값이 됩니다 */
@@ -924,19 +926,21 @@ export const RESTAURANTS: Record<RestaurantId, RestaurantConfig> = {
     id: "cafe", name: "카페", mainLabel: "음료", sideLabel: "디저트",
     drinks: DRINKS, desserts: DESSERTS, sets: SETS, equipment: EQUIPMENT,
     startingEquipment: STARTING_EQUIPMENT, startingLaunched: STARTING_LAUNCHED,
-    costScale: 1, buildCost: 0, kitchenRoleName: "바리스타",
+    costScale: 1, buildCost: 0, kitchenRoleName: "바리스타", revenueScale: 1,
   },
   bunsik: {
     id: "bunsik", name: "분식집", mainLabel: "메인", sideLabel: "사이드",
     drinks: BUNSIK_MAIN, desserts: BUNSIK_SIDE, sets: BUNSIK_SETS, equipment: BUNSIK_EQUIPMENT,
     startingEquipment: [BUNSIK_EQUIPMENT[0].id], startingLaunched: [BUNSIK_MAIN[0].id],
     costScale: BUNSIK_COST_SCALE, buildCost: CAFE_TOP_FLOOR_COST, kitchenRoleName: "주방 직원",
+    revenueScale: 0.5,
   },
   pocha: {
     id: "pocha", name: "포차", mainLabel: "메인", sideLabel: "사이드",
     drinks: POCHA_MAIN, desserts: POCHA_SIDE, sets: POCHA_SETS, equipment: POCHA_EQUIPMENT,
     startingEquipment: [POCHA_EQUIPMENT[0].id], startingLaunched: [POCHA_MAIN[0].id],
     costScale: POCHA_COST_SCALE, buildCost: BUNSIK_TOP_FLOOR_COST, kitchenRoleName: "주방 직원",
+    revenueScale: 0.5,
   },
 };
 
@@ -952,4 +956,19 @@ export const ALL_RESTAURANTS_EQUIPMENT: EquipmentDef[] = RESTAURANT_ORDER.flatMa
 
 export function restaurantConfig(id: RestaurantId): RestaurantConfig {
   return RESTAURANTS[id];
+}
+
+/* ------------------------------ 환생 ------------------------------ */
+/* 환생하면 지금까지 쌓은 매장·코인은 초기화되지만(인지도·취미·기부·평생 누적
+   매출은 그대로 남습니다), 그 대신 모든 가게의 판매가가 영구히 올라갑니다.
+   다시 처음부터 키우는 대신 그만큼 훨씬 빠르게 자랄 수 있게 하려는 목적이에요. */
+
+/** 환생 한 번마다 모든 가게 판매가에 영구히 붙는 배수 (+10%) */
+export const PRESTIGE_BONUS_PER_LEVEL = 0.1;
+
+/** 몇 번째 환생이든, 그때까지 평생 벌어들인 돈이 이만큼은 넘어야 할 수 있어요
+ * (포차를 지을 때 드는 비용의 5배 — 세 가게를 다 키운 뒤가 기준입니다).
+ * 두 번째 환생부터는 그만큼씩 더 필요합니다. */
+export function prestigeThreshold(prestigeCount: number): number {
+  return Math.round(RESTAURANTS.pocha.buildCost * 5 * (prestigeCount + 1));
 }

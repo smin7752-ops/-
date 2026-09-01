@@ -40,6 +40,8 @@ import {
   OFFLINE_EARNINGS_RATE,
   OFFLINE_MIN_AWAY_MS,
   OFFLINE_NO_GM_CAP_MS,
+  PRESTIGE_BONUS_PER_LEVEL,
+  prestigeThreshold,
   SAVE_KEY,
   STARTING_DECOR,
   STARTING_STOCK,
@@ -163,6 +165,8 @@ export interface SaveData {
   /** 지금 보고 있는 가게 */
   activeRestaurant: RestaurantId;
   restaurants: Record<RestaurantId, RestaurantSaveData>;
+  /** 환생한 횟수 — 환생할 때마다 모든 가게 판매가가 영구히 올라갑니다 */
+  prestigeCount: number;
 }
 
 /** 손님 한 명의 주문 (단품 또는 세트) */
@@ -252,6 +256,7 @@ function defaultSave(): SaveData {
     history: [],
     activeRestaurant: "cafe",
     restaurants,
+    prestigeCount: 0,
   };
 }
 
@@ -522,6 +527,8 @@ class GameState {
     merged.fame = typeof parsed.fame === "number" ? parsed.fame : 0;
     merged.hobbies = Array.isArray(parsed.hobbies) ? (parsed.hobbies as string[]) : [];
     merged.totalDonated = typeof parsed.totalDonated === "number" ? parsed.totalDonated : 0;
+    // 환생도 나중에 추가된 기능이라 예전 저장본에는 없습니다.
+    merged.prestigeCount = typeof parsed.prestigeCount === "number" ? parsed.prestigeCount : 0;
 
     // 매출표는 나중에 추가된 기능이라, 예전 저장본에는 없습니다.
     merged.today = { ...emptyLedger(merged.day), ...((parsed.today as Partial<DayLedger>) ?? {}) };
@@ -760,6 +767,42 @@ class GameState {
     return fame;
   }
 
+  /* ------------------------------ 환생 ------------------------------ */
+
+  /** 환생으로 영구히 붙은 판매가 배수 (환생 안 했으면 1배) */
+  prestigeBonus(): number {
+    return 1 + this.data.prestigeCount * PRESTIGE_BONUS_PER_LEVEL;
+  }
+
+  /** 다음 환생에 필요한 "평생 벌어들인 돈" 기준값 */
+  prestigeRequirement(): number {
+    return prestigeThreshold(this.data.prestigeCount);
+  }
+
+  /** 지금 환생할 수 있는가 (평생 벌어들인 돈이 기준을 넘었는가) */
+  canPrestige(): boolean {
+    return this.data.totalEarned >= this.prestigeRequirement();
+  }
+
+  /**
+   * 환생합니다. 코인과 지어둔 가게들(층·직원·메뉴·유니폼·인테리어)은 전부
+   * 초기화되지만, 인지도·취미·기부 총액·평생 누적 매출은 그대로 남고,
+   * 환생 횟수가 하나 늘어난 만큼 모든 가게의 판매가가 영구히 올라갑니다.
+   */
+  doPrestige(): boolean {
+    if (!this.canPrestige()) return false;
+    const keep = {
+      fame: this.data.fame,
+      hobbies: this.data.hobbies,
+      totalDonated: this.data.totalDonated,
+      totalEarned: this.data.totalEarned,
+      prestigeCount: this.data.prestigeCount + 1,
+    };
+    this.data = { ...defaultSave(), ...keep };
+    this.save();
+    return true;
+  }
+
   /** 발주에 쓴 돈을 오늘 재료비에 적습니다 (가게 전체 합산 + 지금 활성 가게별) */
   recordSupplyCost(amount: number) {
     this.data.today.supplyCost += amount;
@@ -924,7 +967,9 @@ class GameState {
     const item = menuById(id);
     const p = this.progress(id);
     const base = item.basePrice * priceMultiplier(p.level) * starMultiplier(p.stars);
-    return Math.round(base * (1 + this.totalBonus().price));
+    return Math.round(
+      base * (1 + this.totalBonus().price) * this.cfg().revenueScale * this.prestigeBonus(),
+    );
   }
 
   /** 지금 별에서 다음 별로 강화하는 데 드는 비용 (이미 만렙이면 0) */

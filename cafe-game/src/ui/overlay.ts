@@ -37,6 +37,7 @@ import {
   tableCost,
   RESTAURANT_ORDER,
   restaurantConfig,
+  PRESTIGE_BONUS_PER_LEVEL,
   type Category,
   type DecorDef,
   type HobbyDef,
@@ -181,6 +182,17 @@ export function mountUI(root: HTMLElement) {
         </div>
       </div>
     </div>
+
+    <div id="prestige-modal" class="modal hidden ui-interactive">
+      <div class="modal-card">
+        <div class="modal-header"><h2>환생하시겠어요?</h2></div>
+        <div class="modal-body" id="prestige-body"></div>
+        <div style="display:flex;gap:10px;margin-top:10px">
+          <button id="prestige-cancel" class="buy-btn alt" style="flex:1;width:auto;margin-top:0">취소</button>
+          <button id="prestige-confirm" class="primary-btn" style="flex:1;width:auto;margin-top:0">환생하기</button>
+        </div>
+      </div>
+    </div>
   `;
 
   const coinEl = root.querySelector("#coin-count") as HTMLElement;
@@ -202,6 +214,8 @@ export function mountUI(root: HTMLElement) {
   const bodyEl = root.querySelector("#panel-body") as HTMLElement;
   const enhanceModal = root.querySelector("#enhance-modal") as HTMLElement;
   const enhanceBody = root.querySelector("#enhance-body") as HTMLElement;
+  const prestigeModal = root.querySelector("#prestige-modal") as HTMLElement;
+  const prestigeBody = root.querySelector("#prestige-body") as HTMLElement;
 
   let activeFloor = 0;
   let openPanel: PanelId | null = null;
@@ -888,6 +902,40 @@ export function mountUI(root: HTMLElement) {
       </div>`;
   }
 
+  /* ---------------------------- 환생 ---------------------------- */
+
+  /** 잘못 눌러서 바로 초기화되지 않도록, 환생도 확인 팝업을 한 번 거칩니다 */
+  function openPrestigeConfirm() {
+    const nextBonus = Math.round(gameState.prestigeBonus() * 100 + PRESTIGE_BONUS_PER_LEVEL * 100 - 100);
+    prestigeBody.innerHTML = `
+      <p>코인과 지어둔 가게(층·직원·메뉴·유니폼·인테리어)가 전부 초기화돼요.</p>
+      <p class="note" style="margin-top:8px">
+        대신 <b>인지도·취미·기부 총액</b>은 그대로 남고, 모든 가게의 판매가가
+        영구히 <b>${nextBonus}%</b> 올라요 (지금 ${Math.round((gameState.prestigeBonus() - 1) * 100)}%
+        → 환생하면 ${nextBonus}%).
+      </p>
+    `;
+    prestigeModal.classList.remove("hidden");
+  }
+
+  function closePrestigeModal() {
+    prestigeModal.classList.add("hidden");
+  }
+
+  function confirmPrestige() {
+    if (!gameState.doPrestige()) {
+      closePrestigeModal();
+      return;
+    }
+    closePrestigeModal();
+    closePanel();
+    // 가게 전체(층·직원·꾸미기 등)가 통째로 초기화됐으니, 지금 보고 있던
+    // 화면을 어설프게 고쳐 쓰는 대신 초원으로 내보내서, 다시 들어갈 때
+    // 이미 검증된 "새로 들어가기" 절차(시뮬레이션·화면 다시 그리기)를
+    // 그대로 타게 합니다.
+    bus.emit(EVENTS.EXIT_TO_WORLD);
+  }
+
   function renderFamePanel() {
     const progress = gameState.hobbyProgress();
 
@@ -919,6 +967,8 @@ export function mountUI(root: HTMLElement) {
       <div class="note">인지도가 일정 이상 쌓이면 그 취미를 <b>코인으로</b> 살 수 있어요
       (인지도 자체는 줄지 않아요). 장착할 필요 없이, 사두기만 하면 계속 효과가 붙습니다.</div>
       ${HOBBIES.map(hobbyRow).join("")}
+
+      ${renderPrestigeSection()}
     `;
 
     wire("[data-donate]", (el) => {
@@ -935,6 +985,38 @@ export function mountUI(root: HTMLElement) {
       gameState.save();
       refreshAll();
     });
+    wire("#open-prestige", () => {
+      if (!gameState.canPrestige()) return;
+      openPrestigeConfirm();
+    });
+  }
+
+  /** 환생 안내 + 진행도 + 버튼 (인지도 패널 맨 아래) */
+  function renderPrestigeSection(): string {
+    const bonusPct = Math.round((gameState.prestigeBonus() - 1) * 100);
+    const need = gameState.prestigeRequirement();
+    const have = gameState.data.totalEarned;
+    const ready = gameState.canPrestige();
+    const ratio = Math.min(1, have / need);
+    return `
+      <h3>환생</h3>
+      <div class="note">
+        지금까지 평생 벌어들인 돈이 일정 금액을 넘으면 <b>환생</b>할 수 있어요.
+        환생하면 코인과 지어둔 가게(층·직원·메뉴·유니폼·인테리어)는 전부
+        초기화되지만, <b>인지도·취미·기부 총액</b>은 그대로 남고, 모든 가게의
+        판매가가 영구히 올라갑니다.
+      </div>
+      <div class="rating-box">
+        <div class="rating-big">환생 ${num(gameState.data.prestigeCount)}회 <span class="muted" style="font-size:16px">(판매가 +${bonusPct}%)</span></div>
+        <div class="rating-note">
+          평생 누적 매출 <b>${num(have)}</b> / <b>${num(need)}</b>
+          <div class="lv-bar" style="margin-top:6px"><i style="width:${Math.round(ratio * 100)}%"></i></div>
+        </div>
+      </div>
+      <button id="open-prestige" class="primary-btn" ${ready ? "" : "disabled"}>
+        ${ready ? "환생하기" : `${num(Math.max(0, need - have))} 더 벌면 환생할 수 있어요`}
+      </button>
+    `;
   }
 
   /* ---------------------------- 매출표 패널 ---------------------------- */
@@ -1564,6 +1646,12 @@ export function mountUI(root: HTMLElement) {
   root.querySelector("#enhance-cancel")?.addEventListener("click", closeEnhanceModal);
   enhanceModal.addEventListener("click", (e) => {
     if (e.target === enhanceModal) closeEnhanceModal();
+  });
+
+  root.querySelector("#prestige-confirm")?.addEventListener("click", confirmPrestige);
+  root.querySelector("#prestige-cancel")?.addEventListener("click", closePrestigeModal);
+  prestigeModal.addEventListener("click", (e) => {
+    if (e.target === prestigeModal) closePrestigeModal();
   });
 
   bus.on(EVENTS.OPEN_PANEL, (id: PanelId) => showPanel(id));
