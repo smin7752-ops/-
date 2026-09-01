@@ -960,15 +960,15 @@ export function restaurantConfig(id: RestaurantId): RestaurantConfig {
 
 /* ------------------------------ 환생 ------------------------------ */
 /* 환생하면 지금까지 쌓은 매장·코인은 초기화되지만(인지도·취미·기부·평생 누적
-   매출은 그대로 남습니다), 그 대신 모든 가게의 판매가가 영구히 올라갑니다.
-   다시 처음부터 키우는 대신 그만큼 훨씬 빠르게 자랄 수 있게 하려는 목적이에요. */
+   매출은 그대로 남습니다), 그 대신 모든 가게의 판매가와 메뉴 경험치가
+   영구히 올라갑니다. 다시 처음부터 키우는 대신 그만큼 훨씬 빠르게 자랄 수
+   있게 하려는 목적이에요.
+   카페 4층(최종 업그레이드)을 열어야 환생할 수 있습니다 — 순수하게 돈만
+   쌓이면 되는 기준이면 계속 놀리기만 해도 끝없이 환생할 수 있어서,
+   실제로 그 판까지 다시 키워야만 하는 기준으로 정했습니다. */
 
-/** 환생 한 번마다 모든 가게 판매가에 영구히 붙는 배수 (+10%) */
-export const PRESTIGE_BONUS_PER_LEVEL = 0.1;
+/** 환생 한 번마다 모든 가게 판매가에 영구히 붙는 배수 (+2.5%) */
+export const PRESTIGE_BONUS_PER_LEVEL = 0.025;
 
-/** 몇 번째 환생이든, 그때까지 평생 벌어들인 돈이 이만큼은 넘어야 할 수 있어요
- * (포차를 지을 때 드는 비용의 5배 — 세 가게를 다 키운 뒤가 기준입니다).
- * 두 번째 환생부터는 그만큼씩 더 필요합니다. */
-export function prestigeThreshold(prestigeCount: number): number {
-  return Math.round(RESTAURANTS.pocha.buildCost * 5 * (prestigeCount + 1));
-}
+/** 환생 한 번마다 메뉴 판매 경험치에 영구히 붙는 배수 (+50% — 렙업이 훨씬 쉬워집니다) */
+export const PRESTIGE_EXP_BONUS_PER_LEVEL = 0.5;

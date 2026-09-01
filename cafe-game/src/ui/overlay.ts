@@ -38,6 +38,7 @@ import {
   RESTAURANT_ORDER,
   restaurantConfig,
   PRESTIGE_BONUS_PER_LEVEL,
+  PRESTIGE_EXP_BONUS_PER_LEVEL,
   type Category,
   type DecorDef,
   type HobbyDef,
@@ -904,15 +905,22 @@ export function mountUI(root: HTMLElement) {
 
   /* ---------------------------- 환생 ---------------------------- */
 
+  /** 2.5% 같은 소수점 배수도 반올림 때문에 "3%"로 뭉개지지 않게, 필요할 때만 소수 첫째 자리를 보여줍니다 */
+  function pct(fraction: number): string {
+    const v = fraction * 100;
+    return Number.isInteger(v) ? `${v}` : v.toFixed(1);
+  }
+
   /** 잘못 눌러서 바로 초기화되지 않도록, 환생도 확인 팝업을 한 번 거칩니다 */
   function openPrestigeConfirm() {
-    const nextBonus = Math.round(gameState.prestigeBonus() * 100 + PRESTIGE_BONUS_PER_LEVEL * 100 - 100);
+    const nextRevenue = pct(gameState.prestigeBonus() - 1 + PRESTIGE_BONUS_PER_LEVEL);
+    const nextExp = pct(gameState.prestigeExpBonus() - 1 + PRESTIGE_EXP_BONUS_PER_LEVEL);
     prestigeBody.innerHTML = `
       <p>코인과 지어둔 가게(층·직원·메뉴·유니폼·인테리어)가 전부 초기화돼요.</p>
       <p class="note" style="margin-top:8px">
         대신 <b>인지도·취미·기부 총액</b>은 그대로 남고, 모든 가게의 판매가가
-        영구히 <b>${nextBonus}%</b> 올라요 (지금 ${Math.round((gameState.prestigeBonus() - 1) * 100)}%
-        → 환생하면 ${nextBonus}%).
+        영구히 <b>+${nextRevenue}%</b>, 메뉴 판매 경험치가 영구히 <b>+${nextExp}%</b> 올라요
+        (경험치가 더 빨리 쌓여서 렙업이 훨씬 쉬워져요).
       </p>
     `;
     prestigeModal.classList.remove("hidden");
@@ -993,28 +1001,25 @@ export function mountUI(root: HTMLElement) {
 
   /** 환생 안내 + 진행도 + 버튼 (인지도 패널 맨 아래) */
   function renderPrestigeSection(): string {
-    const bonusPct = Math.round((gameState.prestigeBonus() - 1) * 100);
-    const need = gameState.prestigeRequirement();
-    const have = gameState.data.totalEarned;
+    const revenuePct = pct(gameState.prestigeBonus() - 1);
+    const expPct = pct(gameState.prestigeExpBonus() - 1);
     const ready = gameState.canPrestige();
-    const ratio = Math.min(1, have / need);
     return `
       <h3>환생</h3>
       <div class="note">
-        지금까지 평생 벌어들인 돈이 일정 금액을 넘으면 <b>환생</b>할 수 있어요.
+        <b>카페 4층(최종 업그레이드)</b>을 열면 환생할 수 있어요.
         환생하면 코인과 지어둔 가게(층·직원·메뉴·유니폼·인테리어)는 전부
         초기화되지만, <b>인지도·취미·기부 총액</b>은 그대로 남고, 모든 가게의
-        판매가가 영구히 올라갑니다.
+        판매가와 메뉴 판매 경험치가 영구히 올라갑니다.
       </div>
       <div class="rating-box">
-        <div class="rating-big">환생 ${num(gameState.data.prestigeCount)}회 <span class="muted" style="font-size:16px">(판매가 +${bonusPct}%)</span></div>
+        <div class="rating-big">환생 ${num(gameState.data.prestigeCount)}회</div>
         <div class="rating-note">
-          평생 누적 매출 <b>${num(have)}</b> / <b>${num(need)}</b>
-          <div class="lv-bar" style="margin-top:6px"><i style="width:${Math.round(ratio * 100)}%"></i></div>
+          판매가 <b>+${revenuePct}%</b> · 메뉴 경험치 <b>+${expPct}%</b>
         </div>
       </div>
       <button id="open-prestige" class="primary-btn" ${ready ? "" : "disabled"}>
-        ${ready ? "환생하기" : `${num(Math.max(0, need - have))} 더 벌면 환생할 수 있어요`}
+        ${ready ? "환생하기" : "카페 4층을 열면 환생할 수 있어요"}
       </button>
     `;
   }

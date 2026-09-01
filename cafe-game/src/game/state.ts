@@ -41,7 +41,7 @@ import {
   OFFLINE_MIN_AWAY_MS,
   OFFLINE_NO_GM_CAP_MS,
   PRESTIGE_BONUS_PER_LEVEL,
-  prestigeThreshold,
+  PRESTIGE_EXP_BONUS_PER_LEVEL,
   SAVE_KEY,
   STARTING_DECOR,
   STARTING_STOCK,
@@ -774,20 +774,21 @@ class GameState {
     return 1 + this.data.prestigeCount * PRESTIGE_BONUS_PER_LEVEL;
   }
 
-  /** 다음 환생에 필요한 "평생 벌어들인 돈" 기준값 */
-  prestigeRequirement(): number {
-    return prestigeThreshold(this.data.prestigeCount);
+  /** 환생으로 영구히 붙은 메뉴 경험치 배수 (환생 안 했으면 1배) */
+  prestigeExpBonus(): number {
+    return 1 + this.data.prestigeCount * PRESTIGE_EXP_BONUS_PER_LEVEL;
   }
 
-  /** 지금 환생할 수 있는가 (평생 벌어들인 돈이 기준을 넘었는가) */
+  /** 지금 환생할 수 있는가 (카페 4층, 즉 최종 업그레이드를 열었는가) */
   canPrestige(): boolean {
-    return this.data.totalEarned >= this.prestigeRequirement();
+    return this.data.restaurants.cafe.floors[MAX_FLOORS - 1].unlocked;
   }
 
   /**
    * 환생합니다. 코인과 지어둔 가게들(층·직원·메뉴·유니폼·인테리어)은 전부
    * 초기화되지만, 인지도·취미·기부 총액·평생 누적 매출은 그대로 남고,
-   * 환생 횟수가 하나 늘어난 만큼 모든 가게의 판매가가 영구히 올라갑니다.
+   * 환생 횟수가 하나 늘어난 만큼 모든 가게의 판매가와 메뉴 경험치가
+   * 영구히 올라갑니다.
    */
   doPrestige(): boolean {
     if (!this.canPrestige()) return false;
@@ -1015,11 +1016,11 @@ class GameState {
     return success ? "success" : "fail";
   }
 
-  /** 판매 경험치를 주고, 레벨이 올랐으면 true */
+  /** 판매 경험치를 주고, 레벨이 올랐으면 true (환생했으면 그만큼 더 받습니다) */
   addExp(id: string, amount = 1): boolean {
     const p = this.progress(id);
     if (p.level >= MAX_MENU_LEVEL) return false;
-    p.exp += amount;
+    p.exp += Math.round(amount * this.prestigeExpBonus());
     let leveled = false;
     while (p.level < MAX_MENU_LEVEL && p.exp >= expToNext(p.level)) {
       p.exp -= expToNext(p.level);
@@ -1056,11 +1057,11 @@ class GameState {
     return Math.round(parts * set.bonusRate * priceMultiplier(level));
   }
 
-  /** 세트를 한 번 팔았을 때. 레벨이 올랐으면 true */
+  /** 세트를 한 번 팔았을 때. 레벨이 올랐으면 true (환생했으면 그만큼 더 받습니다) */
   addSetExp(setId: string, amount = 1): boolean {
     const p = this.setProgress(setId);
     if (!p || p.level >= MAX_MENU_LEVEL) return false;
-    p.exp += amount;
+    p.exp += Math.round(amount * this.prestigeExpBonus());
     let leveled = false;
     while (p.level < MAX_MENU_LEVEL && p.exp >= expToNext(p.level)) {
       p.exp -= expToNext(p.level);
