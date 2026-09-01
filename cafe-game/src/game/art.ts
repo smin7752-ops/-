@@ -36,8 +36,9 @@ export function isoToScreen(gx: number, gy: number) {
   };
 }
 
-/** 들판 칸이 몇 개까지 깔리는지 (가운데에서 사방으로). */
-export const ISO_GRID_RADIUS = 2;
+/** 들판 칸이 몇 개까지 깔리는지 (가운데에서 사방으로). 매장을 계속
+ * 늘려갈 수 있도록 넉넉하게 잡아둡니다. */
+export const ISO_GRID_RADIUS = 4;
 
 /** "world-ground" 그림의 왼쪽 위 기준으로, 격자 원점(0,0)이 놓이는 자리.
  * 건물을 화면에 놓을 때도 이 값을 더해야 타일과 자리가 맞습니다.
@@ -1823,13 +1824,10 @@ function buildWorldArt(scene: Phaser.Scene) {
       g.strokePath();
     };
 
-    // 바닥에 지는 그림자 — 그림 테두리 안에서만 번지게 폭을 제한해서
-    // (테두리 밖으로 잘리면 그림자가 각지게 잘려 오히려 붕 떠 보입니다),
-    // 옅은 번짐 + 진한 접지 그림자를 겹쳐 건물이 땅에 눌러 붙은 느낌을 줍니다.
-    g.fillStyle(0x000000, 0.08);
-    g.fillEllipse(B.x, B.y + 8, w2 * 1.3, h2 * 1.2);
-    g.fillStyle(0x000000, 0.2);
-    g.fillEllipse(B.x, B.y + 3, w2 * 0.9, h2 * 0.7);
+    // 바닥에 지는 그림자 — 테두리가 또렷한 타원 두 장을 겹치면 마치 받침
+    // 접시 위에 건물이 얹힌 것처럼 보여서(붕 뜬 느낌의 진짜 원인이었습니다),
+    // 옅은 겹을 여러 장 쌓아 가장자리가 부드럽게 번지는 그림자로 바꿨습니다.
+    softShadow(g, B.x, B.y + 4, w2 * 1.3, h2 * 1.2);
 
     // 벽 두 면 (오른쪽이 더 어둡게 — 그늘)
     poly([B, R, Rt, Bt], WALL_SHADE);
@@ -1971,6 +1969,25 @@ function hedgeRow(
   }
 }
 
+/** 건물 밑에 까는 부드러운 그림자. 테두리가 딱 떨어지는 타원 한두 장으로는
+ * 건물이 받침 접시 위에 얹힌 것처럼 보여서(붕 떠 보이는 원인), 옅은 타원을
+ * 여러 겹 포개서 가장자리가 자연스럽게 흐려지는 것처럼 눈속임합니다. */
+function softShadow(
+  g: Phaser.GameObjects.Graphics,
+  cx: number,
+  cy: number,
+  w: number,
+  h: number,
+) {
+  const layers = 6;
+  for (let i = layers; i >= 1; i--) {
+    const t = i / layers; // 1(가장 바깥) → 1/layers(가장 안쪽)
+    const scale = 0.4 + 0.9 * t;
+    g.fillStyle(0x000000, 0.045);
+    g.fillEllipse(cx, cy, w * scale, h * scale);
+  }
+}
+
 /** 공통 뼈대(마름모 발자국, 그림자, 접지선, 화단)를 만들어 두면 분식집·포차가
  * 서로 다른 지붕 모양이어도 함께 쓸 수 있습니다. */
 function buildingGround(
@@ -1979,10 +1996,7 @@ function buildingGround(
   w2: number,
   h2: number,
 ) {
-  g.fillStyle(0x000000, 0.08);
-  g.fillEllipse(B.x, B.y + 8, w2 * 1.3, h2 * 1.2);
-  g.fillStyle(0x000000, 0.2);
-  g.fillEllipse(B.x, B.y + 3, w2 * 0.9, h2 * 0.7);
+  softShadow(g, B.x, B.y + 4, w2 * 1.3, h2 * 1.2);
 }
 
 function groundContactLine(

@@ -144,6 +144,9 @@ export interface RestaurantSaveData {
   decorEquipped: Record<DecorSlot, string>;
   /** 실제 시계 기준으로, 이 가게를 마지막으로 보고 있었던 시각 (다른 가게에 가 있는 동안 번 돈 정산용) */
   lastVisitedAt: number;
+  /** 초원 어느 칸에 지었는지 (아직 안 지었으면 null). 플레이어가 원하는
+   * 빈 칸을 골라서 짓기 때문에 자리가 고정이 아닙니다. */
+  plot: { gx: number; gy: number } | null;
 }
 
 export interface SaveData {
@@ -236,6 +239,8 @@ function defaultRestaurantData(id: RestaurantId): RestaurantSaveData {
     decor: [...STARTING_DECOR],
     decorEquipped: defaultDecorEquipped(),
     lastVisitedAt: Date.now(),
+    // 카페는 항상 지어진 채로 시작하니 자리도 처음부터 가운데에 잡아둡니다.
+    plot: id === "cafe" ? { gx: 0, gy: 0 } : null,
   };
 }
 
@@ -353,6 +358,24 @@ function mergeRestaurantData(
   }
 
   merged.lastVisitedAt = typeof saved.lastVisitedAt === "number" ? saved.lastVisitedAt : Date.now();
+
+  // 자리를 직접 고를 수 있게 되기 전(예전 저장본)에는 매장마다 자리가
+  // 고정이었습니다. 이미 지어놓은 매장이 갑자기 사라져 보이지 않도록,
+  // 그 예전 고정 자리를 그대로 물려받게 합니다.
+  const legacyPlot: Record<RestaurantId, { gx: number; gy: number }> = {
+    cafe: { gx: 0, gy: 0 },
+    pocha: { gx: -2, gy: -2 },
+    bunsik: { gx: 2, gy: 2 },
+  };
+  const savedPlot = (saved as { plot?: { gx: number; gy: number } | null }).plot;
+  if (savedPlot && typeof savedPlot.gx === "number" && typeof savedPlot.gy === "number") {
+    merged.plot = savedPlot;
+  } else if (merged.constructed) {
+    merged.plot = legacyPlot[id];
+  } else {
+    merged.plot = null;
+  }
+
   return merged;
 }
 
@@ -427,13 +450,24 @@ class GameState {
     return this.data.coins >= restaurantConfig(id).buildCost;
   }
 
-  /** 새 가게를 짓습니다. 이전 가게의 총괄 매니저가 있어야 하고, 비용을 냅니다 */
-  buildRestaurant(id: RestaurantId): boolean {
+  /** 그 칸에 이미 다른 매장이 지어져 있는가 */
+  isPlotTaken(gx: number, gy: number): boolean {
+    return RESTAURANT_ORDER.some((id) => {
+      const p = this.data.restaurants[id].plot;
+      return p !== null && p.gx === gx && p.gy === gy;
+    });
+  }
+
+  /** 새 가게를 짓습니다. 이전 가게의 총괄 매니저가 있어야 하고, 비용을 내고,
+   * 플레이어가 고른 빈 칸에 자리를 잡습니다 */
+  buildRestaurant(id: RestaurantId, gx: number, gy: number): boolean {
     const r = this.data.restaurants[id];
     const reqId = this.requiredGmFor(id);
     if (r.constructed || (reqId && !this.hasGeneralManager(reqId))) return false;
+    if (this.isPlotTaken(gx, gy)) return false;
     if (!this.spendCoins(restaurantConfig(id).buildCost)) return false;
     r.constructed = true;
+    r.plot = { gx, gy };
     r.lastVisitedAt = Date.now();
     return true;
   }
