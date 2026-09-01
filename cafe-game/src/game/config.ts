@@ -91,22 +91,25 @@ export function equipmentCost(def: EquipmentDef, floorIndex: number): number {
 /* 배열 순서는 표시 순서일 뿐입니다. 각 메뉴는 설비를 산 뒤 발주 탭에서
    한 번 사야 팔 수 있게 열립니다 (state.ts의 launched 목록 참고). */
 
+// 판매가·원가는 분식집 메뉴와 같은 값으로 맞췄습니다 (세 가게 모두 같은
+// 기준으로 팔리도록). 발주비(launchCost)는 카페 특유의 낮은 진입장벽을
+// 그대로 두었습니다.
 export const DRINKS: MenuDef[] = [
-  { id: "americano", name: "아메리카노", emoji: "☕", category: "drink", equipmentId: "coffee_machine", basePrice: 22, supplyCost: 4, makeTimeMs: 1200, launchCost: 0 },
-  { id: "latte", name: "카페라떼", emoji: "🥛", category: "drink", equipmentId: "coffee_machine", basePrice: 38, supplyCost: 8, makeTimeMs: 1600, launchCost: 700 },
-  { id: "icetea", name: "아이스티", emoji: "🧊", category: "drink", equipmentId: "tea_station", basePrice: 58, supplyCost: 13, makeTimeMs: 1400, launchCost: 1000 },
-  { id: "ade", name: "레몬에이드", emoji: "🍋", category: "drink", equipmentId: "blender", basePrice: 84, supplyCost: 19, makeTimeMs: 1800, launchCost: 1500 },
-  { id: "smoothie", name: "딸기스무디", emoji: "🍓", category: "drink", equipmentId: "blender", basePrice: 124, supplyCost: 28, makeTimeMs: 2200, launchCost: 2200 },
-  { id: "matcha", name: "말차라떼", emoji: "🍵", category: "drink", equipmentId: "tea_station", basePrice: 180, supplyCost: 42, makeTimeMs: 2000, launchCost: 3200 },
+  { id: "americano", name: "아메리카노", emoji: "☕", category: "drink", equipmentId: "coffee_machine", basePrice: 792, supplyCost: 144, makeTimeMs: 1200, launchCost: 0 },
+  { id: "latte", name: "카페라떼", emoji: "🥛", category: "drink", equipmentId: "coffee_machine", basePrice: 1368, supplyCost: 288, makeTimeMs: 1600, launchCost: 700 },
+  { id: "icetea", name: "아이스티", emoji: "🧊", category: "drink", equipmentId: "tea_station", basePrice: 2088, supplyCost: 468, makeTimeMs: 1400, launchCost: 1000 },
+  { id: "ade", name: "레몬에이드", emoji: "🍋", category: "drink", equipmentId: "blender", basePrice: 3024, supplyCost: 684, makeTimeMs: 1800, launchCost: 1500 },
+  { id: "smoothie", name: "딸기스무디", emoji: "🍓", category: "drink", equipmentId: "blender", basePrice: 4464, supplyCost: 1008, makeTimeMs: 2200, launchCost: 2200 },
+  { id: "matcha", name: "말차라떼", emoji: "🍵", category: "drink", equipmentId: "tea_station", basePrice: 6480, supplyCost: 1512, makeTimeMs: 2000, launchCost: 3200 },
 ];
 
 export const DESSERTS: MenuDef[] = [
-  { id: "cookie", name: "쿠키", emoji: "🍪", category: "dessert", equipmentId: "showcase", basePrice: 28, supplyCost: 6, makeTimeMs: 600, launchCost: 500 },
-  { id: "croissant", name: "크루아상", emoji: "🥐", category: "dessert", equipmentId: "oven", basePrice: 48, supplyCost: 11, makeTimeMs: 900, launchCost: 850 },
-  { id: "cheesecake", name: "치즈케이크", emoji: "🍰", category: "dessert", equipmentId: "showcase", basePrice: 74, supplyCost: 17, makeTimeMs: 800, launchCost: 1300 },
-  { id: "macaron", name: "마카롱", emoji: "🍬", category: "dessert", equipmentId: "showcase", basePrice: 110, supplyCost: 25, makeTimeMs: 700, launchCost: 2000 },
-  { id: "tiramisu", name: "티라미수", emoji: "🍮", category: "dessert", equipmentId: "showcase", basePrice: 160, supplyCost: 37, makeTimeMs: 1000, launchCost: 2900 },
-  { id: "tart", name: "딸기타르트", emoji: "🥧", category: "dessert", equipmentId: "oven", basePrice: 240, supplyCost: 56, makeTimeMs: 1100, launchCost: 4300 },
+  { id: "cookie", name: "쿠키", emoji: "🍪", category: "dessert", equipmentId: "showcase", basePrice: 1008, supplyCost: 216, makeTimeMs: 600, launchCost: 500 },
+  { id: "croissant", name: "크루아상", emoji: "🥐", category: "dessert", equipmentId: "oven", basePrice: 1728, supplyCost: 396, makeTimeMs: 900, launchCost: 850 },
+  { id: "cheesecake", name: "치즈케이크", emoji: "🍰", category: "dessert", equipmentId: "showcase", basePrice: 2664, supplyCost: 612, makeTimeMs: 800, launchCost: 1300 },
+  { id: "macaron", name: "마카롱", emoji: "🍬", category: "dessert", equipmentId: "showcase", basePrice: 3960, supplyCost: 900, makeTimeMs: 700, launchCost: 2000 },
+  { id: "tiramisu", name: "티라미수", emoji: "🍮", category: "dessert", equipmentId: "showcase", basePrice: 5760, supplyCost: 1332, makeTimeMs: 1000, launchCost: 2900 },
+  { id: "tart", name: "딸기타르트", emoji: "🥧", category: "dessert", equipmentId: "oven", basePrice: 8640, supplyCost: 2016, makeTimeMs: 1100, launchCost: 4300 },
 ];
 
 export const ALL_MENU: MenuDef[] = [...DRINKS, ...DESSERTS];
@@ -894,22 +897,25 @@ export const POCHA_EQUIPMENT: EquipmentDef[] = [
     desc: "고급 안주를 만들 수 있어요" },
 ];
 
+// 판매가·원가는 분식집 메뉴와 같은 값으로 맞췄습니다 (세 가게 모두 같은
+// 기준으로 팔리도록). 발주비(launchCost)는 포차 특유의 높은 진입장벽을
+// 그대로 두었습니다.
 export const POCHA_MAIN: MenuDef[] = [
-  { id: "pocha_gyeranmari", name: "계란말이", emoji: "🍳", category: "drink", equipmentId: "pocha_stove", basePrice: 28512, supplyCost: 5184, makeTimeMs: 1200, launchCost: 0 },
-  { id: "pocha_dakkochi", name: "닭꼬치", emoji: "🍢", category: "drink", equipmentId: "pocha_stove", basePrice: 49248, supplyCost: 10368, makeTimeMs: 1600, launchCost: 907200 },
-  { id: "pocha_odengtang", name: "오뎅탕", emoji: "🍲", category: "drink", equipmentId: "pocha_soup_pot", basePrice: 75168, supplyCost: 16848, makeTimeMs: 1400, launchCost: 1296000 },
-  { id: "pocha_golbaengi", name: "골뱅이무침", emoji: "🥗", category: "drink", equipmentId: "pocha_charcoal_grill", basePrice: 108864, supplyCost: 24624, makeTimeMs: 1800, launchCost: 1944000 },
-  { id: "pocha_jokbal", name: "족발", emoji: "🍖", category: "drink", equipmentId: "pocha_charcoal_grill", basePrice: 160704, supplyCost: 36288, makeTimeMs: 2200, launchCost: 2851200 },
-  { id: "pocha_haemul_pajeon", name: "해물파전", emoji: "🥘", category: "drink", equipmentId: "pocha_soup_pot", basePrice: 233280, supplyCost: 54432, makeTimeMs: 2000, launchCost: 4147200 },
+  { id: "pocha_gyeranmari", name: "계란말이", emoji: "🍳", category: "drink", equipmentId: "pocha_stove", basePrice: 792, supplyCost: 144, makeTimeMs: 1200, launchCost: 0 },
+  { id: "pocha_dakkochi", name: "닭꼬치", emoji: "🍢", category: "drink", equipmentId: "pocha_stove", basePrice: 1368, supplyCost: 288, makeTimeMs: 1600, launchCost: 907200 },
+  { id: "pocha_odengtang", name: "오뎅탕", emoji: "🍲", category: "drink", equipmentId: "pocha_soup_pot", basePrice: 2088, supplyCost: 468, makeTimeMs: 1400, launchCost: 1296000 },
+  { id: "pocha_golbaengi", name: "골뱅이무침", emoji: "🥗", category: "drink", equipmentId: "pocha_charcoal_grill", basePrice: 3024, supplyCost: 684, makeTimeMs: 1800, launchCost: 1944000 },
+  { id: "pocha_jokbal", name: "족발", emoji: "🍖", category: "drink", equipmentId: "pocha_charcoal_grill", basePrice: 4464, supplyCost: 1008, makeTimeMs: 2200, launchCost: 2851200 },
+  { id: "pocha_haemul_pajeon", name: "해물파전", emoji: "🥘", category: "drink", equipmentId: "pocha_soup_pot", basePrice: 6480, supplyCost: 1512, makeTimeMs: 2000, launchCost: 4147200 },
 ];
 
 export const POCHA_SIDE: MenuDef[] = [
-  { id: "pocha_gamja_twigim", name: "감자튀김", emoji: "🍟", category: "dessert", equipmentId: "pocha_display", basePrice: 36288, supplyCost: 7776, makeTimeMs: 600, launchCost: 648000 },
-  { id: "pocha_chicken_gangjeong", name: "치킨강정", emoji: "🍗", category: "dessert", equipmentId: "pocha_special_station", basePrice: 62208, supplyCost: 14256, makeTimeMs: 900, launchCost: 1101600 },
-  { id: "pocha_gyeranjjim", name: "계란찜", emoji: "🍳", category: "dessert", equipmentId: "pocha_display", basePrice: 95904, supplyCost: 22032, makeTimeMs: 800, launchCost: 1684800 },
-  { id: "pocha_ojingeo_bokkeum", name: "오징어볶음", emoji: "🦑", category: "dessert", equipmentId: "pocha_display", basePrice: 142560, supplyCost: 32400, makeTimeMs: 700, launchCost: 2592000 },
-  { id: "pocha_yangnyeom_tongdak", name: "양념통닭", emoji: "🍗", category: "dessert", equipmentId: "pocha_display", basePrice: 207360, supplyCost: 47952, makeTimeMs: 1000, launchCost: 3758400 },
-  { id: "pocha_modum_jeon", name: "모둠전", emoji: "🥘", category: "dessert", equipmentId: "pocha_special_station", basePrice: 311040, supplyCost: 72576, makeTimeMs: 1100, launchCost: 5572800 },
+  { id: "pocha_gamja_twigim", name: "감자튀김", emoji: "🍟", category: "dessert", equipmentId: "pocha_display", basePrice: 1008, supplyCost: 216, makeTimeMs: 600, launchCost: 648000 },
+  { id: "pocha_chicken_gangjeong", name: "치킨강정", emoji: "🍗", category: "dessert", equipmentId: "pocha_special_station", basePrice: 1728, supplyCost: 396, makeTimeMs: 900, launchCost: 1101600 },
+  { id: "pocha_gyeranjjim", name: "계란찜", emoji: "🍳", category: "dessert", equipmentId: "pocha_display", basePrice: 2664, supplyCost: 612, makeTimeMs: 800, launchCost: 1684800 },
+  { id: "pocha_ojingeo_bokkeum", name: "오징어볶음", emoji: "🦑", category: "dessert", equipmentId: "pocha_display", basePrice: 3960, supplyCost: 900, makeTimeMs: 700, launchCost: 2592000 },
+  { id: "pocha_yangnyeom_tongdak", name: "양념통닭", emoji: "🍗", category: "dessert", equipmentId: "pocha_display", basePrice: 5760, supplyCost: 1332, makeTimeMs: 1000, launchCost: 3758400 },
+  { id: "pocha_modum_jeon", name: "모둠전", emoji: "🥘", category: "dessert", equipmentId: "pocha_special_station", basePrice: 8640, supplyCost: 2016, makeTimeMs: 1100, launchCost: 5572800 },
 ];
 
 export const POCHA_SETS: SetDef[] = [
@@ -933,14 +939,16 @@ export const RESTAURANTS: Record<RestaurantId, RestaurantConfig> = {
     drinks: BUNSIK_MAIN, desserts: BUNSIK_SIDE, sets: BUNSIK_SETS, equipment: BUNSIK_EQUIPMENT,
     startingEquipment: [BUNSIK_EQUIPMENT[0].id], startingLaunched: [BUNSIK_MAIN[0].id],
     costScale: BUNSIK_COST_SCALE, buildCost: CAFE_TOP_FLOOR_COST, kitchenRoleName: "주방 직원",
-    revenueScale: 0.5,
+    // 메뉴 판매가를 분식집 기준으로 맞췄으니(카페·포차 메뉴의 원가도 함께
+    // 조정), 세 가게 모두 이 배수를 1로 같이 둡니다.
+    revenueScale: 1,
   },
   pocha: {
     id: "pocha", name: "포차", mainLabel: "메인", sideLabel: "사이드",
     drinks: POCHA_MAIN, desserts: POCHA_SIDE, sets: POCHA_SETS, equipment: POCHA_EQUIPMENT,
     startingEquipment: [POCHA_EQUIPMENT[0].id], startingLaunched: [POCHA_MAIN[0].id],
     costScale: POCHA_COST_SCALE, buildCost: BUNSIK_TOP_FLOOR_COST, kitchenRoleName: "주방 직원",
-    revenueScale: 0.5,
+    revenueScale: 1,
   },
 };
 
