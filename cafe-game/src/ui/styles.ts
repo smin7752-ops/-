@@ -20,7 +20,9 @@ export function injectStyles() {
     gap: 8px;
   }
   #ui-root .coin-pill {
-    background: rgba(0,0,0,0.6);
+    background: linear-gradient(180deg, rgba(30,20,12,0.72), rgba(20,13,8,0.66));
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.08);
     padding: 6px 18px 6px 10px;
     border-radius: 999px;
     font-size: 19px;
@@ -32,7 +34,9 @@ export function injectStyles() {
   }
   /* 상단 바의 나가기(초원으로) 버튼 — 옆의 코인 알약과 같은 톤으로 맞춥니다 */
   #ui-root #world-btn.icon-btn {
-    background: rgba(0,0,0,0.6);
+    background: linear-gradient(180deg, rgba(30,20,12,0.72), rgba(20,13,8,0.66));
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.08);
     color: #fff;
     border-radius: 999px;
     width: 36px;
@@ -46,9 +50,10 @@ export function injectStyles() {
   }
   /* 게임 속 시각. 누르면 매출표가 열립니다. */
   #ui-root .clock-pill {
-    background: rgba(0,0,0,0.6);
+    background: linear-gradient(180deg, rgba(30,20,12,0.72), rgba(20,13,8,0.66));
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.08);
     color: #fff;
-    border: none;
     padding: 6px 14px;
     border-radius: 999px;
     font-weight: 800;
@@ -60,13 +65,14 @@ export function injectStyles() {
   }
   #ui-root .clock-pill #day-label { font-size: 11px; opacity: 0.75; }
   #ui-root .clock-pill #clock-label { font-size: 17px; font-variant-numeric: tabular-nums; }
-  #ui-root .coin-pill.debt { background: #8a3b3b; }
+  #ui-root .coin-pill.debt { background: linear-gradient(180deg, #9c4646, #7a3535); }
   #ui-root .star { color: #f5c542; }
   /* 인지도. 누르면 인지도 탭이 열립니다. */
   #ui-root .fame-pill {
-    background: rgba(0,0,0,0.6);
+    background: linear-gradient(180deg, rgba(30,20,12,0.72), rgba(20,13,8,0.66));
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.08);
     color: #fff;
-    border: none;
     padding: 6px 13px;
     border-radius: 999px;
     font-weight: 800;
@@ -82,8 +88,9 @@ export function injectStyles() {
     display: flex;
     align-items: center;
     gap: 14px;
-    background: #fdf6e7;
+    background: linear-gradient(180deg, #fffdf8, #fdf6e7);
     border: 1px solid #e6d5b4;
+    box-shadow: 0 2px 5px rgba(139,96,42,0.08);
     border-radius: 12px;
     padding: 12px;
     margin: 8px 0 4px;
@@ -115,18 +122,20 @@ export function injectStyles() {
   }
   #ui-root .floor-tab {
     position: relative;
-    background: rgba(0,0,0,0.45);
+    background: linear-gradient(180deg, rgba(40,28,18,0.5), rgba(20,13,8,0.45));
     color: #fff;
     border: 2px solid transparent;
     padding: 6px 14px;
     border-radius: 12px;
     font-size: 14px;
     font-weight: 700;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
   }
   #ui-root .floor-tab.active {
-    background: #e8973a;
+    background: linear-gradient(180deg, #f2a656, #e8973a);
     color: #3b2410;
     border-color: #fff3;
+    box-shadow: 0 2px 6px rgba(180,112,31,0.4);
   }
   #ui-root .floor-tab.locked { opacity: 0.5; }
   #ui-root .floor-tab .dot {
@@ -159,7 +168,7 @@ export function injectStyles() {
   #ui-root .nav-btn {
     flex: 1 1 0;
     max-width: 92px;
-    background: #e8973a;
+    background: linear-gradient(180deg, #f2a656, #e8973a);
     color: #3b2410;
     border: none;
     padding: 9px 4px 7px;
@@ -196,7 +205,7 @@ export function injectStyles() {
   }
   #ui-root .modal.hidden { display: none; }
   #ui-root .modal-card {
-    background: #fff8ec;
+    background: linear-gradient(180deg, #fffbf3, #fff8ec 60px);
     color: #3b2410;
     width: min(460px, 100%);
     max-height: 82vh;
@@ -204,6 +213,17 @@ export function injectStyles() {
     flex-direction: column;
     border-radius: 22px 22px 0 0;
     padding: 18px 18px calc(18px + env(safe-area-inset-bottom));
+    box-shadow: 0 -8px 28px rgba(59,36,16,0.22);
+  }
+  #ui-root .modal-card::before {
+    content: "";
+    display: block;
+    width: 42px;
+    height: 4px;
+    border-radius: 3px;
+    background: #e6d5b4;
+    margin: -6px auto 10px;
+    flex: 0 0 auto;
   }
   #ui-root .modal-header {
     display: flex;
@@ -212,7 +232,7 @@ export function injectStyles() {
     margin-bottom: 4px;
     flex: 0 0 auto;
   }
-  #ui-root .modal-header h2 { margin: 0; font-size: 20px; }
+  #ui-root .modal-header h2 { margin: 0; font-size: 20px; font-weight: 800; letter-spacing: 0.2px; }
   #ui-root .modal-body { overflow-y: auto; flex: 1 1 auto; -webkit-overflow-scrolling: touch; }
   #ui-root .icon-btn {
     background: none; border: none; font-size: 22px; color: #3b2410; padding: 4px 8px;
@@ -220,9 +240,12 @@ export function injectStyles() {
 
   #ui-root h3 {
     font-size: 13px;
-    margin: 16px 0 6px;
+    font-weight: 800;
+    margin: 16px 0 8px;
     color: #8a5a34;
     letter-spacing: 0.4px;
+    border-left: 3px solid #e8973a;
+    padding-left: 8px;
   }
   #ui-root h3:first-child { margin-top: 4px; }
 
@@ -267,8 +290,9 @@ export function injectStyles() {
 
   /* 매출 · 지출 · 순이익 정산표 */
   #ui-root .ledger {
-    background: #fdf6e7;
+    background: linear-gradient(180deg, #fffdf8, #fdf6e7);
     border: 1px solid #e6d5b4;
+    box-shadow: 0 2px 5px rgba(139,96,42,0.08);
     border-radius: 12px;
     padding: 10px 12px;
     margin: 10px 0;
@@ -304,7 +328,9 @@ export function injectStyles() {
   #ui-root .profit.loss { color: #b4564c; }
 
   #ui-root .week-block {
-    background: #f6ecd8;
+    background: linear-gradient(180deg, #f9f0dd, #f6ecd8);
+    border: 1px solid #ecdcc0;
+    box-shadow: 0 2px 5px rgba(139,96,42,0.06);
     border-radius: 14px;
     padding: 4px 12px;
     margin: 10px 0;
@@ -321,14 +347,16 @@ export function injectStyles() {
     margin: 10px 0 16px;
   }
   #ui-root .donation-btn {
-    background: #eaf6f2;
+    background: linear-gradient(180deg, #f2fbf8, #eaf6f2);
     border: 2px solid #bfe3d6;
+    box-shadow: 0 2px 4px rgba(63,143,106,0.1);
     border-radius: 12px;
     padding: 8px 6px;
     font-family: inherit;
     text-align: center;
   }
-  #ui-root .donation-btn:disabled { opacity: 0.5; }
+  #ui-root .donation-btn:active:not(:disabled) { transform: translateY(1px); }
+  #ui-root .donation-btn:disabled { opacity: 0.5; box-shadow: none; }
   #ui-root .donation-amt { font-weight: 800; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 4px; }
   #ui-root .donation-fame { margin-top: 3px; font-size: 12px; color: #3f8f6a; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 3px; }
   #ui-root .hobby-emoji { font-size: 30px; width: 42px; text-align: center; flex: 0 0 auto; }
@@ -358,7 +386,7 @@ export function injectStyles() {
     justify-content: center;
     gap: 6px;
   }
-  #ui-root .shop-tab.active { background: #e8973a; color: #3b2410; }
+  #ui-root .shop-tab.active { background: linear-gradient(180deg, #f2a656, #e8973a); color: #3b2410; box-shadow: 0 2px 5px rgba(180,112,31,0.3); }
 
   #ui-root .close-lead { font-size: 14px; line-height: 1.5; }
   #ui-root .warn-text {
@@ -390,7 +418,7 @@ export function injectStyles() {
 
   #ui-root .buy-btn {
     flex: 0 0 auto;
-    background: #7ac74f;
+    background: linear-gradient(180deg, #8ed263, #7ac74f);
     color: #1e3a10;
     border: none;
     padding: 9px 13px;
@@ -398,9 +426,12 @@ export function injectStyles() {
     font-weight: 800;
     font-size: 13px;
     white-space: nowrap;
+    box-shadow: 0 3px 0 #4f9a2e;
   }
-  #ui-root .buy-btn:disabled { background: #ddd3bf; color: #9a8b74; }
-  #ui-root .buy-btn.alt { background: #4aa3df; color: #06263c; }
+  #ui-root .buy-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #4f9a2e; }
+  #ui-root .buy-btn:disabled { background: #ddd3bf; color: #9a8b74; box-shadow: none; }
+  #ui-root .buy-btn.alt { background: linear-gradient(180deg, #5eb3ea, #4aa3df); color: #06263c; box-shadow: 0 3px 0 #2c78a8; }
+  #ui-root .buy-btn.alt:active { box-shadow: 0 1px 0 #2c78a8; }
 
   #ui-root .lv-bar {
     height: 5px;
@@ -429,7 +460,8 @@ export function injectStyles() {
 
   #ui-root .muted { color: #8a7a63; font-size: 13px; line-height: 1.5; }
   #ui-root .note {
-    background: #f3e7d0;
+    background: linear-gradient(180deg, #f7eddb, #f3e7d0);
+    border: 1px solid #ecdcc0;
     border-radius: 12px;
     padding: 10px 12px;
     font-size: 12px;
@@ -445,10 +477,12 @@ export function injectStyles() {
   #ui-root #offline-modal .modal-card { border-radius: 22px; }
   #ui-root #offline-modal { align-items: center; padding: 22px; }
   #ui-root .primary-btn {
-    background: #e8973a; color: #3b2410; border: none;
+    background: linear-gradient(180deg, #f2a656, #e8973a); color: #3b2410; border: none;
     padding: 13px 26px; border-radius: 14px; font-size: 16px; font-weight: 800;
     box-shadow: 0 4px 0 #b4701f; width: 100%; margin-top: 10px;
   }
+  #ui-root .primary-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #b4701f; }
+  #ui-root .primary-btn:disabled { background: #ddd3bf; color: #9a8b74; box-shadow: none; }
   `;
   document.head.appendChild(style);
 }

@@ -252,9 +252,16 @@ export class CafeScene extends Phaser.Scene {
     const wallColor = gameState.decorColors("wallpaper").primary;
     const floorColors = gameState.decorColors("floor");
 
-    // 카운터 뒤쪽 벽
+    // 카운터 뒤쪽 벽 — 위는 밝게, 아래로 갈수록 살짝 그늘져서 입체감을 줍니다.
     g.fillStyle(wallColor, 1);
     g.fillRect(0, 0, VIRTUAL_WIDTH, floorTop);
+    g.fillStyle(0xffffff, 0.06);
+    g.fillRect(0, 0, VIRTUAL_WIDTH, floorTop * 0.4);
+    g.fillStyle(0x000000, 0.05);
+    g.fillRect(0, floorTop * 0.75, VIRTUAL_WIDTH, floorTop * 0.25);
+    // 걸레받이(벽·바닥 경계선) — 벽과 바닥이 자연스럽게 이어지게 합니다.
+    g.fillStyle(0x000000, 0.14);
+    g.fillRect(0, floorTop - 6, VIRTUAL_WIDTH, 6);
 
     // 바닥 (체크 무늬)
     g.fillStyle(floorColors.primary, 1);
@@ -266,8 +273,15 @@ export class CafeScene extends Phaser.Scene {
         g.fillRect(x + shift, y, 48, 48);
       }
     }
+    // 바닥에 은은한 세로 광택 — 안쪽(카운터 쪽)이 살짝 밝아 보이게 합니다.
+    g.fillStyle(0x000000, 0.05);
+    g.fillRect(0, floorTop, VIRTUAL_WIDTH, 40);
+    g.fillStyle(0xffffff, 0.04);
+    g.fillRect(0, floorTop + 40, VIRTUAL_WIDTH, 60);
 
     // 문 앞 바닥 매트 — 입구를 눈에 띄게 해줍니다
+    g.fillStyle(0x000000, 0.12);
+    g.fillRoundedRect(DOOR.x - 92, DOOR.y + 60, 184, 34, 12);
     g.fillStyle(floorColors.accent, 1);
     g.fillRoundedRect(DOOR.x - 90, DOOR.y + 58, 180, 32, 12);
 
@@ -296,10 +310,14 @@ export class CafeScene extends Phaser.Scene {
     this.counterGraphics?.destroy();
     const g = this.add.graphics().setDepth(1);
     const colors = gameState.decorColors("counter");
+    g.fillStyle(0x000000, 0.12);
+    g.fillRoundedRect(30, COUNTER_Y + COUNTER_H - 4, VIRTUAL_WIDTH - 60, 14, 8);
     g.fillStyle(colors.primary, 1);
     g.fillRoundedRect(30, COUNTER_Y, VIRTUAL_WIDTH - 60, COUNTER_H, 14);
     g.fillStyle(colors.secondary, 1);
     g.fillRoundedRect(30, COUNTER_Y, VIRTUAL_WIDTH - 60, 34, 14);
+    g.fillStyle(0xffffff, 0.18);
+    g.fillRoundedRect(34, COUNTER_Y + 3, VIRTUAL_WIDTH - 68, 8, 6);
     g.lineStyle(5, colors.accent, 1);
     g.strokeRoundedRect(30, COUNTER_Y, VIRTUAL_WIDTH - 60, COUNTER_H, 14);
     this.counterGraphics = g;

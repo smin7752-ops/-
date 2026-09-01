@@ -1528,6 +1528,27 @@ function isoTile(
   }
 }
 
+/** 마름모 테두리만 그립니다 (채우기 없이) — 타일에 살짝 그림자/광택을 얹을 때 씁니다. */
+function strokeDiamond(
+  g: Phaser.GameObjects.Graphics,
+  cx: number,
+  cy: number,
+  w: number,
+  h: number,
+  color: number,
+  width: number,
+  alpha: number,
+) {
+  g.lineStyle(width, color, alpha);
+  g.beginPath();
+  g.moveTo(cx, cy - h / 2);
+  g.lineTo(cx + w / 2, cy);
+  g.lineTo(cx, cy + h / 2);
+  g.lineTo(cx - w / 2, cy);
+  g.closePath();
+  g.strokePath();
+}
+
 function buildWorldArt(scene: Phaser.Scene) {
   const S = ART_COLORS;
   const SKY_TOP = 0x8fd3ec;
@@ -1547,34 +1568,63 @@ function buildWorldArt(scene: Phaser.Scene) {
   // 하늘 + 먼 언덕 + 잔디 바탕 — 화면 전체(720x1280)를 채웁니다.
   // 이 위에 "world-ground"(아이소메트릭 타일 바닥)를 겹쳐서 놓습니다.
   tex(scene, "world-bg", 720, 1280, (g) => {
+    // 하늘 — 3단으로 색을 겹쳐서 부드러운 그러데이션처럼 보이게 합니다.
+    const SKY_MID = 0xa9e0ee;
     g.fillStyle(SKY_TOP, 1);
-    g.fillRect(0, 0, 720, 560);
+    g.fillRect(0, 0, 720, 260);
+    g.fillStyle(SKY_MID, 1);
+    g.fillRect(0, 220, 720, 220);
     g.fillStyle(SKY_BOTTOM, 1);
-    g.fillRect(0, 380, 720, 180);
+    g.fillRect(0, 400, 720, 160);
 
-    // 해
-    g.fillStyle(SUN, 0.35);
+    // 해 — 은은한 빛무리를 겹으로 둘러 더 따뜻하게 보이게 합니다.
+    g.fillStyle(SUN, 0.18);
+    g.fillCircle(590, 130, 118);
+    g.fillStyle(SUN, 0.3);
     g.fillCircle(590, 130, 82);
-    disc(g, 590, 130, 58, SUN, 0);
+    disc(g, 590, 130, 56, 0xfff1b8, 0);
 
     // 구름
     const cloud = (x: number, y: number, s: number) => {
-      g.fillStyle(0xffffff, 0.9);
+      g.fillStyle(0xffffff, 0.92);
       g.fillEllipse(x, y, 90 * s, 40 * s);
       g.fillEllipse(x - 42 * s, y + 6 * s, 56 * s, 30 * s);
       g.fillEllipse(x + 42 * s, y + 6 * s, 56 * s, 30 * s);
+      g.fillStyle(0xffffff, 0.5);
+      g.fillEllipse(x, y + 16 * s, 70 * s, 18 * s);
     };
     cloud(150, 150, 1);
     cloud(430, 230, 0.7);
+    cloud(80, 330, 0.55);
 
-    // 먼 언덕
+    // 먼 언덕 — 두 겹으로 깊이감을 주고, 능선을 따라 작은 나무 실루엣을 흩뿌립니다.
+    const HILL_FAR = 0xb3dd93;
+    g.fillStyle(HILL_FAR, 1);
+    g.fillEllipse(80, 540, 380, 130);
+    g.fillEllipse(640, 560, 420, 140);
     g.fillStyle(HILL, 1);
-    g.fillEllipse(150, 570, 420, 160);
-    g.fillEllipse(570, 590, 480, 180);
+    g.fillEllipse(150, 580, 420, 160);
+    g.fillEllipse(570, 600, 480, 180);
 
-    // 들판 (아이소메트릭 타일 바닥 바깥까지 넉넉히 채워두는 바탕색)
+    const tree = (x: number, y: number, s: number, foliage: number) => {
+      g.fillStyle(0x6f4a2c, 0.85);
+      g.fillRect(x - 3 * s, y - 4 * s, 6 * s, 16 * s);
+      g.fillStyle(foliage, 0.9);
+      g.fillCircle(x, y - 14 * s, 15 * s);
+      g.fillCircle(x - 10 * s, y - 8 * s, 11 * s);
+      g.fillCircle(x + 10 * s, y - 8 * s, 11 * s);
+    };
+    tree(60, 560, 0.7, 0x6fae5a);
+    tree(110, 575, 0.55, 0x7cbb63);
+    tree(660, 580, 0.75, 0x6fae5a);
+    tree(700, 595, 0.5, 0x7cbb63);
+    tree(610, 600, 0.6, 0x6fae5a);
+
+    // 들판 (아이소메트릭 타일 바닥 바깥까지 넉넉히 채워두는 바탕색) — 아래로 갈수록 살짝 짙게
     g.fillStyle(GRASS, 1);
-    g.fillRect(0, 500, 720, 780);
+    g.fillRect(0, 500, 720, 400);
+    g.fillStyle(0x7cb35e, 1);
+    g.fillRect(0, 900, 720, 380);
   });
 
   // 아이소메트릭 들판 구역 — 건물 하나가 칸 하나를 차지하는 큼직한 마름모
@@ -1586,6 +1636,15 @@ function buildWorldArt(scene: Phaser.Scene) {
   const gw = ox * 2;
   const gh = oy * 2;
   tex(scene, "world-ground", gw, gh, (g) => {
+    // 옅은 바닥 그림자 — 길 전체 아래에 깔아서 타일이 살짝 떠 보이는 느낌을 줍니다.
+    for (let gy = -GRID; gy <= GRID; gy++) {
+      for (let gx = -GRID; gx <= GRID; gx++) {
+        const p = isoToScreen(gx, gy);
+        g.fillStyle(0x000000, 0.06);
+        g.fillEllipse(p.x + ox + 4, p.y + oy + 10, ISO_TILE_W * 0.5, ISO_TILE_H * 0.5);
+      }
+    }
+
     for (let gy = -GRID; gy <= GRID; gy++) {
       for (let gx = -GRID; gx <= GRID; gx++) {
         const p = isoToScreen(gx, gy);
@@ -1593,6 +1652,15 @@ function buildWorldArt(scene: Phaser.Scene) {
           color: PATH,
           width: 26,
         });
+      }
+    }
+
+    // 길에 입체감 — 안쪽으로 짙은 홈, 바깥쪽으로 밝은 하이라이트를 살짝 둘러줍니다.
+    for (let gy = -GRID; gy <= GRID; gy++) {
+      for (let gx = -GRID; gx <= GRID; gx++) {
+        const p = isoToScreen(gx, gy);
+        strokeDiamond(g, p.x + ox, p.y + oy, ISO_TILE_W, ISO_TILE_H, 0x8a6a3f, 6, 0.35);
+        strokeDiamond(g, p.x + ox, p.y + oy, ISO_TILE_W - 30, ISO_TILE_H - 15, 0xf5e6bd, 4, 0.5);
       }
     }
 
@@ -1612,6 +1680,23 @@ function buildWorldArt(scene: Phaser.Scene) {
         }
       }
     }
+
+    // 작은 덤불 — 몇 칸 구석에 놓아 들판에 풍성한 느낌을 줍니다.
+    const bushTiles: [number, number][] = [
+      [-2, 1], [2, 1], [-2, -2], [1, 2],
+    ];
+    bushTiles.forEach(([gx, gy]) => {
+      const p = isoToScreen(gx, gy);
+      const bx = p.x + ox - ISO_TILE_W * 0.28;
+      const by = p.y + oy + ISO_TILE_H * 0.22;
+      g.fillStyle(0x000000, 0.1);
+      g.fillEllipse(bx, by + 10, 34, 12);
+      g.fillStyle(0x5f9a4a, 1);
+      g.fillCircle(bx - 10, by, 13);
+      g.fillCircle(bx + 10, by, 13);
+      g.fillStyle(0x74b35b, 1);
+      g.fillCircle(bx, by - 8, 15);
+    });
 
     // 들꽃 — 카페 자리(0,0)는 피해서 몇 칸에만 놓습니다.
     const flowerTiles: [number, number][] = [
@@ -1657,7 +1742,9 @@ function buildWorldArt(scene: Phaser.Scene) {
       g.strokePath();
     };
 
-    // 바닥에 지는 그림자 — 건물이 땅에 붙어 있는 것처럼 보이게 합니다.
+    // 바닥에 지는 그림자 — 두 겹으로 번지듯 깔아서 건물이 땅에 붙어 있게 합니다.
+    g.fillStyle(0x000000, 0.09);
+    g.fillEllipse(B.x, B.y + 10, w2 * 1.9, h2 * 1.4);
     g.fillStyle(0x000000, 0.16);
     g.fillEllipse(B.x, B.y + 6, w2 * 1.5, h2 * 1.1);
 
@@ -1665,29 +1752,70 @@ function buildWorldArt(scene: Phaser.Scene) {
     poly([B, R, Rt, Bt], WALL_SHADE);
     poly([B, L, Lt, Bt], WALL);
 
+    // 왼쪽(밝은) 벽에 은은한 세로결 — 판자벽 느낌을 살짝 줍니다.
+    g.lineStyle(2, 0x000000, 0.06);
+    for (let i = 1; i < 4; i++) {
+      const t = i / 4;
+      g.lineBetween(L.x + (B.x - L.x) * t, L.y + (B.y - L.y) * t, Lt.x + (Bt.x - Lt.x) * t, Lt.y + (Bt.y - Lt.y) * t);
+    }
+
     // 지붕 두 면 (오른쪽 = 그늘) + 용마루 선
     poly([Tt, Bt, Rt], ROOF_DARK);
     poly([Tt, Lt, Bt], ROOF);
     g.lineStyle(5, INK, 1);
     g.lineBetween(Tt.x, Tt.y, Bt.x, Bt.y);
+    // 지붕 기와 결 — 왼쪽 지붕면에 용마루와 나란한 얇은 선을 몇 줄 그어 질감을 냅니다.
+    g.lineStyle(2, 0x000000, 0.12);
+    for (let i = 1; i < 4; i++) {
+      const t = i / 4;
+      const a = { x: Tt.x + (Lt.x - Tt.x) * t, y: Tt.y + (Lt.y - Tt.y) * t };
+      const b = { x: Bt.x + (Lt.x - Tt.x) * t, y: Bt.y + (Lt.y - Tt.y) * t };
+      g.lineBetween(a.x, a.y, b.x, b.y);
+    }
 
     // 굴뚝 — 지붕 경사면 위에 실제로 얹혀 있도록, 오른쪽 지붕면 위의 한 점에서 세웁니다.
     const chimneyBase = { x: Tt.x + (Rt.x - Tt.x) * 0.4, y: Tt.y + (Rt.y - Tt.y) * 0.4 };
     blob(g, chimneyBase.x - 11, chimneyBase.y - 46, 22, 48, 3, S.woodDark, 5);
 
+    // 문 위 차양(어닝) — 줄무늬 천막으로 입구를 도드라져 보이게 합니다.
+    const awningY = 168;
+    const awningColors = [0xe8973a, S.paper];
+    for (let i = 0; i < 6; i++) {
+      g.fillStyle(awningColors[i % 2], 1);
+      g.beginPath();
+      g.moveTo(145 + i * 15, awningY);
+      g.lineTo(160 + i * 15, awningY);
+      g.lineTo(163 + i * 15, awningY + 16);
+      g.lineTo(142 + i * 15, awningY + 16);
+      g.closePath();
+      g.fillPath();
+    }
+    g.lineStyle(4, INK, 1);
+    g.lineBetween(143, awningY, 233, awningY);
+    g.fillStyle(0x000000, 0.12);
+    g.fillRect(143, awningY + 16, 90, 4);
+
     // 문 (오른쪽 벽) — 벽 위아래로 여백을 남겨 문틀처럼 보이게 합니다.
     blob(g, 170, 213, 50, 94, 6, S.woodDark, 5);
     blob(g, 178, 221, 34, 60, 5, GLASS, 4);
+    g.fillStyle(0xffffff, 0.35);
+    g.fillRect(184, 227, 8, 48);
     disc(g, 205, 260, 4, S.steelDark, 0);
 
-    // 창문 (왼쪽 벽)
+    // 창문 (왼쪽 벽) + 창가 화분
     blob(g, 80, 213, 50, 94, 6, S.woodDark, 5);
     blob(g, 88, 221, 34, 60, 5, GLASS, 4);
     g.lineStyle(3, S.woodDark, 1);
     g.lineBetween(105, 221, 105, 281);
     g.lineBetween(88, 251, 122, 251);
+    blob(g, 76, 289, 58, 16, 4, S.woodDark, 4);
+    disc(g, 86, 287, 7, 0xf4a9a8, 3);
+    disc(g, 100, 285, 7, 0xf7d08a, 3);
+    disc(g, 114, 287, 7, 0xffffff, 3);
 
     // 간판 (글자는 화면에서 텍스트로 따로 얹습니다)
+    g.fillStyle(0x000000, 0.1);
+    g.fillRoundedRect(Bt.x - 68, Bt.y - 25, 140, 32, 10);
     blob(g, Bt.x - 70, Bt.y - 28, 140, 32, 10, S.paper, 5);
   });
 }
@@ -1735,36 +1863,76 @@ function buildRestaurantBuildings(scene: Phaser.Scene) {
         g.strokePath();
       };
 
-      // 바닥에 지는 그림자
+      // 바닥에 지는 그림자 — 두 겹으로 번지듯 깔아줍니다.
+      g.fillStyle(0x000000, 0.09);
+      g.fillEllipse(B.x, B.y + 10, w2 * 1.9, h2 * 1.4);
       g.fillStyle(0x000000, 0.16);
       g.fillEllipse(B.x, B.y + 6, w2 * 1.5, h2 * 1.1);
 
       // 벽 두 면
       poly([B, R, Rt, Bt], wallShade);
       poly([B, L, Lt, Bt], wall);
+      g.lineStyle(2, 0x000000, 0.06);
+      for (let i = 1; i < 4; i++) {
+        const t = i / 4;
+        g.lineBetween(L.x + (B.x - L.x) * t, L.y + (B.y - L.y) * t, Lt.x + (Bt.x - Lt.x) * t, Lt.y + (Bt.y - Lt.y) * t);
+      }
 
-      // 지붕 두 면 + 용마루 선
+      // 지붕 두 면 + 용마루 선 + 결 무늬
       poly([Tt, Bt, Rt], roofDark);
       poly([Tt, Lt, Bt], roof);
       g.lineStyle(5, INK, 1);
       g.lineBetween(Tt.x, Tt.y, Bt.x, Bt.y);
+      g.lineStyle(2, 0x000000, 0.12);
+      for (let i = 1; i < 4; i++) {
+        const t = i / 4;
+        const a = { x: Tt.x + (Lt.x - Tt.x) * t, y: Tt.y + (Lt.y - Tt.y) * t };
+        const b = { x: Bt.x + (Lt.x - Tt.x) * t, y: Bt.y + (Lt.y - Tt.y) * t };
+        g.lineBetween(a.x, a.y, b.x, b.y);
+      }
 
       const chimneyBase = { x: Tt.x + (Rt.x - Tt.x) * 0.4, y: Tt.y + (Rt.y - Tt.y) * 0.4 };
       topper(g, chimneyBase);
 
+      // 문 위 차양(어닝)
+      const awningY = 168;
+      const awningColors = [roofDark, S.paper];
+      for (let i = 0; i < 6; i++) {
+        g.fillStyle(awningColors[i % 2], 1);
+        g.beginPath();
+        g.moveTo(145 + i * 15, awningY);
+        g.lineTo(160 + i * 15, awningY);
+        g.lineTo(163 + i * 15, awningY + 16);
+        g.lineTo(142 + i * 15, awningY + 16);
+        g.closePath();
+        g.fillPath();
+      }
+      g.lineStyle(4, INK, 1);
+      g.lineBetween(143, awningY, 233, awningY);
+      g.fillStyle(0x000000, 0.12);
+      g.fillRect(143, awningY + 16, 90, 4);
+
       // 문 (오른쪽 벽)
       blob(g, 170, 213, 50, 94, 6, S.woodDark, 5);
       blob(g, 178, 221, 34, 60, 5, GLASS, 4);
+      g.fillStyle(0xffffff, 0.35);
+      g.fillRect(184, 227, 8, 48);
       disc(g, 205, 260, 4, S.steelDark, 0);
 
-      // 창문 (왼쪽 벽)
+      // 창문 (왼쪽 벽) + 창가 화분
       blob(g, 80, 213, 50, 94, 6, S.woodDark, 5);
       blob(g, 88, 221, 34, 60, 5, GLASS, 4);
       g.lineStyle(3, S.woodDark, 1);
       g.lineBetween(105, 221, 105, 281);
       g.lineBetween(88, 251, 122, 251);
+      blob(g, 76, 289, 58, 16, 4, S.woodDark, 4);
+      disc(g, 86, 287, 7, 0xf4a9a8, 3);
+      disc(g, 100, 285, 7, 0xf7d08a, 3);
+      disc(g, 114, 287, 7, 0xffffff, 3);
 
       // 간판 자리 (글자는 화면에서 따로 얹습니다)
+      g.fillStyle(0x000000, 0.1);
+      g.fillRoundedRect(Bt.x - 68, Bt.y - 25, 140, 32, 10);
       blob(g, Bt.x - 70, Bt.y - 28, 140, 32, 10, S.paper, 5);
     });
   };
