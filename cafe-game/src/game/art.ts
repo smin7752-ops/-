@@ -40,9 +40,15 @@ export function isoToScreen(gx: number, gy: number) {
 export const ISO_GRID_RADIUS = 2;
 
 /** "world-ground" 그림의 왼쪽 위 기준으로, 격자 원점(0,0)이 놓이는 자리.
- * 건물을 화면에 놓을 때도 이 값을 더해야 타일과 자리가 맞습니다. */
+ * 건물을 화면에 놓을 때도 이 값을 더해야 타일과 자리가 맞습니다.
+ * 가장자리 타일(포차·분식집처럼 격자 맨 끝에 있는 칸)의 마름모 꼭짓점까지
+ * 통째로 들어가려면 반 칸만큼 여백을 더 둬야 합니다 — 이 여백이 모자라서
+ * 맨 끝 칸의 잔디·길이 그림 밖으로 잘려 나가고 있었습니다. */
 export function isoGroundOrigin() {
-  return { x: ISO_GRID_RADIUS * ISO_TILE_W, y: ISO_GRID_RADIUS * ISO_TILE_H + 20 };
+  return {
+    x: ISO_GRID_RADIUS * ISO_TILE_W + ISO_TILE_W / 2,
+    y: ISO_GRID_RADIUS * ISO_TILE_H + ISO_TILE_H / 2,
+  };
 }
 
 /** 테두리 색. 모든 그림이 이 색 테두리를 둘러 한 세트처럼 보이게 합니다. */
@@ -1716,15 +1722,10 @@ function buildWorldArt(scene: Phaser.Scene) {
   const gw = ox * 2;
   const gh = oy * 2;
   tex(scene, "world-ground", gw, gh, (g) => {
-    // 옅은 바닥 그림자 — 길 전체 아래에 깔아서 타일이 살짝 떠 보이는 느낌을 줍니다.
-    for (let gy = -GRID; gy <= GRID; gy++) {
-      for (let gx = -GRID; gx <= GRID; gx++) {
-        const p = isoToScreen(gx, gy);
-        g.fillStyle(0x000000, 0.06);
-        g.fillEllipse(p.x + ox + 4, p.y + oy + 10, ISO_TILE_W * 0.5, ISO_TILE_H * 0.5);
-      }
-    }
-
+    // (예전엔 모든 칸 한가운데에 옅은 타원 그림자를 깔아뒀는데, 건물은 칸
+    // 한가운데가 아니라 앞쪽으로 당겨서 세우다 보니 그 타원이 건물과 어긋난
+    // 자리에 남아 건물이 붕 떠 보이는 원인이 됐습니다. 건물 자체의 그림자
+    // 만으로도 충분해서 이 칸 전체용 그림자는 없앴습니다.)
     for (let gy = -GRID; gy <= GRID; gy++) {
       for (let gx = -GRID; gx <= GRID; gx++) {
         const p = isoToScreen(gx, gy);
