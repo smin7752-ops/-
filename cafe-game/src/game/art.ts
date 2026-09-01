@@ -2043,12 +2043,12 @@ function buildRestaurantBuildings(scene: Phaser.Scene) {
     const up = (p: { x: number; y: number }) => ({ x: p.x, y: p.y - WALL_H });
     const [Tt, Rt, Bt, Lt] = [up(T), up(R), up(B), up(L)];
 
-    // 뒤쪽은 훌쩍 높이 솟고, 앞쪽도 벽 끝보다 한 뼘 더 올라온 처마
-    // 턱(파샤판)을 둬서 — 앞쪽 지붕 끝이 벽과 같은 높이로 딱 붙어버리면
-    // 지붕이 눌려서 벽 속으로 꺼진 것처럼 보입니다. 처마 턱을 주면 지붕이
-    // 벽 위에 실제로 "얹혀" 있는 것처럼 두께감이 생깁니다.
-    const ROOF_RISE_BACK = 100;
-    const ROOF_RISE_FRONT = 26;
+    // 뒤쪽이 앞쪽보다 살짝만 더 높게 — 다른 두 매장과 지붕 높이가
+    // 비슷해지도록 기울기를 얕게 잡되(너무 길쭉해 보이지 않게), 앞쪽도
+    // 벽 끝보다 한 뼘 더 올라온 처마 턱(파샤판)을 둬서 지붕과 벽 사이
+    // 경계는 분명하게 남겨둡니다.
+    const ROOF_RISE_BACK = 34;
+    const ROOF_RISE_FRONT = 10;
     const ROOF_RISE_SIDE = (ROOF_RISE_BACK + ROOF_RISE_FRONT) / 2;
     const RTt = { x: Tt.x, y: Tt.y - ROOF_RISE_BACK };
     const RRt = { x: Rt.x, y: Rt.y - ROOF_RISE_SIDE };
