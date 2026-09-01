@@ -137,7 +137,10 @@ export class WorldScene extends Phaser.Scene {
       if (!p.isDown) return;
       const p1 = this.input.pointer1;
       const p2 = this.input.pointer2;
-      const bothDown = p1.isDown && p2.isDown;
+      // p2(두 번째 손가락)는 손가락 하나로만 터치할 땐 아예 안 잡혀서
+      // undefined일 수 있습니다. 그대로 .isDown을 읽으면 화면을 그냥
+      // 터치하기만 해도 앱이 튕겼습니다.
+      const bothDown = !!p1 && !!p2 && p1.isDown && p2.isDown;
 
       if (bothDown) {
         const dist = Phaser.Math.Distance.Between(p1.x, p1.y, p2.x, p2.y);

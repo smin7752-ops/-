@@ -86,6 +86,10 @@ const game = new Phaser.Game({
   // 캔버스 아래의 게임 오브젝트까지 같이 눌리는 문제가 생깁니다.
   input: {
     windowEvents: false,
+    // 두 손가락 확대·축소(핀치)를 쓰려면 두 번째 손가락 포인터도 추적해야
+    // 합니다. 기본값은 1이라 두 번째 손가락이 아예 안 잡혀서, 그 상태에서
+    // pointer2를 읽으려 하면 곧바로 튕겼습니다.
+    activePointers: 2,
   },
   scene: [WorldScene, CafeScene],
 });
