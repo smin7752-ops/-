@@ -48,6 +48,10 @@ export class WorldScene extends Phaser.Scene {
   private lastPointerX = 0;
   private lastPointerY = 0;
 
+  /** "여기에 지을까요?" 확인 팝업이 떠 있는 동안은 true — 그동안은 화면을
+   * 밀거나 확대하거나 다른 칸을 누르는 게 씹히지 않게 막습니다. */
+  private popupOpen = false;
+
   constructor() {
     super("world");
   }
@@ -56,6 +60,7 @@ export class WorldScene extends Phaser.Scene {
     this.pendingLabels = [];
     this.gestureDragDistance = 0;
     this.pinchStartDistance = 0;
+    this.popupOpen = false;
     buildArt(this);
 
     pinToScreen(this.add.image(0, 0, "world-bg").setOrigin(0, 0));
@@ -128,12 +133,14 @@ export class WorldScene extends Phaser.Scene {
     const DRAG_THRESHOLD = 10;
 
     this.input.on("pointerdown", (p: Phaser.Input.Pointer) => {
+      if (this.popupOpen) return;
       this.gestureDragDistance = 0;
       this.lastPointerX = p.x;
       this.lastPointerY = p.y;
     });
 
     this.input.on("pointermove", (p: Phaser.Input.Pointer) => {
+      if (this.popupOpen) return;
       if (!p.isDown) return;
       const p1 = this.input.pointer1;
       const p2 = this.input.pointer2;
@@ -386,6 +393,116 @@ export class WorldScene extends Phaser.Scene {
     hit.setInteractive({ useHandCursor: true });
     hit.on("pointerup", () => {
       if (!this.wasTap()) return;
+      if (this.popupOpen) return;
+      if (!gameState.canBuildRestaurant(id)) {
+        this.cameras.main.shake(120, 0.004);
+        return;
+      }
+      // 바로 지어버리지 않고, 정말 이 자리에 지을지 한 번 더 물어봅니다.
+      this.showBuildConfirm(id, gx, gy);
+    });
+  }
+
+  /** "여기에 지을까요?" 확인 팝업 — 빈 칸을 눌렀다고 바로 지어버리지 않고,
+   * 무엇을 얼마에 지을지 보여준 뒤 한 번 더 확인받습니다. */
+  private showBuildConfirm(id: RestaurantId, gx: number, gy: number) {
+    const cfg = restaurantConfig(id);
+    this.popupOpen = true;
+
+    const items: Phaser.GameObjects.GameObject[] = [];
+    const track = <T extends Phaser.GameObjects.GameObject>(obj: T): T => {
+      pinToScreen(obj);
+      items.push(obj);
+      return obj;
+    };
+    const close = () => {
+      for (const o of items) o.destroy();
+      this.popupOpen = false;
+    };
+
+    const cy = VIRTUAL_HEIGHT / 2;
+    const panelW = VIRTUAL_WIDTH - 100;
+    const panelH = 260;
+    const panelTop = cy - panelH / 2;
+
+    const backdrop = track(
+      this.add
+        .rectangle(VIRTUAL_WIDTH / 2, VIRTUAL_HEIGHT / 2, VIRTUAL_WIDTH, VIRTUAL_HEIGHT, 0x1a120b, 0.55)
+        .setDepth(UI_DEPTH + 10)
+        .setInteractive(),
+    );
+    backdrop.on("pointerup", close);
+
+    const panel = track(this.add.graphics().setDepth(UI_DEPTH + 11));
+    panel.fillStyle(0x3b2a20, 0.97);
+    panel.fillRoundedRect(50, panelTop, panelW, panelH, 20);
+    panel.lineStyle(3, 0xffe066, 1);
+    panel.strokeRoundedRect(50, panelTop, panelW, panelH, 20);
+
+    track(
+      this.add
+        .text(VIRTUAL_WIDTH / 2, panelTop + 46, `${cfg.name}을 지을까요?`, {
+          fontSize: "22px",
+          fontStyle: "bold",
+          color: "#fffaf2",
+          align: "center",
+        })
+        .setOrigin(0.5)
+        .setDepth(UI_DEPTH + 12),
+    );
+    track(
+      this.add
+        .text(
+          VIRTUAL_WIDTH / 2,
+          panelTop + 92,
+          `이 자리에 ${cfg.name}을 짓는 데 ${coinText(cfg.buildCost)}이 들어요.\n한 번 지으면 자리를 옮길 수 없어요.`,
+          {
+            fontSize: "14px",
+            color: "#e8c896",
+            align: "center",
+            wordWrap: { width: panelW - 60 },
+          },
+        )
+        .setOrigin(0.5, 0)
+        .setDepth(UI_DEPTH + 12),
+    );
+
+    const btnY = panelTop + panelH - 46;
+    const btnW = (panelW - 60) / 2;
+
+    const cancelBtn = track(
+      this.add
+        .rectangle(VIRTUAL_WIDTH / 2 - btnW / 2 - 10, btnY, btnW, 52, 0x2a1d14, 1)
+        .setStrokeStyle(2, 0x8a6a4a)
+        .setDepth(UI_DEPTH + 12)
+        .setInteractive({ useHandCursor: true }),
+    );
+    track(
+      this.add
+        .text(VIRTUAL_WIDTH / 2 - btnW / 2 - 10, btnY, "취소", { fontSize: "16px", color: "#e8c896" })
+        .setOrigin(0.5)
+        .setDepth(UI_DEPTH + 13),
+    );
+    cancelBtn.on("pointerup", close);
+
+    const buildBtn = track(
+      this.add
+        .rectangle(VIRTUAL_WIDTH / 2 + btnW / 2 + 10, btnY, btnW, 52, 0xe8b04b, 1)
+        .setDepth(UI_DEPTH + 12)
+        .setInteractive({ useHandCursor: true }),
+    );
+    track(
+      this.add
+        .text(VIRTUAL_WIDTH / 2 + btnW / 2 + 10, btnY, "짓기", {
+          fontSize: "16px",
+          fontStyle: "bold",
+          color: "#3b2a20",
+        })
+        .setOrigin(0.5)
+        .setDepth(UI_DEPTH + 13),
+    );
+    buildBtn.on("pointerup", () => {
+      close();
       if (!gameState.canBuildRestaurant(id)) {
         this.cameras.main.shake(120, 0.004);
         return;
