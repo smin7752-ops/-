@@ -2043,17 +2043,28 @@ function buildRestaurantBuildings(scene: Phaser.Scene) {
     const up = (p: { x: number; y: number }) => ({ x: p.x, y: p.y - WALL_H });
     const [Tt, Rt, Bt, Lt] = [up(T), up(R), up(B), up(L)];
 
-    const ROOF_RISE = 74; // 뒤쪽 지붕마루가 벽 끝보다 이만큼 더 솟습니다
-    const RTt = { x: Tt.x, y: Tt.y - ROOF_RISE };
-    const RRt = { x: Rt.x, y: Rt.y - ROOF_RISE * 0.48 };
-    const RLt = { x: Lt.x, y: Lt.y - ROOF_RISE * 0.48 };
-    const RBt = Bt; // 앞쪽 처마는 벽 끝과 같은 높이 — 여기가 문·창문 위 라인입니다.
+    // 뒤쪽은 훌쩍 높이 솟고, 앞쪽도 벽 끝보다 한 뼘 더 올라온 처마
+    // 턱(파샤판)을 둬서 — 앞쪽 지붕 끝이 벽과 같은 높이로 딱 붙어버리면
+    // 지붕이 눌려서 벽 속으로 꺼진 것처럼 보입니다. 처마 턱을 주면 지붕이
+    // 벽 위에 실제로 "얹혀" 있는 것처럼 두께감이 생깁니다.
+    const ROOF_RISE_BACK = 100;
+    const ROOF_RISE_FRONT = 26;
+    const ROOF_RISE_SIDE = (ROOF_RISE_BACK + ROOF_RISE_FRONT) / 2;
+    const RTt = { x: Tt.x, y: Tt.y - ROOF_RISE_BACK };
+    const RRt = { x: Rt.x, y: Rt.y - ROOF_RISE_SIDE };
+    const RLt = { x: Lt.x, y: Lt.y - ROOF_RISE_SIDE };
+    const RBt = { x: Bt.x, y: Bt.y - ROOF_RISE_FRONT };
 
     tex(scene, "world-bunsik-iso", BW, BH, (g) => {
       buildingGround(g, B, w2, h2);
       poly(g, [B, R, Rt, Bt], WALL_SHADE);
       poly(g, [B, L, Lt, Bt], WALL);
       groundContactLine(g, L, B, R);
+
+      // 처마 턱(파샤판) — 지붕과 벽 사이에 두께가 있는 판을 하나 끼워서
+      // 지붕이 벽 위에 실제로 얹혀 있는 것처럼 보이게 합니다.
+      poly(g, [Bt, Rt, RRt, RBt], ROOF_DARK);
+      poly(g, [Bt, Lt, RLt, RBt], ROOF);
 
       // 외발 지붕 — 뒤가 높고 앞이 낮은 한 장의 판. 벽과는 별개로 그 위에
       // 얹히는 구조라, 문·창문이 있는 벽 비례는 그대로 유지됩니다.
