@@ -36,6 +36,7 @@ import {
   type UniformSlot,
   equipmentCost,
   roleWage,
+  WAGE_COST_SCALE,
   OFFLINE_EARNINGS_CAP_MS,
   OFFLINE_EARNINGS_RATE,
   OFFLINE_MIN_AWAY_MS,
@@ -422,12 +423,6 @@ class GameState {
     return this.data.restaurants[id].constructed;
   }
 
-  /** 이 가게를 짓기 전에, 어느 가게의 총괄 매니저부터 고용해야 하는지 (카페는 없음 = null) */
-  requiredGmFor(id: RestaurantId): RestaurantId | null {
-    const idx = RESTAURANT_ORDER.indexOf(id);
-    return idx > 0 ? RESTAURANT_ORDER[idx - 1] : null;
-  }
-
   /** 그 가게에 총괄 매니저가 있는가 (안 주면 지금 보고 있는 가게 기준) */
   hasGeneralManager(id: RestaurantId = this.data.activeRestaurant): boolean {
     return this.data.restaurants[id].generalManager;
@@ -446,12 +441,11 @@ class GameState {
     return true;
   }
 
-  /** 이 가게를 지을 수 있는가 (이전 가게의 총괄 매니저를 고용했고, 아직 안 지었고, 돈이 충분한가) */
+  /** 이 가게를 지을 수 있는가 (아직 안 지었고, 짓는 비용만큼 돈이 있는가 —
+   * 순서는 따로 없어서 돈만 모이면 어느 가게든 먼저 지을 수 있습니다) */
   canBuildRestaurant(id: RestaurantId): boolean {
     const r = this.data.restaurants[id];
     if (r.constructed) return false;
-    const reqId = this.requiredGmFor(id);
-    if (reqId && !this.hasGeneralManager(reqId)) return false;
     return this.data.coins >= restaurantConfig(id).buildCost;
   }
 
@@ -463,12 +457,10 @@ class GameState {
     });
   }
 
-  /** 새 가게를 짓습니다. 이전 가게의 총괄 매니저가 있어야 하고, 비용을 내고,
-   * 플레이어가 고른 빈 칸에 자리를 잡습니다 */
+  /** 새 가게를 짓습니다. 비용을 내고, 플레이어가 고른 빈 칸에 자리를 잡습니다 */
   buildRestaurant(id: RestaurantId, gx: number, gy: number): boolean {
     const r = this.data.restaurants[id];
-    const reqId = this.requiredGmFor(id);
-    if (r.constructed || (reqId && !this.hasGeneralManager(reqId))) return false;
+    if (r.constructed) return false;
     if (this.isPlotTaken(gx, gy)) return false;
     if (!this.spendCoins(restaurantConfig(id).buildCost)) return false;
     r.constructed = true;
@@ -858,11 +850,12 @@ class GameState {
     if (stats) stats.supplyCost += amount;
   }
 
-  /** 가게 하나의 하루 인건비 (그 가게가 안 지어졌으면 0) */
+  /** 가게 하나의 하루 인건비 (그 가게가 안 지어졌으면 0) — 가게마다 다르게
+   * 뛰지 않도록 모든 가게가 분식집 값 단위를 기준으로 계산합니다 */
   restaurantWageTotal(id: RestaurantId): number {
     const r = this.data.restaurants[id];
     if (!r.constructed) return 0;
-    const scale = restaurantConfig(id).costScale;
+    const scale = WAGE_COST_SCALE;
     let total = 0;
     r.floors.forEach((floor, i) => {
       if (!floor.unlocked) return;
@@ -881,11 +874,12 @@ class GameState {
     return RESTAURANT_ORDER.reduce((sum, id) => sum + this.restaurantWageTotal(id), 0);
   }
 
-  /** 그 층 하루 인건비 (지금 활성화된 가게 기준) */
+  /** 그 층 하루 인건비 (지금 활성화된 가게 기준) — 인건비는 가게마다 다르게
+   * 뛰지 않도록 모든 가게가 분식집 값 단위를 기준으로 계산합니다 */
   floorWageTotal(floorIndex: number): number {
     const floor = this.floor(floorIndex);
     if (!floor.unlocked) return 0;
-    const scale = this.cfg().costScale;
+    const scale = WAGE_COST_SCALE;
     return ROLE_ORDER.reduce(
       (sum, role) => sum + floor[role] * roleWage(role, floorIndex, scale),
       0,

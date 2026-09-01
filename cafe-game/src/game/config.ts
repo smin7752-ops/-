@@ -842,6 +842,11 @@ const BUNSIK_COST_SCALE = Math.round(CAFE_TOP_FLOOR_COST / 20000);
 const BUNSIK_TOP_FLOOR_COST = floorUnlockCost(3, BUNSIK_COST_SCALE);
 const POCHA_COST_SCALE = Math.round(BUNSIK_TOP_FLOOR_COST / 20000);
 
+/** 인건비(직원 하루 급여)는 가게마다 다르게 뛰지 않도록, 모든 가게가 분식집
+ * 값 단위를 기준으로 계산합니다 (설비값·짓는 비용 등 다른 값들은 가게마다
+ * 계속 다르게 뜁니다 — 인건비만 통일). */
+export const WAGE_COST_SCALE = BUNSIK_COST_SCALE;
+
 /** 분식집 설비 — 커피머신(기본)·쇼케이스·티스테이션·블렌더·오븐 자리를 그대로 잇습니다 */
 export const BUNSIK_EQUIPMENT: EquipmentDef[] = [
   { id: "bunsik_stove", name: "떡볶이 화로", emoji: "🔥", cost: 0,

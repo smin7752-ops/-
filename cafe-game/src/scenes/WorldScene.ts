@@ -321,24 +321,16 @@ export class WorldScene extends Phaser.Scene {
     });
   }
 
-  /** 아직 다 못 지은 매장이 있으면, 화면 위쪽에 안내 배너를 띄우고
-   * (총괄 매니저 조건을 채웠으면) 빈 칸마다 "+" 표시를 놓아서 원하는
-   * 자리에 지을 수 있게 합니다. */
+  /** 아직 다 못 지은 매장이 있으면, 화면 위쪽에 안내 배너를 띄우고 빈 칸마다
+   * "+" 표시를 놓습니다. 가게 순서는 따로 없어서, "+"를 누르면 아직 안 지은
+   * 가게를 전부 보여주고 그중 돈이 모인 것부터 골라 지을 수 있습니다. */
   private buildNextRestaurantUi(
     groundScreenX: number,
     groundScreenY: number,
     takenTiles: Set<string>,
   ) {
-    const nextId = RESTAURANT_ORDER.find((id) => !gameState.isConstructed(id));
-    if (!nextId) return; // 셋 다 지었으면 안내할 것이 없습니다.
-
-    const cfg = restaurantConfig(nextId);
-    const requiredGmId = gameState.requiredGmFor(nextId);
-    const gmHired = requiredGmId === null || gameState.hasGeneralManager(requiredGmId);
-
-    const bannerText = !gmHired
-      ? `${requiredGmId ? restaurantConfig(requiredGmId).name : ""}에 총괄 매니저를 고용하면 ${cfg.name}을 지을 수 있어요`
-      : `${cfg.name} 짓기 — ${coinText(cfg.buildCost)} · 빈 칸을 눌러서 지을 자리를 골라주세요`;
+    const unbuiltIds = RESTAURANT_ORDER.filter((id) => !gameState.isConstructed(id));
+    if (unbuiltIds.length === 0) return; // 다 지었으면 안내할 것이 없습니다.
 
     const g = this.add.graphics().setDepth(UI_DEPTH);
     g.fillStyle(0x3b2a20, 0.85);
@@ -346,7 +338,7 @@ export class WorldScene extends Phaser.Scene {
     pinToScreen(g);
     pinToScreen(
       this.add
-        .text(VIRTUAL_WIDTH / 2, 155, bannerText, {
+        .text(VIRTUAL_WIDTH / 2, 155, "빈 칸을 눌러서 지을 가게를 골라주세요 · 돈이 모인 가게부터 지을 수 있어요", {
           fontSize: "15px",
           fontStyle: "bold",
           color: "#fffaf2",
@@ -357,19 +349,16 @@ export class WorldScene extends Phaser.Scene {
         .setDepth(UI_DEPTH),
     );
 
-    if (!gmHired) return;
-
     for (let gy = -ISO_GRID_RADIUS; gy <= ISO_GRID_RADIUS; gy++) {
       for (let gx = -ISO_GRID_RADIUS; gx <= ISO_GRID_RADIUS; gx++) {
         if (takenTiles.has(`${gx},${gy}`)) continue;
-        this.buildEmptyTileMarker(nextId, gx, gy, groundScreenX, groundScreenY);
+        this.buildEmptyTileMarker(gx, gy, groundScreenX, groundScreenY);
       }
     }
   }
 
-  /** 빈 칸에 놓는 작은 "+" 표시 — 누르면 그 자리에 다음 매장을 짓습니다. */
+  /** 빈 칸에 놓는 작은 "+" 표시 — 누르면 아직 안 지은 가게 목록을 보여줍니다. */
   private buildEmptyTileMarker(
-    id: RestaurantId,
     gx: number,
     gy: number,
     groundScreenX: number,
@@ -396,19 +385,15 @@ export class WorldScene extends Phaser.Scene {
     hit.on("pointerup", () => {
       if (!this.wasTap()) return;
       if (this.popupOpen) return;
-      if (!gameState.canBuildRestaurant(id)) {
-        this.cameras.main.shake(120, 0.004);
-        return;
-      }
-      // 바로 지어버리지 않고, 정말 이 자리에 지을지 한 번 더 물어봅니다.
-      this.showBuildConfirm(id, gx, gy);
+      this.showRestaurantPicker(gx, gy);
     });
   }
 
-  /** "여기에 지을까요?" 확인 팝업 — 빈 칸을 눌렀다고 바로 지어버리지 않고,
-   * 무엇을 얼마에 지을지 보여준 뒤 한 번 더 확인받습니다. */
-  private showBuildConfirm(id: RestaurantId, gx: number, gy: number) {
-    const cfg = restaurantConfig(id);
+  /** "여기에 어느 가게를 지을까요?" 목록 팝업 — 아직 안 지은 가게를 전부
+   * 보여주고, 돈이 모자란 가게는 흐리게 비활성화해서 못 고르게 합니다. */
+  private showRestaurantPicker(gx: number, gy: number) {
+    const unbuiltIds = RESTAURANT_ORDER.filter((id) => !gameState.isConstructed(id));
+    if (unbuiltIds.length === 0) return;
     this.popupOpen = true;
 
     const items: Phaser.GameObjects.GameObject[] = [];
@@ -422,10 +407,12 @@ export class WorldScene extends Phaser.Scene {
       this.popupOpen = false;
     };
 
-    const cy = VIRTUAL_HEIGHT / 2;
-    const panelW = VIRTUAL_WIDTH - 100;
-    const panelH = 260;
-    const panelTop = cy - panelH / 2;
+    const rowH = 64;
+    const headerH = 74;
+    const footerH = 70;
+    const panelW = VIRTUAL_WIDTH - 80;
+    const panelH = headerH + unbuiltIds.length * rowH + footerH;
+    const panelTop = VIRTUAL_HEIGHT / 2 - panelH / 2;
 
     const backdrop = track(
       this.add
@@ -437,84 +424,85 @@ export class WorldScene extends Phaser.Scene {
 
     const panel = track(this.add.graphics().setDepth(UI_DEPTH + 11));
     panel.fillStyle(0x3b2a20, 0.97);
-    panel.fillRoundedRect(50, panelTop, panelW, panelH, 20);
+    panel.fillRoundedRect(40, panelTop, panelW, panelH, 20);
     panel.lineStyle(3, 0xffe066, 1);
-    panel.strokeRoundedRect(50, panelTop, panelW, panelH, 20);
+    panel.strokeRoundedRect(40, panelTop, panelW, panelH, 20);
 
     track(
       this.add
-        .text(VIRTUAL_WIDTH / 2, panelTop + 46, `${cfg.name}을 지을까요?`, {
-          fontSize: "22px",
+        .text(VIRTUAL_WIDTH / 2, panelTop + 34, "지을 가게를 골라주세요", {
+          fontSize: "20px",
           fontStyle: "bold",
           color: "#fffaf2",
-          align: "center",
         })
         .setOrigin(0.5)
         .setDepth(UI_DEPTH + 12),
     );
-    track(
-      this.add
-        .text(
-          VIRTUAL_WIDTH / 2,
-          panelTop + 92,
-          `이 자리에 ${cfg.name}을 짓는 데 ${coinText(cfg.buildCost)}이 들어요.\n한 번 지으면 자리를 옮길 수 없어요.`,
-          {
-            fontSize: "14px",
-            color: "#e8c896",
-            align: "center",
-            wordWrap: { width: panelW - 60 },
-          },
-        )
-        .setOrigin(0.5, 0)
-        .setDepth(UI_DEPTH + 12),
-    );
 
-    const btnY = panelTop + panelH - 46;
-    const btnW = (panelW - 60) / 2;
+    unbuiltIds.forEach((id, i) => {
+      const cfg = restaurantConfig(id);
+      const affordable = gameState.canBuildRestaurant(id);
+      const rowY = panelTop + headerH + i * rowH + rowH / 2;
+      const rowW = panelW - 32;
 
+      const rowRect = track(
+        this.add
+          .rectangle(VIRTUAL_WIDTH / 2, rowY, rowW, rowH - 12, affordable ? 0x4a3226 : 0x2a1d14, 1)
+          .setStrokeStyle(2, affordable ? 0xffe066 : 0x5a4536)
+          .setDepth(UI_DEPTH + 12)
+          .setInteractive({ useHandCursor: affordable }),
+      );
+      rowRect.on("pointerup", () => {
+        if (!affordable) {
+          // 돈이 모자란 가게 — 팝업은 닫지 않고, 살짝 흔들어서 아직
+          // 못 짓는다는 걸 알려줍니다.
+          this.cameras.main.shake(120, 0.004);
+          return;
+        }
+        close();
+        if (!gameState.buildRestaurant(id, gx, gy)) return;
+        gameState.save();
+        bus.emit(EVENTS.COINS_CHANGED);
+        // 다 지어졌으니 화면을 새로 그려서, 지금 막 지은 가게가 바로
+        // 들어갈 수 있는 상태로 보이게 합니다.
+        this.scene.restart();
+      });
+
+      track(
+        this.add
+          .text(VIRTUAL_WIDTH / 2 - rowW / 2 + 20, rowY, cfg.name, {
+            fontSize: "17px",
+            fontStyle: "bold",
+            color: affordable ? "#fffaf2" : "#8a7a68",
+          })
+          .setOrigin(0, 0.5)
+          .setDepth(UI_DEPTH + 13),
+      );
+      track(
+        this.add
+          .text(VIRTUAL_WIDTH / 2 + rowW / 2 - 20, rowY, coinText(cfg.buildCost), {
+            fontSize: "15px",
+            color: affordable ? "#ffe066" : "#6a5c4e",
+          })
+          .setOrigin(1, 0.5)
+          .setDepth(UI_DEPTH + 13),
+      );
+    });
+
+    const closeBtnY = panelTop + panelH - footerH / 2;
     const cancelBtn = track(
       this.add
-        .rectangle(VIRTUAL_WIDTH / 2 - btnW / 2 - 10, btnY, btnW, 52, 0x2a1d14, 1)
+        .rectangle(VIRTUAL_WIDTH / 2, closeBtnY, 120, 40, 0x2a1d14, 1)
         .setStrokeStyle(2, 0x8a6a4a)
         .setDepth(UI_DEPTH + 12)
         .setInteractive({ useHandCursor: true }),
     );
     track(
       this.add
-        .text(VIRTUAL_WIDTH / 2 - btnW / 2 - 10, btnY, "취소", { fontSize: "16px", color: "#e8c896" })
+        .text(VIRTUAL_WIDTH / 2, closeBtnY, "닫기", { fontSize: "15px", color: "#e8c896" })
         .setOrigin(0.5)
         .setDepth(UI_DEPTH + 13),
     );
     cancelBtn.on("pointerup", close);
-
-    const buildBtn = track(
-      this.add
-        .rectangle(VIRTUAL_WIDTH / 2 + btnW / 2 + 10, btnY, btnW, 52, 0xe8b04b, 1)
-        .setDepth(UI_DEPTH + 12)
-        .setInteractive({ useHandCursor: true }),
-    );
-    track(
-      this.add
-        .text(VIRTUAL_WIDTH / 2 + btnW / 2 + 10, btnY, "짓기", {
-          fontSize: "16px",
-          fontStyle: "bold",
-          color: "#3b2a20",
-        })
-        .setOrigin(0.5)
-        .setDepth(UI_DEPTH + 13),
-    );
-    buildBtn.on("pointerup", () => {
-      close();
-      if (!gameState.canBuildRestaurant(id)) {
-        this.cameras.main.shake(120, 0.004);
-        return;
-      }
-      if (!gameState.buildRestaurant(id, gx, gy)) return;
-      gameState.save();
-      bus.emit(EVENTS.COINS_CHANGED);
-      // 다 지어졌으니 화면을 새로 그려서, 지금 막 지은 가게가 바로 들어갈
-      // 수 있는 상태로 보이게 합니다.
-      this.scene.restart();
-    });
   }
 }

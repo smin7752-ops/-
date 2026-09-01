@@ -34,6 +34,7 @@ import {
   ownEffectText,
   uniformsOfSlot,
   roleWage,
+  WAGE_COST_SCALE,
   tableCost,
   RESTAURANT_ORDER,
   restaurantConfig,
@@ -1260,7 +1261,9 @@ export function mountUI(root: HTMLElement) {
     const full = count >= max;
     const costScale = gameState.cfg().costScale;
     const cost = roleCost(role, count, floorIndex, costScale);
-    const wage = roleWage(role, floorIndex, costScale);
+    // 인건비는 가게마다 다르게 뛰지 않도록, 화면에 보여줄 때도 모든 가게가
+    // 분식집 값 단위를 기준으로 계산합니다.
+    const wage = roleWage(role, floorIndex, WAGE_COST_SCALE);
     // 사람 수(바리스타·홀 직원)는 점으로, 등급(매니저)은 Lv. 로 보여줍니다.
     const upgradable = info.upgradable === true;
     const pips = Array.from({ length: max }, (_, i) =>
