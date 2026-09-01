@@ -2036,19 +2036,17 @@ function buildRestaurantBuildings(scene: Phaser.Scene) {
     const ROOF_DARK = 0xa8331f;
     const WALL = 0xf4e8ca;
     const WALL_SHADE = 0xe7d6ac;
-    // 벽은 카페와 비슷한 높이로 반듯하게 세워서 문·창문이 눌리지 않게 하고,
-    // 지붕만 벽 위에서 뒤쪽이 더 높이 솟는 외발(한쪽으로 흐르는) 모양으로
-    // 얹습니다 — 이렇게 해야 앞쪽이 무너져 내려앉은 것처럼 보이지 않습니다.
-    const WALL_H = 112;
+    // 벽은 살짝 낮추고 지붕 몫을 넉넉히 줘서, 벽:지붕 비율이 카페와
+    // 비슷하게 느껴지도록 맞춥니다 (지붕이 너무 얇으면 눌린 것처럼
+    // 보입니다).
+    const WALL_H = 98;
     const up = (p: { x: number; y: number }) => ({ x: p.x, y: p.y - WALL_H });
     const [Tt, Rt, Bt, Lt] = [up(T), up(R), up(B), up(L)];
 
-    // 뒤쪽이 앞쪽보다 살짝 더 높은 외발 지붕 — 카페·포차와 지붕 높이가
-    // 비슷해지도록 낮게 잡습니다. (전에는 지붕과 벽 사이에 별도 처마 턱을
-    // 끼워 넣었더니, 얇은 판이 지붕 삼각형과 테두리선이 겹쳐서 그 자리가
-    // 지저분하게 보였습니다 — 카페처럼 지붕 한 장으로 단순하게 그립니다.)
-    const ROOF_RISE_BACK = 48;
-    const ROOF_RISE_FRONT = 16;
+    // 뒤쪽이 앞쪽보다 더 높은 외발 지붕. 앞쪽도 벽 끝보다 확실히 솟아
+    // 있어야 지붕이 벽에 눌려 붙은 것처럼 보이지 않습니다.
+    const ROOF_RISE_BACK = 78;
+    const ROOF_RISE_FRONT = 34;
     const ROOF_RISE_SIDE = (ROOF_RISE_BACK + ROOF_RISE_FRONT) / 2;
     const RTt = { x: Tt.x, y: Tt.y - ROOF_RISE_BACK };
     const RRt = { x: Rt.x, y: Rt.y - ROOF_RISE_SIDE };
