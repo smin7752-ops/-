@@ -2027,57 +2027,40 @@ function buildRestaurantBuildings(scene: Phaser.Scene) {
     g.strokePath();
   };
 
-  /* -------------------------- 분식집: 외발지붕 매대 -------------------------- */
-  // 가게 뒤쪽은 높고 앞쪽은 낮은 외발 지붕(창고형 매대) — 카페의 오두막 지붕과는
-  // 아예 다른 실루엣이라 멀리서도 한눈에 구분됩니다. 왼쪽 벽 전체를 큰 통유리
-  // 진열창으로 열어서 매대 느낌을 살립니다.
+  /* ------------------------------ 분식집: 매대 ------------------------------ */
+  // 벽·지붕은 카페와 같은 오두막 기법(반듯한 벽 + 좌우 대칭 지붕)으로 맞추고,
+  // 빨간 지붕·환풍 배기구·좁은 출입문·큰 통유리 진열창으로 분식집만의
+  // 정체성을 살립니다.
   {
     const ROOF = 0xd0432f;
     const ROOF_DARK = 0xa8331f;
     const WALL = 0xf4e8ca;
     const WALL_SHADE = 0xe7d6ac;
-    // 벽은 살짝 낮추고 지붕 몫을 넉넉히 줘서, 벽:지붕 비율이 카페와
-    // 비슷하게 느껴지도록 맞춥니다 (지붕이 너무 얇으면 눌린 것처럼
-    // 보입니다).
-    const WALL_H = 98;
+    const WALL_H = 120;
     const up = (p: { x: number; y: number }) => ({ x: p.x, y: p.y - WALL_H });
     const [Tt, Rt, Bt, Lt] = [up(T), up(R), up(B), up(L)];
 
-    // 뒤쪽이 앞쪽보다 더 높은 외발 지붕. 앞쪽도 벽 끝보다 확실히 솟아
-    // 있어야 지붕이 벽에 눌려 붙은 것처럼 보이지 않습니다.
-    const ROOF_RISE_BACK = 78;
-    const ROOF_RISE_FRONT = 34;
-    const ROOF_RISE_SIDE = (ROOF_RISE_BACK + ROOF_RISE_FRONT) / 2;
-    const RTt = { x: Tt.x, y: Tt.y - ROOF_RISE_BACK };
-    const RRt = { x: Rt.x, y: Rt.y - ROOF_RISE_SIDE };
-    const RLt = { x: Lt.x, y: Lt.y - ROOF_RISE_SIDE };
-    const RBt = { x: Bt.x, y: Bt.y - ROOF_RISE_FRONT };
-
     tex(scene, "world-bunsik-iso", BW, BH, (g) => {
       buildingGround(g, B, w2, h2);
-      // 벽은 지붕이 시작하는 높이(RBt·RRt·RLt)까지 곧바로 이어 그려서,
-      // 벽과 지붕 사이에 빈틈(파샤판을 따로 끼워 넣다 생기던 지저분한
-      // 겹침)이 없게 합니다. 문·창문은 이 중 낮은 구간(Bt·Rt·Lt 아래)에만
-      // 얹으니 비례는 그대로입니다.
-      poly(g, [B, R, RRt, RBt], WALL_SHADE);
-      poly(g, [B, L, RLt, RBt], WALL);
+      poly(g, [B, R, Rt, Bt], WALL_SHADE);
+      poly(g, [B, L, Lt, Bt], WALL);
       groundContactLine(g, L, B, R);
 
-      // 외발 지붕 — 뒤가 높고 앞이 낮은 한 장의 판.
-      poly(g, [RTt, RBt, RRt], ROOF_DARK);
-      poly(g, [RTt, RLt, RBt], ROOF);
+      // 지붕 두 면 (카페와 같은 좌우 대칭 오두막 지붕) + 용마루 선 + 기와 결
+      poly(g, [Tt, Bt, Rt], ROOF_DARK);
+      poly(g, [Tt, Lt, Bt], ROOF);
       g.lineStyle(5, INK, 1);
-      g.lineBetween(RTt.x, RTt.y, RBt.x, RBt.y);
+      g.lineBetween(Tt.x, Tt.y, Bt.x, Bt.y);
       g.lineStyle(2, 0x000000, 0.14);
-      for (let i = 1; i < 5; i++) {
-        const t = i / 5;
-        const a = { x: RTt.x + (RLt.x - RTt.x) * t, y: RTt.y + (RLt.y - RTt.y) * t };
-        const b = { x: RBt.x + (RLt.x - RTt.x) * t, y: RBt.y + (RLt.y - RTt.y) * t };
+      for (let i = 1; i < 4; i++) {
+        const t = i / 4;
+        const a = { x: Tt.x + (Lt.x - Tt.x) * t, y: Tt.y + (Lt.y - Tt.y) * t };
+        const b = { x: Bt.x + (Lt.x - Tt.x) * t, y: Bt.y + (Lt.y - Tt.y) * t };
         g.lineBetween(a.x, a.y, b.x, b.y);
       }
 
       // 지붕 위 환풍 배기구 + 몽글몽글 김
-      const ventBase = { x: RTt.x + (RRt.x - RTt.x) * 0.42, y: RTt.y + (RRt.y - RTt.y) * 0.42 };
+      const ventBase = { x: Tt.x + (Rt.x - Tt.x) * 0.42, y: Tt.y + (Rt.y - Tt.y) * 0.42 };
       blob(g, ventBase.x - 10, ventBase.y - 40, 20, 42, 8, S.steel, 5);
       blob(g, ventBase.x - 13, ventBase.y - 46, 26, 10, 5, S.steelDark, 5);
       g.fillStyle(0xffffff, 0.7);
