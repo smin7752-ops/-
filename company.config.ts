@@ -127,7 +127,7 @@ export const DEPARTMENTS = [
     name: "재무·정산팀",
     short: "finance.xls",
     icon: "🧾",
-    task: "음원 스트리밍 정산 현황 정리",
+    task: "스트리밍 정산·브랜드 협찬비·굿즈/티켓 판매 등 수익 항목 정리",
     report: "정산서가 오면 바로 반영합니다.",
   },
   {
