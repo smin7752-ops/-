@@ -811,6 +811,244 @@ function buildPochaArt(scene: Phaser.Scene) {
   });
 }
 
+function buildChickenArt(scene: Phaser.Scene) {
+  const T = (id: string, draw: Draw) => tex(scene, itemKey(id), 96, 96, draw);
+
+  T("chicken_fried", (g) => {
+    plate(g);
+    [[30, 48], [50, 42], [68, 50]].forEach(([x, y]) => {
+      blob(g, x - 12, y - 12, 24, 24, 10, 0xe0a95c, 4);
+    });
+  });
+  T("chicken_yangnyeom", (g) => {
+    plate(g);
+    [[30, 48], [50, 42], [68, 50]].forEach(([x, y]) => {
+      disc(g, x, y, 12, 0xd0432f, 4);
+      g.fillStyle(0xffffff, 0.3);
+      g.fillCircle(x - 3, y - 3, 3);
+    });
+  });
+  T("chicken_ganjang", (g) => {
+    plate(g);
+    [[30, 48], [50, 42], [68, 50]].forEach(([x, y]) => {
+      disc(g, x, y, 12, 0x8a5a34, 4);
+      g.fillStyle(0xf5c542, 0.6);
+      g.fillCircle(x + 3, y - 2, 1.6);
+      g.fillCircle(x - 2, y + 3, 1.6);
+    });
+  });
+  T("chicken_banban", (g) => {
+    plate(g);
+    disc(g, 34, 48, 13, 0xe0a95c, 4);
+    disc(g, 62, 48, 13, 0xd0432f, 4);
+  });
+  T("chicken_padak", (g) => {
+    plate(g);
+    [[34, 50], [58, 46]].forEach(([x, y]) => blob(g, x - 12, y - 12, 24, 24, 10, 0xe0a95c, 4));
+    g.lineStyle(3, 0x69ab5a, 1);
+    [[26, 38], [40, 34], [54, 36], [66, 40]].forEach(([x, y]) => g.lineBetween(x, y, x - 2, y - 10));
+  });
+  T("chicken_hot", (g) => {
+    plate(g);
+    [[30, 48], [50, 42], [68, 50]].forEach(([x, y]) => disc(g, x, y, 12, 0xc9291f, 4));
+    g.fillStyle(0xf0a35e, 0.9);
+    [[30, 32], [68, 34]].forEach(([x, y]) => {
+      g.beginPath();
+      g.moveTo(x, y);
+      g.lineTo(x - 5, y - 10);
+      g.lineTo(x + 5, y - 10);
+      g.closePath();
+      g.fillPath();
+    });
+  });
+
+  T("chicken_mu", (g) => {
+    blob(g, 20, 30, 56, 46, 10, 0xdff0f5, 4);
+    [[36, 48], [52, 44], [44, 60]].forEach(([x, y]) => blob(g, x - 7, y - 7, 14, 14, 4, 0xf7d08a, 2));
+  });
+  T("chicken_cheese_ball", (g) => {
+    plate(g);
+    [[34, 48], [56, 44], [46, 60]].forEach(([x, y]) => {
+      disc(g, x, y, 11, 0xf5d76e, 3);
+      g.fillStyle(0xffffff, 0.5);
+      g.fillCircle(x - 3, y - 3, 2.4);
+    });
+  });
+  T("chicken_wedge", (g) => {
+    plate(g);
+    [[32, 50], [48, 44], [64, 52]].forEach(([x, y]) => {
+      g.fillStyle(0xe0a95c, 1);
+      g.beginPath();
+      g.moveTo(x, y + 16);
+      g.lineTo(x - 10, y - 16);
+      g.lineTo(x + 10, y - 16);
+      g.closePath();
+      g.fillPath();
+      g.lineStyle(3, 0xc0834a, 1);
+      g.strokePath();
+    });
+  });
+  T("chicken_gizzard", (g) => {
+    plate(g);
+    [[30, 50], [48, 44], [64, 52], [42, 60]].forEach(([x, y]) => {
+      disc(g, x, y, 8, 0xc0834a, 3);
+    });
+  });
+  T("chicken_bbq_wing", (g) => {
+    plate(g);
+    [[32, 48], [60, 46]].forEach(([x, y]) => {
+      blob(g, x - 14, y - 10, 28, 20, 8, 0x8a5030, 4);
+      blob(g, x + 10, y - 4, 16, 6, 3, 0xf3ede1, 2);
+    });
+  });
+  T("chicken_tteokbokki_combo", (g) => {
+    bowl(g, 0xd0432f);
+    [30, 46, 62, 40].forEach((x, i) => blob(g, x - 6, 30 - (i % 2) * 6, 12, 28, 6, 0xf3ede1, 3));
+  });
+}
+
+function buildMartArt(scene: Phaser.Scene) {
+  const T = (id: string, draw: Draw) => tex(scene, itemKey(id), 96, 96, draw);
+
+  T("mart_hotdog", (g) => {
+    g.lineStyle(5, 0xc9a97a, 1);
+    g.lineBetween(48, 84, 48, 50);
+    blob(g, 20, 20, 56, 34, 17, 0xe0a95c, 4);
+    g.lineStyle(3, 0xf5c542, 1);
+    for (let x = 26; x <= 70; x += 10) {
+      g.beginPath();
+      g.moveTo(x, 14);
+      g.lineTo(x + 6, 44);
+      g.strokePath();
+    }
+  });
+  T("mart_samgak_gimbap", (g) => {
+    g.fillStyle(0x2b2b2f, 1);
+    g.beginPath();
+    g.moveTo(48, 18);
+    g.lineTo(20, 78);
+    g.lineTo(76, 78);
+    g.closePath();
+    g.fillPath();
+    g.lineStyle(4, INK, 1);
+    g.strokePath();
+    g.fillStyle(0xf3ede1, 1);
+    g.beginPath();
+    g.moveTo(48, 34);
+    g.lineTo(32, 68);
+    g.lineTo(64, 68);
+    g.closePath();
+    g.fillPath();
+    disc(g, 48, 56, 6, 0xd0432f, 0);
+  });
+  T("mart_cup_ramen", (g) => {
+    g.fillStyle(0xf3ede1, 1);
+    g.beginPath();
+    g.moveTo(28, 34);
+    g.lineTo(68, 34);
+    g.lineTo(60, 82);
+    g.lineTo(36, 82);
+    g.closePath();
+    g.fillPath();
+    g.lineStyle(4, INK, 1);
+    g.strokePath();
+    g.fillStyle(0xd0432f, 1);
+    g.fillRect(28, 34, 40, 14);
+    g.lineStyle(3, 0xf5c542, 1);
+    for (let x = 38; x <= 58; x += 10) {
+      g.beginPath();
+      g.arc(x, 56, 7, Phaser.Math.DegToRad(200), Phaser.Math.DegToRad(430));
+      g.strokePath();
+    }
+    g.fillStyle(0xffffff, 0.5);
+    g.fillEllipse(44, 22, 10, 16);
+    g.fillEllipse(56, 18, 8, 14);
+  });
+  T("mart_jumeok_bap", (g) => {
+    disc(g, 48, 52, 32, 0xf3ede1, 5);
+    g.fillStyle(0x2b2b2f, 0.7);
+    [[36, 44], [58, 48], [46, 62]].forEach(([x, y]) => g.fillCircle(x, y, 2));
+  });
+  T("mart_gimbap", (g) => {
+    gimbapSlice(g, 48, 50, 30, [0xf2d764, 0x69ab5a, 0xf29ab4]);
+  });
+  T("mart_dosirak", (g) => {
+    blob(g, 12, 30, 72, 50, 10, 0xdff0f5, 5);
+    g.lineStyle(3, INK, 0.5);
+    g.lineBetween(48, 30, 48, 80);
+    g.lineBetween(12, 55, 84, 55);
+    g.fillStyle(0xf3ede1, 1);
+    g.fillRect(16, 34, 28, 18);
+    g.fillStyle(0xd0432f, 1);
+    g.fillRect(52, 34, 28, 18);
+    g.fillStyle(0x69ab5a, 1);
+    g.fillRect(16, 59, 28, 18);
+    g.fillStyle(0xf7d08a, 1);
+    g.fillRect(52, 59, 28, 18);
+  });
+
+  T("mart_chips", (g) => {
+    g.fillStyle(0xd0432f, 1);
+    g.beginPath();
+    g.moveTo(24, 20);
+    g.lineTo(72, 20);
+    g.lineTo(78, 82);
+    g.lineTo(18, 82);
+    g.closePath();
+    g.fillPath();
+    g.lineStyle(4, INK, 1);
+    g.strokePath();
+    g.lineStyle(4, 0xf5c542, 1);
+    g.lineBetween(24, 20, 30, 10);
+    g.lineBetween(72, 20, 66, 10);
+    g.fillStyle(0xffffff, 0.85);
+    g.fillEllipse(48, 50, 30, 20);
+  });
+  T("mart_icecream", (g) => {
+    g.fillStyle(0xe0a95c, 1);
+    g.beginPath();
+    g.moveTo(38, 50);
+    g.lineTo(58, 50);
+    g.lineTo(48, 86);
+    g.closePath();
+    g.fillPath();
+    g.lineStyle(3, 0xc0834a, 1);
+    g.strokePath();
+    disc(g, 48, 40, 22, 0xf6b8cd, 4);
+    disc(g, 48, 22, 16, 0xffffff, 4);
+  });
+  T("mart_soda", (g) => {
+    blob(g, 32, 14, 32, 70, 8, 0xc9ccd4, 4);
+    g.fillStyle(0xd0432f, 1);
+    g.fillRect(32, 40, 32, 26);
+    g.lineStyle(3, INK, 0.4);
+    g.lineBetween(32, 40, 64, 40);
+    g.lineBetween(32, 66, 64, 66);
+    blob(g, 40, 8, 16, 8, 3, 0x8f96a3, 3);
+  });
+  T("mart_coffee", (g) => {
+    blob(g, 32, 14, 32, 70, 8, 0x8a5a34, 4);
+    g.fillStyle(0xf3ede1, 1);
+    g.fillRect(32, 40, 32, 24);
+    g.lineStyle(3, INK, 0.35);
+    g.lineBetween(32, 40, 64, 40);
+    g.lineBetween(32, 64, 64, 64);
+    blob(g, 40, 8, 16, 8, 3, 0x6f7684, 3);
+  });
+  T("mart_chocolate", (g) => {
+    blob(g, 16, 24, 64, 44, 8, 0x6b4630, 4);
+    g.lineStyle(3, 0x4a3226, 0.7);
+    for (let x = 32; x < 80; x += 16) g.lineBetween(x, 24, x, 68);
+    g.lineBetween(16, 46, 80, 46);
+  });
+  T("mart_beer", (g) => {
+    blob(g, 30, 22, 36, 62, 8, 0xe0b84a, 4);
+    blob(g, 28, 10, 40, 16, 6, 0xfffaf2, 4);
+    g.fillStyle(0xffffff, 0.5);
+    g.fillRect(36, 30, 6, 44);
+  });
+}
+
 function buildRestaurantEquipment(scene: Phaser.Scene) {
   const S = ART_COLORS;
 
@@ -907,6 +1145,117 @@ function buildRestaurantEquipment(scene: Phaser.Scene) {
     g.lineStyle(6, S.wood, 1); // 손잡이
     g.lineBetween(20, 50, 4, 40);
     g.lineBetween(130, 50, 146, 40);
+  });
+}
+
+function buildChickenMartEquipment(scene: Phaser.Scene) {
+  const S = ART_COLORS;
+
+  // 치킨집 후라이드 튀김기 — 150x130
+  tex(scene, equipKey("chicken_fryer"), 150, 130, (g) => {
+    blob(g, 18, 44, 114, 62, 12, S.steel, 5);
+    blob(g, 30, 54, 90, 40, 8, 0xe0a95c, 4); // 기름
+    g.lineStyle(4, S.steelDark, 1); // 튀김 바스켓
+    g.strokeRect(40, 40, 60, 36);
+    g.lineStyle(5, S.wood, 1);
+    g.lineBetween(100, 40, 124, 20);
+    blob(g, 26, 24, 98, 16, 6, S.steelDark, 4); // 조작판
+    disc(g, 120, 32, 6, 0xf07f7f, 3);
+  });
+  // 치킨 진열대 — 160x130
+  tex(scene, equipKey("chicken_display"), 160, 130, (g) => {
+    blob(g, 10, 24, 140, 84, 12, 0xdff0f5, 5);
+    blob(g, 10, 96, 140, 24, 8, S.wood, 5);
+    g.lineStyle(4, INK, 0.6);
+    g.lineBetween(10, 66, 150, 66);
+    disc(g, 44, 52, 15, 0xe0a95c, 4);
+    disc(g, 76, 52, 15, 0xf5d76e, 4);
+    disc(g, 112, 86, 13, 0xd0432f, 4);
+  });
+  // 양념 소스팟 — 130x110
+  tex(scene, equipKey("chicken_sauce_pot"), 130, 110, (g) => {
+    blob(g, 22, 40, 86, 46, 12, S.steel, 5);
+    oval(g, 65, 40, 78, 16, 0xd0432f, 4);
+    g.lineStyle(6, S.wood, 1); // 국자
+    g.lineBetween(100, 30, 122, 12);
+    disc(g, 122, 12, 6, S.wood, 0);
+  });
+  // 숯불 그릴 — 150x130 (포차 숯불그릴과 같은 기법)
+  tex(scene, equipKey("chicken_charcoal_grill"), 150, 130, (g) => {
+    blob(g, 18, 64, 114, 44, 10, S.steelDark, 5);
+    oval(g, 75, 64, 100, 20, 0x2b2b2f, 4);
+    g.lineStyle(5, S.steel, 1);
+    for (let x = 34; x <= 116; x += 14) g.lineBetween(x, 46, x, 64);
+    g.fillStyle(0xf0a35e, 0.8);
+    [50, 75, 100].forEach((x) => disc(g, x, 40, 5, 0xf07f4a, 0));
+  });
+  // 특제 조리대 — 150x130
+  tex(scene, equipKey("chicken_special_station"), 150, 130, (g) => {
+    blob(g, 14, 20, 122, 108, 14, S.steel, 5);
+    blob(g, 28, 46, 94, 66, 10, 0xc9622f, 5);
+    g.fillStyle(0xf5c542, 0.5);
+    [[52, 66], [78, 78], [96, 62]].forEach(([x, y]) => disc(g, x, y, 4, 0xf5c542, 0));
+    blob(g, 34, 28, 82, 12, 6, S.steelDark, 4);
+    disc(g, 128, 34, 7, 0xf07f7f, 4);
+  });
+
+  // 편의점 즉석조리 워머 — 150x110
+  tex(scene, equipKey("mart_warmer"), 150, 110, (g) => {
+    blob(g, 10, 20, 130, 70, 12, 0xdff0f5, 5); // 유리 케이스
+    blob(g, 10, 82, 130, 18, 6, S.wood, 5);
+    g.lineStyle(6, S.steelDark, 1); // 롤러
+    for (let y = 44; y <= 68; y += 12) g.lineBetween(24, y, 126, y);
+    blob(g, 56, 30, 30, 12, 6, 0xe0a95c, 3); // 핫도그
+  });
+  // 스낵 진열대 — 140x140 (세로 선반)
+  tex(scene, equipKey("mart_shelf"), 140, 140, (g) => {
+    blob(g, 10, 10, 120, 120, 10, S.steel, 5);
+    g.lineStyle(4, S.steelDark, 1);
+    [46, 82, 118].forEach((y) => g.lineBetween(14, y, 126, y));
+    g.fillStyle(0xd0432f, 1);
+    g.fillRect(20, 24, 18, 18);
+    g.fillStyle(0xf5c542, 1);
+    g.fillRect(46, 24, 18, 18);
+    g.fillStyle(0x69ab5a, 1);
+    g.fillRect(72, 24, 18, 18);
+    g.fillStyle(0xf29ab4, 1);
+    g.fillRect(20, 58, 18, 18);
+    g.fillStyle(0x8a5a34, 1);
+    g.fillRect(46, 58, 18, 18);
+    g.fillStyle(0x4fa3d1, 1);
+    g.fillRect(72, 58, 18, 18);
+  });
+  // 즉석밥 코너 — 150x130 (밥솥)
+  tex(scene, equipKey("mart_rice_cooker"), 150, 130, (g) => {
+    blob(g, 20, 92, 110, 22, 8, S.wood, 5);
+    blob(g, 25, 40, 100, 56, 20, S.steel, 5);
+    blob(g, 34, 24, 82, 22, 10, S.steelDark, 5);
+    disc(g, 75, 20, 6, 0xf07f7f, 3);
+    g.fillStyle(0xffffff, 0.4);
+    g.fillEllipse(60, 16, 14, 20);
+  });
+  // 즉석라면 코너 — 150x130 (온수 디스펜서)
+  tex(scene, equipKey("mart_noodle_station"), 150, 130, (g) => {
+    blob(g, 30, 14, 60, 92, 10, S.steel, 5); // 본체
+    blob(g, 44, 26, 32, 24, 6, S.steelDark, 4); // 표시창
+    g.lineStyle(6, S.steelDark, 1); // 꼭지
+    g.lineBetween(60, 78, 60, 96);
+    blob(g, 90, 96, 40, 26, 8, 0xf3ede1, 4); // 컵
+    g.fillStyle(0xffffff, 0.5);
+    g.fillEllipse(100, 82, 10, 16);
+  });
+  // 도시락 코너 — 160x130 (냉장 진열대)
+  tex(scene, equipKey("mart_deluxe_station"), 160, 130, (g) => {
+    blob(g, 14, 14, 132, 100, 12, 0xdff0f5, 5);
+    g.lineStyle(4, S.steelDark, 1);
+    [50, 80].forEach((y) => g.lineBetween(18, y, 142, y));
+    g.fillStyle(0xf3ede1, 1);
+    g.fillRect(28, 24, 30, 18);
+    g.fillStyle(0xe0b84a, 1);
+    g.fillRect(70, 24, 22, 56);
+    g.fillStyle(0xd0432f, 1);
+    g.fillRect(102, 24, 30, 18);
+    blob(g, 14, 96, 132, 18, 6, S.wood, 4);
   });
 }
 
@@ -2387,7 +2736,10 @@ export function buildArt(scene: Phaser.Scene) {
   buildEquipment(scene);
   buildBunsikArt(scene);
   buildPochaArt(scene);
+  buildChickenArt(scene);
+  buildMartArt(scene);
   buildRestaurantEquipment(scene);
+  buildChickenMartEquipment(scene);
   buildFurniture(scene);
   buildBubbles(scene);
   buildIcons(scene);
