@@ -17,38 +17,38 @@
 /** 회사 기본 정보 */
 export const COMPANY = {
   /** 좌측 상단 헤더에 뜨는 회사 이름 */
-  name: "SooA ENT.",
+  name: "하루로그",
   /** 헤더 로고 배지에 들어갈 글자 1개 (이모지도 됩니다) */
-  logoLetter: "S",
+  logoLetter: "하",
   /** 화면 상단 큰 제목 (앞부분) */
-  titlePrefix: "수아의",
+  titlePrefix: "하루의",
   /** 화면 상단 큰 제목 (강조되는 뒷부분) */
-  titleAccent: "AI Office",
+  titleAccent: "일상 브이로그",
   /** 브라우저 탭 제목 */
-  pageTitle: "SooA ENT. — 나의 AI 오피스",
+  pageTitle: "하루로그 — 나의 AI 오피스",
   /** 검색·공유될 때 뜨는 설명 */
   description:
-    "예명 '수아'(본명 오성민)로 활동하는 싱어송라이터가 운영하는 음악 블로그 '성민의 하루 플레이리스트'를 위한 AI 오피스. 좋아하는 노래를 소개하는 감상글과, 직접 작사·노래한 자작곡의 비하인드 스토리 두 가지를 다룹니다.",
+    "가상의 캐릭터 '하루'가 살아가는 평범하지만 사랑스러운 하루하루를 담는 롤플레잉(RP) 일상 브이로그 채널 '하루로그'를 위한 AI 오피스. 캐릭터의 말투·세계관을 지키면서, 소소한 에피소드를 매일 기록합니다.",
   /** 창 하단 파일명 느낌의 라벨 */
-  windowLabel: "sooa_ent.exe — 대표실",
+  windowLabel: "harulog.exe — 대표실",
   /** 일일 브리핑 제목에 들어갈 이름 */
-  reportName: "SooA ENT.",
+  reportName: "하루로그",
 } as const;
 
 /** 대표(나) — 사무실 대표실에 앉아 있는 캐릭터 */
 export const CEO_PROFILE = {
   name: "수아",
   callsign: "대표님",
-  role: "싱어송라이터 · 블로거 · 최종 의사결정",
-  hair: "#42283a",
-  shirt: "#ff8fc0",
-  accent: "#fff3b0",
+  role: "'하루' 캐릭터 크리에이터 · 최종 의사결정",
+  hair: "#8b5a3c",
+  shirt: "#f4e4c1",
+  accent: "#ffb199",
   skin: "#ffdcc4",
   thoughts: [
-    "완벽해서가 아니라 솔직해서 의미 있는 글을 쓰자.",
-    "곡 정보·크레딧은 무조건 정확하게 확인한다.",
-    "예명 수아도, 본명 오성민도 결국 다 나다.",
-    "과장된 감정 말고, 그때 진짜 느꼈던 마음부터 떠올리자.",
+    "'하루'는 완벽한 하루가 아니라 진짜 같은 하루를 살아야 해.",
+    "캐릭터 설정은 어제 한 말이랑 오늘 한 말이 달라지면 안 돼.",
+    "화려한 이벤트보다 소소한 디테일이 몰입을 만든다.",
+    "연기 같지 않게, 정말 옆집에 사는 사람처럼.",
   ],
 };
 
@@ -60,66 +60,66 @@ export const CEO_PROFILE = {
 export const DEPARTMENTS = [
   {
     id: "research",
-    name: "음악 아카이브팀",
-    short: "archive.lab",
-    icon: "🎵",
-    task: "오늘 소개할 곡·아티스트 자료 조사",
-    report: "발매일·앨범·크레딧부터 정확히 확인해요.",
+    name: "일상 소재 리서치팀",
+    short: "daily.lab",
+    icon: "🔍",
+    task: "오늘 '하루'가 겪을 소소한 일상 소재 조사",
+    report: "공감 가는 디테일부터 모아서 올려요.",
   },
   {
     id: "brand",
-    name: "아티스트 정체성팀",
-    short: "artist.id",
-    icon: "🎤",
-    task: "'수아' 예명·톤앤매너, SNS 반응 점검",
-    report: "지표 연동이 되면 수치까지 붙습니다.",
+    name: "캐릭터 정체성팀",
+    short: "character.id",
+    icon: "🎭",
+    task: "'하루'의 말투·성격·세계관 일관성 점검",
+    report: "지표 연동이 되면 반응 수치까지 붙습니다.",
   },
   {
     id: "strategy1",
     name: "콘텐츠 기획팀",
     short: "idea.studio",
     icon: "💡",
-    task: "이번 주 소개할 곡 후보 10개 기획",
-    report: "추천곡·자작곡 비중을 맞춰 TOP 3까지 좁혀요.",
+    task: "이번 주 '하루' 에피소드 후보 10개 기획",
+    report: "설레는 일·소소한 고민 비중을 맞춰 TOP 3까지 좁혀요.",
   },
   {
     id: "qa",
-    name: "품질 검수팀",
-    short: "qa.check",
+    name: "세계관 검수팀",
+    short: "lore.check",
     icon: "🛡️",
-    task: "곡 정보·크레딧 팩트체크",
-    report: "발매일·저작권 표기가 틀리면 바로 반려해요.",
+    task: "캐릭터 설정·타임라인 오류(설정 붕괴) 검수",
+    report: "예전 에피소드랑 말이 다르면 바로 반려해요.",
   },
   {
     id: "strategy2",
-    name: "원고 작성팀",
+    name: "대본·자막 작성팀",
     short: "script.team",
     icon: "✍️",
-    task: "'음악 이야기' 포스팅 원고 작성",
-    report: "성민님 특유의 잔잔한 존댓말 톤으로 맞춰 써요.",
+    task: "브이로그 나레이션·자막 대본 작성",
+    report: "'하루' 특유의 말투 톤 유지해서 써요.",
   },
   {
     id: "reels",
     name: "영상 제작팀",
     short: "video.edit",
     icon: "🎬",
-    task: "유튜브 영상 편집·자막 작업",
-    report: "원곡 음원은 그대로 두고 자막만 다듬어요.",
+    task: "일상 브이로그 영상 촬영본 편집·자막 작업",
+    report: "캐릭터 얼굴·목소리 일관성부터 체크해요.",
   },
   {
     id: "carousel",
-    name: "이미지·블로그 디자인팀",
+    name: "이미지·캐릭터 디자인팀",
     short: "design.studio",
     icon: "🖼️",
-    task: "앨범 커버·썸네일 감성 이미지 디자인",
-    report: "곡 분위기에 맞는 톤으로 맞춰요.",
+    task: "캐릭터 비주얼·썸네일 이미지 제작",
+    report: "매일 같은 얼굴로 보이게 스타일을 고정해요.",
   },
   {
     id: "partner",
-    name: "협업·유통 커뮤니케이션팀",
+    name: "협업 커뮤니케이션팀",
     short: "partner.mail",
     icon: "💌",
-    task: "콜라보·음원 유통 제안 검토",
+    task: "브랜드 협찬·콜라보 제안 검토",
     report: "초안까지만 씁니다. 계약은 대표가 직접 해요.",
   },
   {
@@ -127,7 +127,7 @@ export const DEPARTMENTS = [
     name: "재무·정산팀",
     short: "finance.xls",
     icon: "🧾",
-    task: "음원 스트리밍 정산 현황 정리",
+    task: "브랜드 협찬비·굿즈·후원 등 수익 항목 정리",
     report: "정산서가 오면 바로 반영합니다.",
   },
   {
@@ -135,8 +135,8 @@ export const DEPARTMENTS = [
     name: "성과리뷰팀",
     short: "review.data",
     icon: "📈",
-    task: "조회수·스트리밍·댓글 반응 기록",
-    report: "어떤 음악 이야기가 반응 좋았는지 패턴으로 남겨요.",
+    task: "조회수·저장·댓글 반응 기록",
+    report: "어떤 에피소드가 반응 좋았는지 패턴으로 남겨요.",
   },
   {
     id: "ops",
@@ -173,95 +173,95 @@ export type StaffEntry = {
 };
 
 export const STAFF_LIST: StaffEntry[] = [
-  // ① 음악 아카이브팀
-  { dept: "research", rank: "lead", name: "김서연", role: "음악 아카이브 팀장", callsign: "김리서",
+  // ① 일상 소재 리서치팀
+  { dept: "research", rank: "lead", name: "김서연", role: "일상 소재 리서치 팀장", callsign: "김리서",
     colors: ["#6b3d34", "#fff3b0", "#ff8fc0"],
-    thoughts: ["발매일·앨범명부터 원출처로 확인해야 해.", "크레딧 표기 하나 틀리면 큰일 나.", "이 곡, 저작권 표기부터 다시 본다."] },
-  { dept: "research", rank: "member", name: "오태윤", role: "신곡·아티스트 리서처",
+    thoughts: ["너무 특별한 사건 말고, 진짜 있을 법한 하루를 찾자.", "디테일 하나가 몰입을 만든다.", "이 소재, '하루'라면 어떻게 반응할지부터 생각한다."] },
+  { dept: "research", rank: "member", name: "오태윤", role: "일상 소재 발굴",
     colors: ["#2f2a3d", "#c9b8ff", "#b8f0dd"],
-    thoughts: ["요즘 성민님이 자주 듣는 곡이 뭔지 체크.", "원곡 유통사 정보까지 확인해야 안전해요."] },
-  { dept: "research", rank: "member", name: "하은채", role: "곡 배경 조사",
+    thoughts: ["요즘 사람들 일상에서 뭐가 공감되는지 체크.", "너무 흔한 소재는 '하루'만의 시선으로 비틀어야 해요."] },
+  { dept: "research", rank: "member", name: "하은채", role: "공감 포인트 조사",
     colors: ["#8a4a3c", "#b8f0dd", "#ff8fc0"],
-    thoughts: ["이 곡에 얽힌 개인적인 사연이 있는지 여쭤봐야겠다.", "재수록 앨범 정보는 원반이랑 헷갈리면 안 돼."] },
+    thoughts: ["이 상황, 실제로 겪어본 사람 많을지 확인.", "계절감·요일감 놓치면 안 돼."] },
 
-  // ② 아티스트 정체성팀
-  { dept: "brand", rank: "lead", name: "박보라", role: "아티스트 정체성 팀장", callsign: "박브리",
+  // ② 캐릭터 정체성팀
+  { dept: "brand", rank: "lead", name: "박보라", role: "캐릭터 정체성 팀장", callsign: "박브리",
     colors: ["#372b4a", "#c9b8ff", "#c9b8ff"],
-    thoughts: ["지표 연동 전엔 수치를 지어내지 않아요.", "예명 '수아'와 본명 '오성민' 표기, 이번에도 맞게 들어갔는지 확인."] },
+    thoughts: ["지표 연동 전엔 수치를 지어내지 않아요.", "'하루' 말투가 오늘도 어제랑 같은지 확인."] },
   { dept: "brand", rank: "member", name: "신재원", role: "채널 반응 분석",
     colors: ["#3c3a4f", "#ffe6f2", "#c9b8ff"],
     thoughts: ["저장·댓글 반응이 조회수보다 중요해요.", "30일 흐름부터 그려보자."] },
-  { dept: "brand", rank: "member", name: "임다혜", role: "톤앤매너 검증",
+  { dept: "brand", rank: "member", name: "임다혜", role: "말투·세계관 검증",
     colors: ["#5a3450", "#fff3b0", "#ff8fc0"],
-    thoughts: ["너무 분석적인 말투는 이 블로그랑 안 맞아요.", "잔잔하고 진솔한 톤 유지하는지 본다."] },
+    thoughts: ["너무 연기하는 말투는 이 채널이랑 안 맞아요.", "담백하고 자연스러운 톤 유지하는지 본다."] },
 
   // ③ 콘텐츠 기획팀
   { dept: "strategy1", rank: "lead", name: "최아름", role: "콘텐츠 기획 팀장", callsign: "최아이",
     colors: ["#c26e4b", "#ff8fc0", "#fff3b0"],
-    thoughts: ["오늘도 정확히 10개, 예외 없어요.", "추천곡이랑 자작곡 이야기 비율부터 나누고 시작.", "이번 주는 어떤 감정선으로 갈지부터 정하자."] },
-  { dept: "strategy1", rank: "member", name: "정유진", role: "곡 후보 발굴",
+    thoughts: ["오늘도 정확히 10개, 예외 없어요.", "설레는 일이랑 소소한 고민 비율부터 나누고 시작.", "이번 주는 어떤 감정선으로 갈지부터 정하자."] },
+  { dept: "strategy1", rank: "member", name: "정유진", role: "에피소드 후보 발굴",
     colors: ["#7b4a2f", "#b8f0dd", "#ff8fc0"],
-    thoughts: ["제목을 좀 더 구체적으로 바꿔볼까.", "이 곡이랑 얽힌 에피소드가 있어야 글이 산다."] },
-  { dept: "strategy1", rank: "member", name: "배시현", role: "도입부 문구 기획",
+    thoughts: ["제목을 좀 더 궁금하게 바꿔볼까.", "이 에피소드, 다음 화로 이어질 여지가 있어야 산다."] },
+  { dept: "strategy1", rank: "member", name: "배시현", role: "오프닝 문구 기획",
     colors: ["#2c2638", "#fff3b0", "#c9b8ff"],
-    thoughts: ["'안녕하세요, 성민입니다' 인사말은 고정으로 가요.", "과장된 후킹 문구는 이 블로그 톤이랑 안 맞아요."] },
+    thoughts: ["'안녕, 오늘의 하루야' 인사말은 고정으로 가요.", "과장된 후킹 문구는 이 채널 톤이랑 안 맞아요."] },
 
-  // ④ 품질 검수팀
-  { dept: "qa", rank: "lead", name: "윤규아", role: "품질 검수 팀장", callsign: "윤큐아",
+  // ④ 세계관 검수팀
+  { dept: "qa", rank: "lead", name: "윤규아", role: "세계관 검수 팀장", callsign: "윤큐아",
     colors: ["#2d4b46", "#b8f0dd", "#b8f0dd"],
-    thoughts: ["곡 정보 팩트체크부터 돌립니다.", "크레딧 링크 없는 안은 반려예요."] },
-  { dept: "qa", rank: "member", name: "강태오", role: "크레딧·발매일 검사",
+    thoughts: ["설정 붕괴부터 체크합니다.", "타임라인 안 맞는 안은 반려예요."] },
+  { dept: "qa", rank: "member", name: "강태오", role: "타임라인·설정 검사",
     colors: ["#463227", "#ffe6f2", "#b8f0dd"],
-    thoughts: ["발매년도 하나 틀리면 신뢰도 훅 떨어져요.", "원곡 유통 채널 링크가 진짜인지 확인."] },
-  { dept: "qa", rank: "member", name: "문세라", role: "감정 표현 검수",
+    thoughts: ["요일·날짜 하나 틀리면 몰입감 훅 떨어져요.", "지난 화랑 이어지는 설정인지 확인."] },
+  { dept: "qa", rank: "member", name: "문세라", role: "캐릭터 반응 검수",
     colors: ["#6c3a55", "#c9b8ff", "#fff3b0"],
-    thoughts: ["과장된 감정 표현은 바로 빼요.", "실제 있었던 이야기인지, 지어낸 건 아닌지 본다."] },
+    thoughts: ["'하루'답지 않은 반응은 바로 빼요.", "실제 사람 같은 반응인지, 어색한 연기는 아닌지 본다."] },
 
-  // ⑤ 원고 작성팀
-  { dept: "strategy2", rank: "lead", name: "한도빈", role: "원고 팀장", callsign: "한대본",
+  // ⑤ 대본·자막 작성팀
+  { dept: "strategy2", rank: "lead", name: "한도빈", role: "대본 팀장", callsign: "한대본",
     colors: ["#8b534a", "#fff3b0", "#ff8fc0"],
-    thoughts: ["승인된 곡만 원고로 씁니다.", "'☕🎧' 마무리 인사, 이번에도 빠뜨리지 말자."] },
-  { dept: "strategy2", rank: "member", name: "조민서", role: "감상평 원고",
+    thoughts: ["승인된 소재만 대본으로 씁니다.", "마무리 인사, 이번에도 빠뜨리지 말자."] },
+  { dept: "strategy2", rank: "member", name: "조민서", role: "나레이션 대본",
     colors: ["#33304a", "#ff8fc0", "#b8f0dd"],
-    thoughts: ["소제목은 '■'로 시작하는 걸로 통일.", "노래를 먼저 듣고 글을 쓰게 안내하는 문장 잊지 말기."] },
-  { dept: "strategy2", rank: "member", name: "백가온", role: "비하인드 스토리 원고",
+    thoughts: ["문장은 짧게, 말하듯이 써야 해요.", "너무 설명충 대사는 잘라낸다."] },
+  { dept: "strategy2", rank: "member", name: "백가온", role: "자막 타이밍",
     colors: ["#5d3a2c", "#b8f0dd", "#c9b8ff"],
-    thoughts: ["자작곡 이야기는 그때의 진짜 감정부터 다시 꺼내본다.", "마지막 문단은 다음 화 예고로 닫아요."] },
+    thoughts: ["자막이 대사보다 먼저 뜨면 몰입 깨져요.", "마지막 문단은 다음 화 예고로 닫아요."] },
 
   // ⑥ 영상 제작팀
   { dept: "reels", rank: "lead", name: "송리원", role: "영상 제작 팀장", callsign: "송릴스",
     colors: ["#2c2638", "#ff8fc0", "#ff8fc0"],
-    thoughts: ["원곡 음원은 절대 안 건드려요.", "유튜브 링크는 본문 맨 위에 넣는 걸로."] },
+    thoughts: ["캐릭터 얼굴·목소리는 매일 같아야 해요.", "짧고 임팩트 있게 15~30초로 자른다."] },
   { dept: "reels", rank: "member", name: "권지호", role: "편집",
     colors: ["#4a3a2a", "#fff3b0", "#b8f0dd"],
-    thoughts: ["자막 템포가 늘어지면 이탈이에요.", "출처 표기는 대표가 직접 확인해요."] },
+    thoughts: ["템포가 늘어지면 이탈이에요.", "출처 표기는 대표가 직접 확인해요."] },
   { dept: "reels", rank: "member", name: "유세아", role: "자막·썸네일",
     colors: ["#7a3f58", "#c9b8ff", "#ff8fc0"],
-    thoughts: ["앨범 커버 이미지로 썸네일 뽑아둘게요.", "워터마크는 안 넣습니다."] },
+    thoughts: ["표정 클로즈업으로 썸네일 뽑아둘게요.", "워터마크는 안 넣습니다."] },
 
-  // ⑦ 이미지·블로그 디자인팀
-  { dept: "carousel", rank: "lead", name: "이가림", role: "이미지·블로그 디자인 팀장", callsign: "이캐리",
+  // ⑦ 이미지·캐릭터 디자인팀
+  { dept: "carousel", rank: "lead", name: "이가림", role: "이미지·캐릭터 디자인 팀장", callsign: "이캐리",
     colors: ["#d88d68", "#c9b8ff", "#c9b8ff"],
-    thoughts: ["원본 앨범 커버는 그대로, 편집본만 새로 만들어요.", "곡 분위기랑 색감부터 맞추고 시작."] },
+    thoughts: ["캐릭터 얼굴 일관성이 제일 중요해요.", "오늘 분위기랑 색감부터 맞추고 시작."] },
   { dept: "carousel", rank: "member", name: "남주하", role: "레이아웃",
     colors: ["#3a2f4d", "#ffe6f2", "#ff8fc0"],
     thoughts: ["감성 있는 여백부터 잡는 중.", "표지 3안부터 만들자."] },
   { dept: "carousel", rank: "member", name: "표하늘", role: "텍스트 교체",
     colors: ["#274a44", "#fff3b0", "#b8f0dd"],
-    thoughts: ["곡 제목·가수명 오타는 절대 안 돼요.", "복제본에만 손댑니다."] },
+    thoughts: ["캐릭터 이름 오타는 절대 안 돼요.", "복제본에만 손댑니다."] },
 
-  // ⑧ 협업·유통 커뮤니케이션팀
-  { dept: "partner", rank: "lead", name: "정파랑", role: "협업·유통 팀장", callsign: "정파트",
+  // ⑧ 협업 커뮤니케이션팀
+  { dept: "partner", rank: "lead", name: "정파랑", role: "협업 팀장", callsign: "정파트",
     colors: ["#563a32", "#b8f0dd", "#b8f0dd"],
     thoughts: ["메일 연동 전이라 아직 못 읽어요.", "실제 계약·답장은 대표 손으로."] },
   { dept: "partner", rank: "member", name: "구예성", role: "협업 검토",
     colors: ["#452d3f", "#c9b8ff", "#fff3b0"],
-    thoughts: ["결이 맞는 콜라보 제안만 받습니다.", "답장 초안까지만 준비해둘게요."] },
+    thoughts: ["캐릭터 결이랑 맞는 콜라보 제안만 받습니다.", "답장 초안까지만 준비해둘게요."] },
 
   // ⑨ 재무·정산팀
   { dept: "finance", rank: "lead", name: "오재민", role: "재무 팀장", callsign: "오재무",
     colors: ["#313b56", "#fff3b0", "#fff3b0"],
-    thoughts: ["정산서가 오면 바로 정리합니다.", "음원 유통사 입금 대기 건부터 확인해요."] },
+    thoughts: ["정산서가 오면 바로 정리합니다.", "협찬비 입금 대기 건부터 확인해요."] },
   { dept: "finance", rank: "member", name: "심우진", role: "정산 관리",
     colors: ["#4b3b2c", "#b8f0dd", "#c9b8ff"],
     thoughts: ["지연된 건은 따로 표시해둡니다.", "정산은 자동으로 처리 안 해요."] },
@@ -272,7 +272,7 @@ export const STAFF_LIST: StaffEntry[] = [
     thoughts: ["잘된 이유를 패턴으로 남겨야 해요.", "저장·댓글이 조회수보다 진짜 지표입니다."] },
   { dept: "review", rank: "member", name: "마지훈", role: "지표 수집",
     colors: ["#2e3a4a", "#ffe6f2", "#b8f0dd"],
-    thoughts: ["조회수·스트리밍 수 다시 긁어옵니다.", "연동되면 자동화돼요."] },
+    thoughts: ["조회수·저장 수 다시 긁어옵니다.", "연동되면 자동화돼요."] },
   { dept: "review", rank: "member", name: "여름", role: "학습점 정리",
     colors: ["#6b4a2f", "#c9b8ff", "#fff3b0"],
     thoughts: ["반복할 패턴 1개, 중단할 패턴 1개.", "다음 기획팀에 넘길 학습점 정리 중."] },
@@ -291,7 +291,7 @@ export const STAFF_LIST: StaffEntry[] = [
     thoughts: ["대표가 결정할 것만 추립니다.", "중복 설명은 다 지워요."] },
   { dept: "secretary", rank: "member", name: "홍보람", role: "브리핑 정리",
     colors: ["#334a3a", "#ffe6f2", "#fff3b0"],
-    thoughts: ["콘텐츠 유형별로 묶어서 올릴게요.", "막힌 건 먼저 보고해요."] },
+    thoughts: ["에피소드 유형별로 묶어서 올릴게요.", "막힌 건 먼저 보고해요."] },
 ];
 
 /**
