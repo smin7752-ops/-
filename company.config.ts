@@ -40,9 +40,9 @@ export const CEO_PROFILE = {
   name: "수아",
   callsign: "대표님",
   role: "'하루' 캐릭터 크리에이터 · 최종 의사결정",
-  hair: "#42283a",
-  shirt: "#ff8fc0",
-  accent: "#fff3b0",
+  hair: "#8b5a3c",
+  shirt: "#f4e4c1",
+  accent: "#ffb199",
   skin: "#ffdcc4",
   thoughts: [
     "'하루'는 완벽한 하루가 아니라 진짜 같은 하루를 살아야 해.",
