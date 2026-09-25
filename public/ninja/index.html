@@ -338,6 +338,7 @@ const SETS=[
 // 장비 = 세트(01~10) × 등급(F·D·A·S). t 는 0~39 번호: 세트 = t>>2, 등급 = t&3
 const GR=['F','D','A','S'], GRC=['#c8c0b0','#7fd06a','#c07bff','#ffc94a'], GRMUL=[1,1.5,2.2,3];
 const TIERS=40;
+const MERGE=2; // 같은 장비 2개 → 한 등급 위
 const setOf=t=>t>>2, grOf=t=>t&3;
 const setNo=t=>String(setOf(t)+1).padStart(2,'0');
 const pEq=(eq=save.eq)=>eq.map(setOf); // 캐릭터 옷 색·쿠나이 모양은 세트 기준
@@ -1001,7 +1002,7 @@ function updateBossBar(){
 }
 function updateDots(){
   const sp=spLeft(); $('dotGrow').hidden=!sp; $('dotGrow').textContent=sp>99?'99+':sp;
-  let comb=false; for(const k in save.inv){if(save.inv[k].n>=5&&+k.split('-')[1]<TIERS-1){comb=true;break;}} $('dotGear').hidden=!comb; $('dotGear').textContent='!';
+  let comb=false; for(const k in save.inv){if(save.inv[k].n>=MERGE&&+k.split('-')[1]<TIERS-1){comb=true;break;}} $('dotGear').hidden=!comb; $('dotGear').textContent='!';
   $('dotRank').hidden=!rankReady(); $('dotRank').textContent='!';
   const fr=freeLeft(); $('dotSum').hidden=!fr; $('dotSum').textContent=fr;
 }
@@ -1092,25 +1093,25 @@ function renderGear(){
   const cnt=k=>{const x=inv(s,k);return x?x.n:0;};
   $('pbody').innerHTML=`
     <div class="gdet">
-      <div>${gbox(s,t,{show:true,eq:isEq})}<div class="cbar${n>=5?' full':''}"><i style="width:${Math.min(100,n/5*100)}%"></i><span class="num">${n}/5</span></div></div>
+      <div>${gbox(s,t,{show:true,eq:isEq})}<div class="cbar${n>=MERGE?' full':''}"><i style="width:${Math.min(100,n/MERGE*100)}%"></i><span class="num">${n}/${MERGE}</span></div></div>
       <div class="ginfo"><h4>${itemName(s,t)}<span class="num">${own?`LV.${lv}/<b>${ITEM_MAX}</b>`:'미보유'}</span></h4>
         <div class="fxs"><h5>장착효과</h5>${rows(cur,nxt)}</div>
         <div class="fxs"><h5>보유효과</h5>${rows(oc,on)}</div></div>
       <div class="gbtns">
-        <button class="obtn brown" id="gComb">합성하기<span class="cost">5개 → ${t<TIERS-1?`${SETS[setOf(t+1)].n} ${GR[grOf(t+1)]}`:'최고 등급'}</span></button>
+        <button class="obtn brown" id="gComb">합성하기<span class="cost">${MERGE}개 → ${t<TIERS-1?`${SETS[setOf(t+1)].n} ${GR[grOf(t+1)]}`:'최고 등급'}</span></button>
         <button class="obtn brown" id="gEq">${isEq?'장착중':'장착하기'}</button>
         <button class="obtn" id="gEnh"></button>
       </div>
     </div>
     <div class="slottabs">${SLOTS.map((_,i)=>`<button data-sl="${i}" class="${i===s?'on':''}">${slotName(i)}</button>`).join('')}</div>
-    <div class="pscroll"><div class="ggrid">${Array.from({length:TIERS},(_,k)=>`<button class="gcard${k===t?' sel':''}" data-t="${k}">${gbox(s,k,{eq:save.eq[s]===k})}<div class="cbar${cnt(k)>=5?' full':''}"><i style="width:${Math.min(100,cnt(k)/5*100)}%"></i><span class="num">${cnt(k)}/5</span></div><div class="gname">${SETS[setOf(k)].n} ${GR[grOf(k)]}</div></button>`).join('')}</div>
+    <div class="pscroll"><div class="ggrid">${Array.from({length:TIERS},(_,k)=>`<button class="gcard${k===t?' sel':''}" data-t="${k}">${gbox(s,k,{eq:save.eq[s]===k})}<div class="cbar${cnt(k)>=MERGE?' full':''}"><i style="width:${Math.min(100,cnt(k)/MERGE*100)}%"></i><span class="num">${cnt(k)}/${MERGE}</span></div><div class="gname">${SETS[setOf(k)].n} ${GR[grOf(k)]}</div></button>`).join('')}</div>
       ${setTable(setOf(t))}
-      <p class="note" style="margin-top:10px">같은 장비 5개를 모으면 한 등급 위(F→D→A→S)로 합성되고, S등급 5개는 다음 세트 F등급이 돼요. 장비는 소환에서 얻어요.</p></div>
+      <p class="note" style="margin-top:10px">같은 장비 ${MERGE}개를 모으면 한 등급 위(F→D→A→S)로 합성되고, S등급 ${MERGE}개는 다음 세트 F등급이 돼요. 장비는 소환에서 얻어요.</p></div>
     <div class="pfoot"><button class="obtn green big" id="gAllComb">일괄합성</button><button class="obtn big" id="gAuto">자동 장착</button></div>`;
   const pb=$('pbody');
   pb.querySelectorAll('[data-sl]').forEach(b=>b.onclick=()=>{SFX.tap();view.slot=+b.dataset.sl;view.sel=save.eq[view.slot];renderGear();});
   pb.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{SFX.tap();view.sel=+b.dataset.t;renderGear();});
-  $('gComb').disabled=!(n>=5&&t<TIERS-1);
+  $('gComb').disabled=!(n>=MERGE&&t<TIERS-1);
   $('gComb').onclick=()=>{if(combine(s,t)){SFX.buy();toast(`${itemName(s,t+1)} 획득!`);afterGear();}};
   $('gEq').disabled=!own||isEq;
   $('gEq').onclick=()=>{save.eq[s]=t;SFX.equip();toast(`${itemName(s,t)} 장착`);afterGear();};
@@ -1130,8 +1131,8 @@ function setTable(k){
     <div class="uni${uni?' on':''}"><b>고유</b> ${SETFX[k][2][1]} <small>· 8부위 모두 ${SETS[k].n} 세트 이상</small></div></div>`;
 }
 function combine(s,t){
-  const it=inv(s,t); if(!it||it.n<5||t>=TIERS-1) return false;
-  it.n-=5; const key=s+'-'+(t+1), nx=save.inv[key]||(save.inv[key]={n:0,lv:0});
+  const it=inv(s,t); if(!it||it.n<MERGE||t>=TIERS-1) return false;
+  it.n-=MERGE; const key=s+'-'+(t+1), nx=save.inv[key]||(save.inv[key]={n:0,lv:0});
   if(nx.lv>0) nx.n++; else nx.lv=1;
   return true;
 }
