@@ -248,6 +248,36 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
 .toast{position:absolute;left:50%;top:190px;transform:translateX(-50%);background:rgba(20,15,12,.92);border:2px solid #c89a5a;color:#fff;padding:8px 16px;border-radius:999px;font-size:14px;font-weight:700;pointer-events:none;transition:opacity .3s;z-index:9;white-space:nowrap}
 .ic{background-repeat:no-repeat;background-image:var(--atlas);background-size:800% 1000%}
 
+
+/* ---- 장비 창 압축 (폰에서 보유 장비 목록을 넓게) ---- */
+.panel.full .ptabs{padding:6px 10px 0}
+.panel.full .ptabs button{padding:7px 4px 6px;font-size:14px}
+.panel.full .ghead{padding:5px 12px;font-size:13px}
+.panel.full .ghead .pill{padding:1px 10px 1px 3px;font-size:12px}
+.panel.full .ghead .coin{width:15px;height:15px}.panel.full .ghead .coin::after{inset:5px}
+.panel.full .ghead .gem{width:15px;height:13px}
+.gdet{padding:8px 10px;gap:6px 10px}
+.gdet .gbox{width:64px;height:64px}
+.gdet .cbar{margin-top:4px}
+.ginfo{gap:3px}
+.ginfo h4{font-size:15px}
+.ginfo h4 span{font-size:12px}
+.fxs{padding:2px 7px}
+.fxs h5{font-size:10px}
+.fxr{font-size:11px;line-height:1.35}
+.gbtns .obtn{gap:1px;padding:4px 4px;font-size:13px;white-space:nowrap;min-width:0}
+.gbtns .obtn .cost{font-size:10px;padding:0 6px}
+.gbtns .obtn:not(:has(.cost)){min-height:38px}
+.fxs h5.sep{margin-top:2px;border-top:1px solid #4a3d35;padding-top:1px}
+.slottabs{grid-template-columns:repeat(8,minmax(0,1fr));gap:4px;padding:6px 8px 2px}
+.slottabs button{padding:5px 0;font-size:12px;border-width:1px;border-radius:5px}
+.ggrid{gap:6px 8px}
+.gcard .gname{display:none}
+.gcard .cbar{height:11px;margin-top:3px}
+.pscroll{padding:8px 10px}
+.pfoot{padding:6px 16px 7px}
+.pfoot .obtn{font-size:14px;padding:6px 10px}
+
 @media (max-width:380px){
   .pill{min-width:96px;font-size:13px}
   .xp{width:90px}
@@ -1095,8 +1125,7 @@ function renderGear(){
     <div class="gdet">
       <div>${gbox(s,t,{show:true,eq:isEq})}<div class="cbar${n>=MERGE?' full':''}"><i style="width:${Math.min(100,n/MERGE*100)}%"></i><span class="num">${n}/${MERGE}</span></div></div>
       <div class="ginfo"><h4>${itemName(s,t)}<span class="num">${own?`LV.${lv}/<b>${ITEM_MAX}</b>`:'미보유'}</span></h4>
-        <div class="fxs"><h5>장착효과</h5>${rows(cur,nxt)}</div>
-        <div class="fxs"><h5>보유효과</h5>${rows(oc,on)}</div></div>
+        <div class="fxs"><h5>장착효과</h5>${rows(cur,nxt)}<h5 class="sep">보유효과</h5>${rows(oc,on)}</div></div>
       <div class="gbtns">
         <button class="obtn brown" id="gComb">합성하기<span class="cost">${MERGE}개 → ${t<TIERS-1?`${SETS[setOf(t+1)].n} ${GR[grOf(t+1)]}`:'최고 등급'}</span></button>
         <button class="obtn brown" id="gEq">${isEq?'장착중':'장착하기'}</button>
