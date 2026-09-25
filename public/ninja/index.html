@@ -136,10 +136,12 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 
 /* ---------- HUD ---------- */
 .hud-top{position:absolute;top:0;left:0;right:0;display:grid;grid-template-columns:1fr auto 1fr;align-items:start;padding:12px 16px;gap:8px}
-.hearts{display:flex;gap:4px;flex-wrap:wrap}
-.heart{width:18px;height:18px;background:var(--lacquer);clip-path:path("M9 16.5 1.8 9.4a4.3 4.3 0 0 1 6.1-6.1L9 4.4l1.1-1.1a4.3 4.3 0 0 1 6.1 6.1Z")}
-.heart.off{background:#4a4054}
-.shield{width:18px;height:18px;background:#c9d3e0;clip-path:polygon(50% 0,100% 18%,90% 62%,50% 100%,10% 62%,0 18%)}
+.hearts{display:flex;gap:6px;align-items:center}
+.hpbox{position:relative;width:clamp(110px,30vw,180px);height:18px;border-radius:6px;background:#2a2230;border:1px solid var(--line);overflow:hidden}
+.hpbox i{position:absolute;inset:0;width:100%;background:linear-gradient(180deg,#e2574c,#b52a22);transition:width .2s}
+.hpbox i.lag{background:#f0d9b0;opacity:.55;transition:width .6s .15s}
+.hpbox span{position:absolute;inset:0;display:grid;place-items:center;font-size:11px;font-weight:700;color:#fff;text-shadow:0 1px 1px rgba(0,0,0,.7)}
+.shield{flex:none;width:18px;height:18px;background:#c9d3e0;clip-path:polygon(50% 0,100% 18%,90% 62%,50% 100%,10% 62%,0 18%)}
 .hud-l{display:flex;flex-direction:column;gap:6px;min-width:0}
 .lv{display:flex;align-items:center;gap:8px;background:rgba(20,17,27,.72);border:1px solid var(--line);border-radius:999px;padding:4px 10px 4px 4px;width:max-content;max-width:100%}
 .lv-badge{background:var(--gold);color:#241a08;font-family:var(--display);font-size:14px;border-radius:999px;padding:3px 8px;line-height:1.1;white-space:nowrap}
@@ -151,7 +153,19 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .hud-r{display:flex;justify-content:flex-end;align-items:center;gap:8px}
 .purse.pop{animation:pop .3s}
 @keyframes pop{50%{transform:scale(1.12)}}
-.lobby-lv{display:flex;align-items:center;justify-content:center;gap:8px}
+.lobby-lv{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}
+.spbtn{position:relative;font-size:12px;padding:4px 10px;border-radius:999px;border:1px solid var(--gold);color:var(--gold)}
+.spbtn.has{background:var(--gold);color:#241a08;font-weight:700}
+.stat-rows{display:flex;flex-direction:column;gap:8px;text-align:left}
+.srow{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;background:var(--paper-2);border-radius:10px;padding:8px 10px}
+.srow b{font-size:15px}
+.srow small{display:block;font-size:11px;color:#6a5a44}
+.srow .val{font-family:var(--display);font-size:17px;text-align:right;min-width:72px}
+.srow .val em{font-style:normal;font-size:11px;color:#6a5a44;display:block;font-family:var(--body)}
+.plus{width:38px;height:38px;border-radius:10px;background:var(--lacquer);color:#fff;font-size:20px;line-height:1}
+.plus[disabled]{background:#c9bca0;cursor:not-allowed}
+.sp-left{font-family:var(--display);font-size:20px}
+.sp-left b{color:var(--lacquer)}
 .keyhint{display:none}}
 .keyhint{position:absolute;top:64px;left:16px;right:16px;text-align:center;font-size:12px;color:var(--muted)}
 
@@ -249,7 +263,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
     <div class="hud-top">
       <div class="hud-l">
         <div class="lv"><span class="lv-badge">Lv.<span class="num" id="lvG">1</span></span><div class="xpbar" aria-label="경험치"><i id="xpG"></i></div></div>
-        <div class="hearts" id="hearts"></div>
+        <div class="hearts" id="hearts"><div class="hpbox" role="meter" aria-label="체력"><i class="lag" id="hpLag"></i><i id="hpFill"></i><span class="num" id="hpText">100 / 100</span></div><span id="shieldsG" style="display:flex;gap:4px"></span></div>
       </div>
       <div class="round"><small>ROUND</small><b class="num" id="roundG">1</b></div>
       <div class="hud-r"><div class="purse" id="purseG"><i class="coin"></i><b class="num" id="coinG">0</b></div><button class="iconbtn" id="pauseBtn" aria-label="일시정지">Ⅱ</button></div>
@@ -268,6 +282,19 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
     </div>
   </section>
 
+  <section id="statsM" class="screen modal" hidden>
+    <div class="sheet">
+      <h2>스탯 찍기</h2>
+      <div class="sp-left">남은 포인트 <b class="num" id="spLeft">0</b></div>
+      <div class="stat-rows" id="statRows"></div>
+      <p class="note" style="margin:0">레벨이 오를 때마다 포인트 3개를 받아요. 초기화하면 포인트를 전부 돌려받아요.</p>
+      <div class="actions">
+        <button class="btn btn-paper" id="spReset">초기화</button>
+        <button class="btn btn-primary" id="spDone">완료</button>
+      </div>
+    </div>
+  </section>
+
   <section id="result" class="screen modal" hidden>
     <div class="sheet">
       <div class="newrec" id="newrec" hidden>신기록</div>
@@ -283,6 +310,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
         <button class="btn btn-paper" id="resLobby">로비 · 상점</button>
         <button class="btn btn-primary" id="resAgain">다시 출전</button>
       </div>
+      <button class="btn btn-paper" id="resStats" hidden>스탯 포인트 찍기</button>
     </div>
   </section>
 
@@ -356,14 +384,14 @@ const SETFX=[
 function itemStats(slot,t){return MAIN[slot](t);}
 function setCounts(eq){const c=Array(SETS.length).fill(0);eq.forEach(v=>c[v]++);return c;}
 function calcStats(eq){
-  const s={atk:10+LV_ATK*(save.lv-1),aspd:0,crit:.05,cdmg:1.5,shield:0,multi:1,pierce:0,poison:0,shadow:0,blast:0};
+  const s={hp:100,atk:10,aspd:0,crit:.05,cdmg:1.5,shield:0,multi:1,pierce:0,poison:0,shadow:0,blast:0};
   const add=o=>{for(const k in o){if(k==='multi') s.multi=Math.max(s.multi,o[k]); else s[k]+=o[k];}};
   eq.forEach((t,slot)=>{add(itemStats(slot,t)); if(TRAIT[t]) add(TRAIT[t]);});
+  for(const a of ALLOC) s[a.k]+=(save.alloc[a.k]||0)*a.per; // 직접 찍은 스탯
   const counts=setCounts(eq), active=[];
   counts.forEach((n,set)=>SETFX[set].forEach(([need,txt,fx])=>{if(n>=need){add(fx);active.push({set,need,txt});}}));
   s.crit=Math.min(1,s.crit);
   s.aps=BASE_APS*(1+s.aspd); // 초당 공격 횟수
-  s.hp=3; // 체력은 장비와 상관없이 3칸
   s.full=counts.findIndex((n,i)=>i>0&&n===8); // 8부위 세트면 오라
   s.active=active; s.counts=counts;
   return s;
@@ -371,11 +399,21 @@ function calcStats(eq){
 
 /* ================= SAVE ================= */
 const SKEY='shadow-shuriken-v1';
-const save={coins:300,best:0,bestRound:0,lv:1,xp:0,g:'f',mute:false,owned:{f:{},m:{}},eq:{f:[0,0,0,0,0,0,0,0],m:[0,0,0,0,0,0,0,0]}};
+const save={coins:300,best:0,bestRound:0,lv:1,xp:0,alloc:{},g:'f',mute:false,owned:{f:{},m:{}},eq:{f:[0,0,0,0,0,0,0,0],m:[0,0,0,0,0,0,0,0]}};
 try{const s=JSON.parse(localStorage.getItem(SKEY)||'null');if(s&&typeof s==='object'){Object.assign(save,s);}}catch(e){}
 function persist(){try{localStorage.setItem(SKEY,JSON.stringify(save))}catch(e){}}
 /* ---- 레벨: 적을 쓰러뜨려 경험치를 모으면 오르고, 레벨마다 공격력 +2 ---- */
-const LV_ATK=2;
+const SP_PER_LV=3;
+// 스탯 포인트 1개당 오르는 값
+const ALLOC=[
+  {k:'hp',n:'체력',per:20,show:v=>`+${v}`,unit:'HP'},
+  {k:'atk',n:'공격력',per:2,show:v=>`+${v}`},
+  {k:'aspd',n:'공격 속도',per:.02,show:v=>`+${pct1(v)}%`},
+  {k:'crit',n:'크리티컬',per:.005,show:v=>`+${pct1(v)}%`},
+  {k:'cdmg',n:'크리티컬 데미지',per:.05,show:v=>`+${pct1(v)}%`}
+];
+const spent=()=>ALLOC.reduce((a,x)=>a+(save.alloc[x.k]||0),0);
+const spLeft=()=>Math.max(0,SP_PER_LV*(save.lv-1)-spent());
 const xpNeed=lv=>40+lv*25;
 function gainXp(n){
   save.xp+=n; let ups=0;
@@ -592,7 +630,8 @@ function renderLobby(){
   const g=save.g, eq=save.eq[g], st=calcStats(eq);
   $('pickF').setAttribute('aria-pressed',g==='f'); $('pickM').setAttribute('aria-pressed',g==='m');
   $('coinL').textContent=save.coins.toLocaleString();
-  $('bestL').innerHTML=`<div class="lobby-lv"><span class="lv-badge">Lv.<span class="num">${save.lv}</span></span><span class="xpbar"><i style="width:${Math.round(save.xp/xpNeed(save.lv)*100)}%"></i></span><span class="num">${save.xp}/${xpNeed(save.lv)}</span>${save.bestRound?`<span>· 최고 <b class="num">${save.bestRound}</b>라운드</span>`:''}</div>`;
+  $('bestL').innerHTML=`<div class="lobby-lv"><span class="lv-badge">Lv.<span class="num">${save.lv}</span></span><span class="xpbar"><i style="width:${Math.round(save.xp/xpNeed(save.lv)*100)}%"></i></span><span class="num">${save.xp}/${xpNeed(save.lv)}</span>${save.bestRound?`<span>· 최고 <b class="num">${save.bestRound}</b>라운드</span>`:''}<button class="spbtn${spLeft()?' has':''}" id="spOpen">스탯 찍기${spLeft()?` ${spLeft()}`:''}</button></div>`;
+  $('spOpen').onclick=()=>{SFX.tap();openStats();};
   const sl=$('slotsL'); sl.innerHTML='';
   SLOTS.forEach((s,i)=>{
     const b=document.createElement('button'); b.className='slot'; b.style.setProperty('--rc',RARITY[SETS[eq[i]].r].c);
@@ -609,9 +648,8 @@ function renderLobby(){
 }
 const pct=v=>Math.round(v*100);
 function statSummary(st){
-  return [['공격력',st.atk],['공격 속도',`초당 ${st.aps.toFixed(2)}회`],['크리티컬',pct1(st.crit)+'%'],['크리티컬 데미지',pct1(st.cdmg)+'%']]
-    .map(([k,v])=>`<span>${k} <b class="num">${v}</b></span>`).join('')
-    +(save.lv>1?`<span>레벨 보너스 <b class="num">공격력 +${LV_ATK*(save.lv-1)}</b></span>`:'');
+  return [['체력',Math.round(st.hp)],['공격력',st.atk],['공격 속도',`초당 ${st.aps.toFixed(2)}회`],['크리티컬',pct1(st.crit)+'%'],['크리티컬 데미지',pct1(st.cdmg)+'%']]
+    .map(([k,v])=>`<span>${k} <b class="num">${v}</b></span>`).join('');
 }
 // 두 장비 조합의 능력치 차이를 "공격력 10 → 20" 형태로
 function statDiff(a,b){
@@ -619,6 +657,17 @@ function statDiff(a,b){
   const out=[];
   for(const [k,n,f] of rows){if(Math.abs(a[k]-b[k])>1e-6){const up=b[k]>a[k];out.push(`<span class="${up?'up':'down'}">${n} ${f(a[k])} → ${f(b[k])}</span>`);}}
   return out.join('');
+}
+function openStats(){$('statsM').hidden=false;renderStats();}
+function renderStats(){
+  const left=spLeft(), st=calcStats(save.eq[save.g]);
+  $('spLeft').textContent=left;
+  const total={hp:Math.round(st.hp),atk:st.atk,aspd:`초당 ${st.aps.toFixed(2)}회`,crit:pct1(st.crit)+'%',cdmg:pct1(st.cdmg)+'%'};
+  $('statRows').innerHTML=ALLOC.map(a=>{const n=save.alloc[a.k]||0;
+    return `<div class="srow"><div><b>${a.n}</b><small>1포인트당 ${a.show(a.per)}${a.unit?' '+a.unit:''} · ${n}포인트 찍음</small></div>
+      <div class="val num">${total[a.k]}<em>${n?a.show(+(n*a.per).toFixed(4)):'—'}</em></div>
+      <button class="plus" data-k="${a.k}" ${left?'':'disabled'} aria-label="${a.n} 올리기">+</button></div>`;}).join('');
+  $('statRows').querySelectorAll('.plus').forEach(b=>b.onclick=()=>{if(!spLeft())return;save.alloc[b.dataset.k]=(save.alloc[b.dataset.k]||0)+1;persist();SFX.equip();renderStats();renderLobby();});
 }
 function show(id){for(const s of ['lobby','shop','hud','pause','result']) $(s).hidden=(s!==id&&!(id==='pause'&&s==='hud')&&!(id==='result'&&s==='hud'));}
 function goLobby(){mode='lobby';show('lobby');lobbyAnim.a='idle';renderLobby();}
@@ -771,8 +820,11 @@ function renderTopHud(){
   $('lvG').textContent=save.lv; $('xpG').style.width=Math.min(100,save.xp/xpNeed(save.lv)*100)+'%';
   $('coinG').textContent=save.coins.toLocaleString(); $('roundG').textContent=G.wave||1;
 }
-function renderHearts(){const h=$('hearts');h.innerHTML='';for(let i=0;i<G.st.hp;i++){const s=document.createElement('i');s.className='heart'+(i<G.hp?'':' off');h.appendChild(s);}
-  for(let i=0;i<G.shield;i++){const s=document.createElement('i');s.className='shield';s.title='보호막';h.appendChild(s);}}
+function renderHearts(){
+  const max=Math.round(G.st.hp), w=Math.max(0,G.hp/max*100)+'%';
+  $('hpFill').style.width=w; $('hpLag').style.width=w; $('hpText').textContent=`${Math.ceil(G.hp)} / ${max}`;
+  const sh=$('shieldsG'); sh.innerHTML=''; for(let i=0;i<G.shield;i++){const s=document.createElement('i');s.className='shield';s.title='보호막';sh.appendChild(s);}
+}
 function nextWave(){
   G.wave++; G.shield=G.st.shield; if(G.hp) renderHearts(); G.waveLeft=4+G.wave*2; G.boss=G.wave%3===0; G.spawnT=.6;
   G.banner={txt:G.boss?`${G.wave}라운드 · 두목 출현`:`${G.wave}라운드`,t:0};
@@ -837,8 +889,10 @@ function damageEnemy(e,dmg,opt={}){
   else {e.state='flinch';e.t=0; if(G.st.poison&&!opt.poison) e.poisonT=1;}
 }
 function playerText(txt,col,size){const A=arena();floatText(A.px,A.py-A.ph*1.05,txt,col,size);}
-function dodgeOrHurt(dmg=1){hurtPlayer(dmg);}
-function hurtPlayer(dmg=1){
+// 적 공격력: 라운드가 오를수록 세진다
+const enemyDmg=base=>Math.round(base*(1+.15*(G.wave-1)));
+function dodgeOrHurt(dmg){hurtPlayer(dmg);}
+function hurtPlayer(dmg){
   if(G.inv>0||G.dead) return;
   if(G.shield>0){G.shield--;G.inv=.5;renderHearts();SFX.dodge();playerText('막음!','#c9d3e0',22);return;}
   G.hp=Math.max(0,G.hp-dmg); G.inv=1; G.shake=.35; G.flash=.35; G.combo=0; renderHearts(); SFX.hurt();
@@ -855,14 +909,14 @@ function killEnemy(e,chain){
   const ups=gainXp(xp); persist();
   const r=enemyRect(e); floatText(r.x,r.y-r.h*1.3,'+'+coin+' 엽전','#e6b450',e.type==='boss'?24:15);
   const pu=$('purseG'); pu.classList.remove('pop'); void pu.offsetWidth; pu.classList.add('pop');
-  if(ups){G.st=calcStats(G.eq); G.banner={txt:`레벨 업! Lv.${save.lv} · 공격력 +${LV_ATK*ups}`,t:0}; SFX.buy();}
+  if(ups){G.banner={txt:`레벨 업! Lv.${save.lv} · 스탯 포인트 +${SP_PER_LV*ups}`,t:0}; SFX.buy();}
   renderTopHud();
   puff(r.x,r.cy,r.h*.55,'#b9aec9'); // 연막을 남기고 사라진다
   if(G.st.blast&&!chain){ // 폭염: 주변 적에게 1 피해
     puff(r.x,r.cy,r.h*.9,'#ff8a3a'); G.shake=Math.max(G.shake,.15);
     for(const o of G.enemies){if(o===e||o.state==='die')continue; const q=enemyRect(o); if(Math.hypot(q.x-r.x,q.cy-r.cy)<r.h*1.3) damageEnemy(o,Math.round(G.st.atk*.6),{fixed:true,chain:true,col:'#ff8a3a'});}
   }
-  if(e.type==='boss'&&G.hp<G.st.hp){G.hp++;renderHearts();playerText('체력 +1','#7fdc8a',20);}
+  if(e.type==='boss'&&G.hp<G.st.hp){const h=Math.round(G.st.hp*.3);G.hp=Math.min(G.st.hp,G.hp+h);renderHearts();playerText('체력 +'+h,'#7fdc8a',20);}
   SFX.kill();
 }
 function update(dt){
@@ -897,7 +951,7 @@ function update(dt){
     if(e.state==='live') e.p=Math.min(e.stopAt,e.p+e.speed*dt);
     if(e.p>=1){ // 캐릭터 앞까지 내려와 베고 연막으로 사라짐
       const r=enemyRect(e); e.state='die'; e.t=0; e.struck=true; puff(r.x,r.cy,r.h*.5,'#6b5a7a');
-      G.shake=Math.max(G.shake,.2); dodgeOrHurt(1); continue;
+      G.shake=Math.max(G.shake,.2); dodgeOrHurt(enemyDmg(e.type==='boss'?40:e.type==='elite'?25:18)); continue;
     }
     if(targetable(e)){
       e.fireT-=dt;
@@ -905,7 +959,7 @@ function update(dt){
       if(e.fireT<=0){
         e.warn=0; e.fireT=(e.type==='boss'?1.5:3.2)*rnd(.8,1.25)*Math.max(.6,1-G.wave*.03);
         const n=e.type==='boss'?(G.wave>=6?3:2):1, r=enemyRect(e);
-        for(let k=0;k<n;k++) G.shots.push({x0:r.x,y0:r.cy,t:-k*.18,dur:Math.max(.55,.95-G.wave*.03),spin:rnd(0,6),done:false});
+        for(let k=0;k<n;k++) G.shots.push({dmg:enemyDmg(e.type==='boss'?15:10),x0:r.x,y0:r.cy,t:-k*.18,dur:Math.max(.55,.95-G.wave*.03),spin:rnd(0,6),done:false});
         SFX.enemy();
       }
     }
@@ -934,7 +988,7 @@ function update(dt){
   // 적 수리검: 캐릭터를 향해 날아온다
   for(const s of G.shots){
     s.t+=dt;
-    if(!s.done&&s.t>=s.dur){s.done=true;s.gone=true;dodgeOrHurt(1);}
+    if(!s.done&&s.t>=s.dur){s.done=true;s.gone=true;dodgeOrHurt(s.dmg);}
   }
   G.shots=G.shots.filter(s=>!s.gone);
   // 이펙트
@@ -1039,6 +1093,7 @@ function endGame(){
   const rec=G.wave>save.bestRound; if(rec) save.bestRound=G.wave; persist();
   $('rWave').textContent=G.wave; $('rKills').textContent=G.kills; $('rCombo').textContent=G.maxCombo;
   $('rLv').textContent=save.lv>G.lv0?`${G.lv0} → ${save.lv}`:save.lv;
+  $('resStats').hidden=!spLeft(); $('resStats').textContent=`스탯 포인트 찍기 (${spLeft()})`;
   $('rCoins').textContent='+'+G.coinsRun.toLocaleString(); $('rXp').textContent='+'+G.xpRun.toLocaleString(); $('newrec').hidden=!rec;
   $('resTitle').textContent=G.dead?'연막 속으로 퇴각!':'오늘은 여기까지';
   show('result'); SFX.coin();
@@ -1059,6 +1114,9 @@ $('pauseBtn').onclick=pause; $('resumeBtn').onclick=resume;
 $('quitBtn').onclick=()=>{G.dead=false;endGame();};
 $('resAgain').onclick=()=>{SFX.tap();newGame();};
 $('resLobby').onclick=()=>{SFX.tap();goLobby();};
+$('resStats').onclick=()=>{SFX.tap();goLobby();openStats();};
+$('spDone').onclick=()=>{SFX.tap();$('statsM').hidden=true;renderLobby();};
+$('spReset').onclick=()=>{save.alloc={};persist();SFX.tap();renderStats();renderLobby();};
 $('toGame').onclick=()=>{ac();SFX.tap();newGame();};
 $('toShop').onclick=()=>{ac();SFX.tap();openShop(1,0);};
 $('shopBack').onclick=()=>{SFX.tap();goLobby();};
