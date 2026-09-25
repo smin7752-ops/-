@@ -807,6 +807,7 @@ function damageEnemy(e,dmg,opt={}){
   if(e.hp<=0) killEnemy(e,opt.chain);
   else {e.state='flinch';e.t=0; if(G.st.poison&&!opt.poison) e.poisonT=1;}
 }
+function playerText(txt,col,size){const A=arena();floatText(A.px,A.py-A.ph*1.05,txt,col,size);}
 function dodgeOrHurt(dmg=1){hurtPlayer(dmg);}
 function hurtPlayer(dmg=1){
   if(G.inv>0||G.dead) return;
@@ -1035,12 +1036,14 @@ addEventListener('resize',()=>{resize();});
 /* ================= LOOP ================= */
 let last=performance.now();
 function frame(now){
+  requestAnimationFrame(frame); // 한 프레임에서 오류가 나도 다음 프레임은 계속 돈다
   const dt=Math.min(.05,(now-last)/1000); last=now; T+=dt;
-  if(mode==='game') update(dt);
-  else if((mode==='result')&&G){G.deathT+=dt; for(const e of G.enemies){e.at+=dt;} }
-  render(dt);
-  if(mode==='shop') drawShopPreview(dt);
-  requestAnimationFrame(frame);
+  try{
+    if(mode==='game') update(dt);
+    else if((mode==='result')&&G){G.deathT+=dt; for(const e of G.enemies){e.at+=dt;} }
+    render(dt);
+    if(mode==='shop') drawShopPreview(dt);
+  }catch(err){console.error(err);}
 }
 
 /* ================= BOOT ================= */
