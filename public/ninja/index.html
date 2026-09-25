@@ -107,7 +107,8 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
 .seg{display:grid;gap:6px;padding:10px 10px 0;flex:none}
 .seg button{padding:7px 0;border-radius:8px;background:#3a2d26;border:2px solid var(--edge);color:#e8d9c0;font-family:var(--display);font-size:14px}
 .seg button.on{background:linear-gradient(180deg,#8a6b4d,#6a5040);color:#fff;border-color:#b08a60}
-.pfoot{flex:none;display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:8px 10px 10px;border-top:2px solid var(--edge);background:var(--pan-3)}
+.pfoot{flex:none;display:flex;justify-content:space-between;gap:12px;padding:8px 16px 10px;border-top:2px solid var(--edge);background:var(--pan-3)}
+.pfoot .obtn{flex:0 1 150px;font-size:15px;padding:8px 10px}
 
 /* 버튼 */
 .obtn{background:linear-gradient(180deg,var(--orange-hi),var(--orange));border:2px solid var(--orange-d);border-radius:8px;color:#fff;font-family:var(--display);font-size:14px;padding:5px 8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;box-shadow:0 2px 0 #8a4a0c;text-shadow:0 1px 0 rgba(0,0,0,.3)}
@@ -170,10 +171,9 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
 .fxr{display:flex;justify-content:space-between;gap:8px;font-size:12px}
 .fxr em{font-style:normal;color:#ffb04a}
 .gbtns{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
-.slottabs{flex:none;display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:4px;padding:8px 10px 0}
-.slottabs button{display:flex;flex-direction:column;align-items:center;gap:1px;padding:4px 0 3px;border-radius:8px;background:#3a2d26;border:2px solid var(--edge);font-size:10px;font-weight:700;color:#d9c3a0;min-width:0}
-.slottabs button .ic{width:26px;height:26px;display:block}
-.slottabs button.on{background:linear-gradient(180deg,#8a6b4d,#6a5040);border-color:#b08a60;color:#fff}
+.slottabs{flex:none;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;padding:10px 10px 2px}
+.slottabs button{padding:6px 0;border-radius:6px;background:#3a2d26;border:2px solid var(--edge);font-family:var(--display);font-size:14px;color:#cdb89c;min-width:0;white-space:nowrap}
+.slottabs button.on{background:linear-gradient(180deg,#9a7858,#6a5040);border-color:#c8a070;color:#fff;text-shadow:0 1px 0 rgba(0,0,0,.4)}
 .ggrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
 @media (min-width:560px){.ggrid{grid-template-columns:repeat(5,minmax(0,1fr))}}
 .gcard{display:flex;flex-direction:column;min-width:0}
@@ -281,6 +281,7 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
 
     <section class="panel pe" id="panel" hidden>
       <div class="ptabs" id="ptabs"></div>
+      <div class="ghead"><span id="phTitle"></span><span style="display:flex;gap:6px"><span class="pill"><i class="coin"></i><b class="num" id="phGold">0</b></span><span class="pill"><i class="gem"></i><b class="num" id="phGem">0</b></span></span></div>
       <div class="pbody" id="pbody"></div>
     </section>
 
@@ -492,7 +493,7 @@ const L={view:600,hudB:150,navTop:600};
 function layout(){
   const ar=$('app').getBoundingClientRect();
   L.navTop=($('nav').getBoundingClientRect().top-ar.top)||H-64;
-  L.view=panel&&panel!=='gear'?$('panel').getBoundingClientRect().top-ar.top:L.navTop; // 전체 화면 창 뒤에서도 전투는 원래 크기로
+  L.view=L.navTop; // 전체 화면 창 뒤에서도 전투는 원래 크기로
   L.hudB=$('stagebox').getBoundingClientRect().bottom-ar.top;
   $('feed').style.bottom=(H-L.view+14)+'px';
 }
@@ -955,6 +956,8 @@ function updateTop(){
   $('cpG').textContent=fmtKo(st.cp); $('rankG').textContent=RANKS[save.rank].n;
   $('goldG').textContent=fmtKo(save.gold); $('gemG').textContent=fmtKo(save.gems);
   $('stageG').textContent=save.stage;
+  $('phGold').textContent=fmtKo(save.gold); $('phGem').textContent=fmtKo(save.gems);
+  $('phTitle').innerHTML=panel==='gear'?`보유 장비 <span class="num">${Object.values(save.inv).filter(x=>x.lv>0).length}</span> / 80`:panel==='grow'?`LV.${save.lv} · 전투력 <span class="num">${fmtKo(st.cp)}</span>`:panel==='rank'?`현재 계급 · ${RANKS[save.rank].n}`:panel==='summon'?`총 소환 <span class="num">${save.pulls.toLocaleString()}</span>회`:'';
   const bar=$('stbar');
   if(G&&G.boss){bar.classList.add('boss'); updateBossBar();}
   bar.hidden=!(G&&G.boss);
@@ -990,11 +993,11 @@ function setMid(){
 function openPanel(p){
   panel=panel===p?null:p;
   document.querySelectorAll('#nav [data-p]').forEach(b=>b.classList.toggle('on',b.dataset.p===panel));
-  setMid(); $('panel').hidden=!panel; $('panel').classList.toggle('full',panel==='gear');
+  setMid(); $('panel').hidden=!panel; $('panel').classList.toggle('full',!!panel);
   if(panel){if(panel==='gear'){view.sel=save.eq[view.slot];} renderPanel();}
   requestAnimationFrame(layout);
 }
-function renderPanel(){({grow:renderGrow,gear:renderGear,rank:renderRank,summon:renderSummon})[panel]();}
+function renderPanel(){({grow:renderGrow,gear:renderGear,rank:renderRank,summon:renderSummon})[panel](); updateTop();}
 function tabs(list,cur,fn){
   $('ptabs').innerHTML=list.map(([k,n,dot])=>`<button data-k="${k}" class="${k===cur?'on':''}">${n}${dot?'<span class="dot" style="right:6px;top:-4px">!</span>':''}</button>`).join('');
   $('ptabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{SFX.tap();fn(b.dataset.k);});
@@ -1059,7 +1062,6 @@ function renderGear(){
   const rows=(a,b)=>Object.keys(a).map(k=>`<div class="fxr"><span>${FXN[k]} 증가</span><span class="num">${fmtPct(a[k])}${own&&lv<ITEM_MAX?` › <em>${fmtPct(b[k])}</em>`:''}</span></div>`).join('');
   const cnt=k=>{const x=inv(s,k);return x?x.n:0;};
   $('pbody').innerHTML=`
-    <div class="ghead"><span>보유 장비 <span class="num">${Object.values(save.inv).filter(x=>x.lv>0).length}</span> / 80</span><span style="display:flex;gap:6px"><span class="pill"><i class="coin"></i><b class="num">${fmtKo(save.gold)}</b></span><span class="pill"><i class="gem"></i><b class="num">${fmtKo(save.gems)}</b></span></span></div>
     <div class="gdet">
       <div>${gbox(s,t,{show:true,eq:isEq})}<div class="cbar${n>=5?' full':''}"><i style="width:${Math.min(100,n/5*100)}%"></i><span class="num">${n}/5</span></div></div>
       <div class="ginfo"><h4>${itemName(s,t)}<span class="num">${own?`LV.${lv}/<b>${ITEM_MAX}</b>`:'미보유'}</span></h4>
@@ -1071,7 +1073,7 @@ function renderGear(){
         <button class="obtn" id="gEnh"></button>
       </div>
     </div>
-    <div class="slottabs">${SLOTS.map((_,i)=>`<button data-sl="${i}" class="${i===s?'on':''}">${iconEl(i,save.eq[i])}${slotName(i)}</button>`).join('')}</div>
+    <div class="slottabs">${SLOTS.map((_,i)=>`<button data-sl="${i}" class="${i===s?'on':''}">${slotName(i)}</button>`).join('')}</div>
     <div class="pscroll"><div class="ggrid">${SETS.map((S,k)=>`<button class="gcard${k===t?' sel':''}" data-t="${k}">${gbox(s,k,{eq:save.eq[s]===k})}<div class="cbar${cnt(k)>=5?' full':''}"><i style="width:${Math.min(100,cnt(k)/5*100)}%"></i><span class="num">${cnt(k)}/5</span></div><div class="gname">${S.n}</div></button>`).join('')}</div>
       <p class="note" style="margin-top:10px">같은 장비 5개를 모으면 다음 등급 1개로 합성돼요. 장비는 소환에서 얻어요.</p></div>
     <div class="pfoot"><button class="obtn green big" id="gAllComb">일괄합성</button><button class="obtn big" id="gAuto">자동 장착</button></div>`;
