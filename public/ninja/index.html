@@ -72,7 +72,6 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .hint{font-size:12px;color:var(--muted);text-align:center}
 .best{position:absolute;top:118px;left:0;right:0;text-align:center;font-size:13px;color:var(--muted)}
 .best b{color:var(--gold)}
-.set-bonus{font-size:12px;color:var(--gold);text-align:center}
 
 /* ---------- icons from atlas ---------- */
 .ic{background-repeat:no-repeat;background-image:var(--atlas);background-size:800% 1000%}
@@ -116,12 +115,28 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .detail .row{grid-column:1/-1;display:flex;gap:8px}
 .detail .row .btn{flex:1;font-size:17px;padding:12px}
 .note{font-size:12px;color:var(--muted);line-height:1.5}
+.detail .lines{grid-column:1/-1;display:flex;flex-direction:column;gap:6px;font-size:13px}
+.detail .lines>div{display:flex;gap:10px;align-items:baseline}
+.detail .lbl{flex:none;width:68px;font-size:12px;color:var(--muted)}
+.detail .diff>div{display:flex;flex-wrap:wrap;gap:4px 12px}
+.detail .up{color:#8fdc8a}.detail .down{color:#ff8a7a}
+.setfx{background:var(--night-2);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.setfx h5{margin:0;font-size:14px;font-weight:700;display:flex;justify-content:space-between;gap:10px}
+.setfx h5 .num{color:var(--muted);font-weight:400;font-size:13px}
+.fx{display:flex;gap:10px;align-items:center;font-size:13px;color:var(--muted)}
+.fx .need{flex:none;min-width:48px;text-align:center;padding:2px 6px;border-radius:999px;border:1px solid var(--line);font-size:12px}
+.fx.on{color:var(--text)}
+.fx.on .need{background:var(--rc);border-color:var(--rc);color:#16121c;font-weight:700}
+.fx.pre .need{border-color:var(--rc);color:var(--rc)}
+.set-bonus{display:flex;flex-wrap:wrap;justify-content:center;gap:6px}
+.fxchip{font-size:12px;padding:3px 10px;border-radius:999px;border:1px solid var(--rc);color:var(--text)}
 
 /* ---------- HUD ---------- */
 .hud-top{position:absolute;top:0;left:0;right:0;display:grid;grid-template-columns:1fr auto 1fr;align-items:start;padding:12px 16px;gap:8px}
 .hearts{display:flex;gap:4px;flex-wrap:wrap}
 .heart{width:18px;height:18px;background:var(--lacquer);clip-path:path("M9 16.5 1.8 9.4a4.3 4.3 0 0 1 6.1-6.1L9 4.4l1.1-1.1a4.3 4.3 0 0 1 6.1 6.1Z")}
 .heart.off{background:#4a4054}
+.shield{width:18px;height:18px;background:#c9d3e0;clip-path:polygon(50% 0,100% 18%,90% 62%,50% 100%,10% 62%,0 18%)}
 .score{text-align:center;font-family:var(--display);font-size:28px;line-height:1;text-shadow:0 2px 0 rgba(0,0,0,.4)}
 .score small{display:block;font-family:var(--body);font-size:12px;color:var(--muted);margin-top:4px;letter-spacing:.1em}
 .hud-r{display:flex;justify-content:flex-end}
@@ -214,7 +229,8 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
         <div class="set-title" id="setTitle"></div>
         <div class="items" id="items"></div>
         <div class="detail" id="detail"></div>
-        <p class="note">두건·목도리·상의·장갑·하의·신발·허리띠는 캐릭터 옷 색으로 바로 보이고, 쿠나이는 전투에서 던지는 무기 모양이 바뀌어요. 8부위를 같은 세트로 맞추면 세트 효과(엽전 +20%, 오라)가 켜져요.</p>
+        <div class="setfx" id="setfx"></div>
+        <p class="note">두건·목도리·상의·장갑·하의·신발·허리띠는 캐릭터 옷 색으로 바로 보이고, 쿠나이는 전투에서 던지는 무기 모양이 바뀌어요. 같은 세트를 2·4·8부위 입으면 세트 효과가 차례로 켜지고, 8부위를 다 맞추면 오라가 생겨요. 여러 세트를 섞으면 세트마다 따로 계산돼요.</p>
       </div>
     </div>
   </section>
@@ -268,7 +284,8 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 'use strict';
 /* ================= DATA ================= */
 const META={"f":{"idle":{"w":142,"h":211,"n":8,"ax":71,"ay":205},"walk":{"w":136,"h":215,"n":8,"ax":68,"ay":209},"throw":{"w":156,"h":212,"n":7,"ax":78,"ay":206},"crouch":{"w":190,"h":211,"n":8,"ax":95,"ay":205},"hit":{"w":196,"h":212,"n":8,"ax":98,"ay":206},"rear":{"w":142,"h":211,"n":8,"ax":71,"ay":205}},"m":{"idle":{"w":160,"h":212,"n":8,"ax":80,"ay":206},"walk":{"w":156,"h":220,"n":8,"ax":78,"ay":214},"throw":{"w":186,"h":212,"n":8,"ax":93,"ay":206},"crouch":{"w":188,"h":215,"n":8,"ax":94,"ay":209},"hit":{"w":210,"h":211,"n":8,"ax":105,"ay":205},"rear":{"w":154,"h":216,"n":8,"ax":77,"ay":210}}};
-const ANIMS=['idle','throw','crouch','hit','rear'];
+// 정면 피격(crouch)·사망(hit) 시트는 assets/reserve/ 에 보관만 하고 불러오지 않는다
+const ANIMS=['idle','throw','rear'];
 const SPRITE_H=200; // 원본 시트에서 서 있는 키(px)
 const ASSET='assets/';
 
@@ -294,26 +311,49 @@ const PRICE=[0,120,260,420,700,1000,1400,2000,2800,4000];
 const priceOf=(slot,set)=>Math.round(PRICE[set]*(slot===7?1.5:slot===2?1.2:1)/10)*10;
 const slotName=(slot,g)=>{const n=SLOTS[slot].n;return typeof n==='string'?n:n[g]};
 const itemName=(slot,set,g)=>`${SETS[set].n} ${slotName(slot,g)}`;
-function statText(slot,t){
-  if(t===0&&slot!==2&&slot!==7) return '기본 장비';
-  switch(slot){
-    case 0:return `연속 유지 시간 +${(0.15*t).toFixed(2)}초`;
-    case 1:return `엽전 +${5*t}%`;
-    case 2:return `체력 ${3+Math.floor(t/3)}칸`;
-    case 3:return `던지기 속도 +${7*t}%`;
-    case 4:return `이동 속도 +${6*t}%`;
-    case 5:return `수리검 회피 확률 ${3*t}%`;
-    case 6:return `점수 +${5*t}%`;
-    case 7:return `공격력 ${1+Math.floor(t/3)} · 쿠나이 속도 +${5*t}%${t>=7?' · 관통':''}`;
-  }
-}
+/* ---- 능력치 ---- */
+const STAT_LABEL={hp:['체력','칸'],atk:['공격력',''],crit:['치명타','%'],rate:['던지기 속도','%'],move:['이동 속도','%'],dodge:['회피','%'],combo:['연속 유지','초'],inv:['피격 후 무적','초'],kspeed:['쿠나이 속도','%'],score:['점수','%'],coin:['엽전','%']};
+const fmtStat=(k,v)=>{const [n,u]=STAT_LABEL[k];return u==='%'?`${n} +${Math.round(v*100)}%`:u==='초'?`${n} +${+v.toFixed(2)}초`:`${n} +${v}${u}`;};
+const fmtStats=o=>Object.keys(o).filter(k=>o[k]&&STAT_LABEL[k]).map(k=>fmtStat(k,o[k]));
+// 부위마다 고유 능력치 (t = 세트 단계 0~9, 높을수록 강함)
+const MAIN=[
+  t=>({combo:.15*t}),                                          // 두건
+  t=>({coin:.05*t}),                                           // 목도리
+  t=>({hp:Math.floor((t+1)/3),inv:.05*t}),                     // 상의
+  t=>({rate:.07*t}),                                           // 장갑
+  t=>({move:.06*t}),                                           // 치마·바지
+  t=>({dodge:.03*t}),                                          // 신발
+  t=>({score:.05*t}),                                          // 허리띠
+  t=>({atk:Math.floor((t+1)/3),kspeed:.05*t,crit:.01*t})       // 쿠나이
+];
+// 세트 특성: 같은 세트 장비라면 부위와 상관없이 하나씩 더 붙는 능력치
+const TRAIT=[null,{crit:.02},{move:.03},{inv:.1},{kspeed:.04},{crit:.03},{dodge:.02},{rate:.04},{score:.04},{coin:.05,crit:.02}];
+// 세트 효과: 같은 세트를 2 / 4 / 8부위 입으면 켜진다 (여러 세트를 섞으면 각각 따로 계산)
+const SETFX=[
+  [],
+  [[2,'체력 +1',{hp:1}],[4,'피격 후 무적 +0.3초',{inv:.3}],[8,'철벽: 습격마다 수리검 1번 막는 보호막',{shield:1}]],
+  [[2,'이동 속도 +10%',{move:.1}],[4,'회피 +5%',{dodge:.05}],[8,'질주: 이동 속도 +25% · 회피 +10%',{move:.25,dodge:.1}]],
+  [[2,'공격력 +1',{atk:1}],[4,'체력 +1',{hp:1}],[8,'관통: 쿠나이가 적을 뚫고 날아감',{pierce:1}]],
+  [[2,'쿠나이 속도 +15%',{kspeed:.15}],[4,'던지기 속도 +10%',{rate:.1}],[8,'쌍투: 쿠나이 2개 동시 투척',{multi:2}]],
+  [[2,'치명타 +8%',{crit:.08}],[4,'치명타 피해 2배 → 3배',{critMul:1}],[8,'맹독: 맞은 적이 1초 뒤 한 번 더 피해',{poison:1}]],
+  [[2,'회피 +8%',{dodge:.08}],[4,'연속 유지 +1초',{combo:1}],[8,'분신: 피하면 그림자가 대신 반격',{shadow:1}]],
+  [[2,'공격력 +1',{atk:1}],[4,'던지기 속도 +15%',{rate:.15}],[8,'폭염: 적을 쓰러뜨리면 주변이 폭발',{blast:1}]],
+  [[2,'점수 +15%',{score:.15}],[4,'엽전 +15%',{coin:.15}],[8,'명성: 10연속부터 점수 2배',{comboDouble:1}]],
+  [[2,'치명타 +5% · 회피 +5%',{crit:.05,dodge:.05}],[4,'체력 +1 · 공격력 +1',{hp:1,atk:1}],[8,'삼연투: 쿠나이 3개 · 엽전 +30%',{multi:3,coin:.3}]]
+];
+function itemStats(slot,t){return MAIN[slot](t);}
+function setCounts(eq){const c=Array(SETS.length).fill(0);eq.forEach(v=>c[v]++);return c;}
 function calcStats(eq){
-  const full=eq.every(v=>v===eq[0])&&eq[0]>0?eq[0]:-1;
-  return {
-    comboWin:2+.15*eq[0], coin:.05*eq[1]+(full>=0?.2:0), hp:3+Math.floor(eq[2]/3),
-    rate:1+.07*eq[3], move:1+.06*eq[4], dodge:.03*eq[5], score:.05*eq[6],
-    dmg:1+Math.floor(eq[7]/3), kspeed:1+.05*eq[7], pierce:eq[7]>=7, full
-  };
+  const s={hp:3,atk:1,crit:.05,critMul:2,rate:0,move:0,dodge:0,combo:2,inv:1,kspeed:0,score:0,coin:0,shield:0,multi:1,pierce:0,poison:0,shadow:0,blast:0,comboDouble:0};
+  const add=o=>{for(const k in o){if(k==='multi') s.multi=Math.max(s.multi,o[k]); else s[k]+=o[k];}};
+  eq.forEach((t,slot)=>{add(itemStats(slot,t)); if(TRAIT[t]) add(TRAIT[t]);});
+  const counts=setCounts(eq), active=[];
+  counts.forEach((n,set)=>SETFX[set].forEach(([need,txt,fx])=>{if(n>=need){add(fx);active.push({set,need,txt});}}));
+  s.dodge=Math.min(.6,s.dodge); s.crit=Math.min(.8,s.crit);
+  s.rate+=1; s.move+=1; s.kspeed+=1; s.dmg=s.atk; s.comboWin=s.combo;
+  s.full=counts.findIndex((n,i)=>i>0&&n===8); // 8부위 세트면 오라
+  s.active=active; s.counts=counts;
+  return s;
 }
 
 /* ================= SAVE ================= */
@@ -541,9 +581,26 @@ function renderLobby(){
     b.onclick=()=>{SFX.tap();openShop(eq[i]===0?1:eq[i],i)};
     sl.appendChild(b);
   });
-  $('statsL').innerHTML=`<span>체력 <b>${st.hp}</b></span><span>공격력 <b>${st.dmg}</b></span><span>던지기 <b>+${Math.round((st.rate-1)*100)}%</b></span><span>이동 <b>+${Math.round((st.move-1)*100)}%</b></span><span>회피 <b>${Math.round(st.dodge*100)}%</b></span><span>엽전 <b>+${Math.round(st.coin*100)}%</b></span>`;
-  const bo=$('bonusL'); if(st.full>=0){bo.hidden=false;bo.textContent=`${SETS[st.full].n} 세트 효과 발동 · 엽전 +20% · 오라`;}else bo.hidden=true;
+  $('statsL').innerHTML=statSummary(st);
+  const bo=$('bonusL');
+  bo.hidden=!st.active.length;
+  bo.innerHTML=st.active.map(a=>`<span class="fxchip" style="--rc:${RARITY[SETS[a.set].r].c}">${SETS[a.set].n} ${a.need}세트 · ${a.txt}</span>`).join('');
   $('muteL').textContent=save.mute?'✕':'♪';
+}
+const pct=v=>Math.round(v*100);
+function statSummary(st){
+  return [['체력',st.hp],['공격력',st.atk],['치명타',pct(st.crit)+'%'],['던지기',`+${pct(st.rate-1)}%`],['이동',`+${pct(st.move-1)}%`],
+    ['회피',pct(st.dodge)+'%'],['연속 유지',st.combo.toFixed(1)+'초'],['점수',`+${pct(st.score)}%`],['엽전',`+${pct(st.coin)}%`]]
+    .map(([k,v])=>`<span>${k} <b class="num">${v}</b></span>`).join('');
+}
+// 두 장비 조합의 능력치 차이를 "공격력 1 → 2" 형태로
+function statDiff(a,b){
+  const rows=[['hp','체력',v=>v],['atk','공격력',v=>v],['crit','치명타',v=>pct(v)+'%'],['rate','던지기 속도',v=>`+${pct(v-1)}%`],['move','이동 속도',v=>`+${pct(v-1)}%`],
+    ['dodge','회피',v=>pct(v)+'%'],['combo','연속 유지',v=>v.toFixed(2)+'초'],['inv','피격 후 무적',v=>v.toFixed(2)+'초'],['kspeed','쿠나이 속도',v=>`+${pct(v-1)}%`],
+    ['score','점수',v=>`+${pct(v)}%`],['coin','엽전',v=>`+${pct(v)}%`]];
+  const out=[];
+  for(const [k,n,f] of rows){if(Math.abs(a[k]-b[k])>1e-6){const up=b[k]>a[k];out.push(`<span class="${up?'up':'down'}">${n} ${f(a[k])} → ${f(b[k])}</span>`);}}
+  return out.join('');
 }
 function show(id){for(const s of ['lobby','shop','hud','pause','result']) $(s).hidden=(s!==id&&!(id==='pause'&&s==='hud')&&!(id==='result'&&s==='hud'));}
 function goLobby(){mode='lobby';show('lobby');lobbyAnim.a='idle';renderLobby();}
@@ -577,7 +634,14 @@ function renderShop(){
   });
   const own=owns(g,sel,set), on=eq[sel]===set, price=priceOf(sel,set);
   const d=$('detail');
-  d.innerHTML=`<i class="big ic"></i><div><h4>${itemName(sel,set,g)}</h4><p><b>${statText(sel,set)}</b></p><p>${slotName(sel,g)} · ${R.n}</p></div><div class="row"></div>`;
+  const main=fmtStats(itemStats(sel,set)), trait=TRAIT[set]?fmtStats(TRAIT[set]):[];
+  const next=[...eq]; next[sel]=set;
+  const diff=on?'':statDiff(calcStats(eq),calcStats(next));
+  d.innerHTML=`<i class="big ic"></i><div><h4>${itemName(sel,set,g)}</h4><p>${slotName(sel,g)} · ${R.n}</p></div>
+    <div class="lines"><div><span class="lbl">부위 능력치</span><b>${main.join(' · ')||'없음 (기본 장비)'}</b></div>
+    <div><span class="lbl">세트 특성</span><b>${trait.join(' · ')||'없음'}</b></div>
+    ${diff?`<div class="diff"><span class="lbl">장착하면</span><div>${diff}</div></div>`:''}</div>
+    <div class="row"></div>`;
   iconStyle(d.querySelector('.ic'),g,sel,set);
   const row=d.querySelector('.row');
   const mkBtn=(txt,cls,fn,dis)=>{const b=document.createElement('button');b.className='btn '+cls;b.innerHTML=txt;b.disabled=!!dis;b.onclick=fn;row.appendChild(b);return b;};
@@ -593,6 +657,12 @@ function renderShop(){
   }
   if(own&&!SLOTS.every((_,i)=>eq[i]===set)&&SLOTS.every((_,i)=>owns(g,i,set))) mkBtn('세트 전부 장착','btn-paper',()=>{SLOTS.forEach((_,i)=>eq[i]=set);persist();SFX.equip();toast(`${S.n} 세트 장착!`);shopView.try=null;renderShop();});
   $('tryon').hidden=!shopView.try;
+  // 세트 효과 표
+  const cur=setCounts(eq)[set], pre=shopView.try?setCounts(shopView.try)[set]:cur;
+  const fx=$('setfx'); fx.style.setProperty('--rc',R.c);
+  fx.innerHTML=`<h5><span>${S.n} 세트 효과</span><span class="num">착용 ${cur}/8${pre!==cur?` → ${pre}/8`:''}</span></h5>`+
+    (SETFX[set].length?SETFX[set].map(([need,txt])=>`<div class="fx${cur>=need?' on':pre>=need?' pre':''}"><span class="need">${need}세트</span><span>${txt}</span></div>`).join('')
+      :'<div class="fx"><span>입문자 세트는 세트 효과가 없어요. 다른 세트를 2부위 이상 맞춰 보세요.</span></div>');
 }
 function buy(slot,set){
   const g=save.g, p=priceOf(slot,set); if(save.coins<p) return;
@@ -632,13 +702,14 @@ function newGame(){
   const g=save.g, eq=[...save.eq[g]], st=calcStats(eq);
   G={g,eq,st,px:0,vx:0,hp:st.hp,score:0,combo:0,comboT:0,maxCombo:0,kills:0,wave:0,waveLeft:0,waveGap:1.2,spawnT:0,
      enemies:[],kunais:[],shots:[],fx:[],texts:[],inv:0,throwT:-1,released:false,aim:null,queued:null,shake:0,
-     dead:false,deathT:0,banner:{txt:'',t:9},flash:0,rearT:0};
+     dead:false,deathT:0,banner:{txt:'',t:9},flash:0,rearT:0,shield:0};
   mode='game'; show('hud'); renderHearts(); $('score').textContent='0';
   nextWave();
 }
-function renderHearts(){const h=$('hearts');h.innerHTML='';for(let i=0;i<G.st.hp;i++){const s=document.createElement('i');s.className='heart'+(i<G.hp?'':' off');h.appendChild(s);}}
+function renderHearts(){const h=$('hearts');h.innerHTML='';for(let i=0;i<G.st.hp;i++){const s=document.createElement('i');s.className='heart'+(i<G.hp?'':' off');h.appendChild(s);}
+  for(let i=0;i<G.shield;i++){const s=document.createElement('i');s.className='shield';s.title='보호막';h.appendChild(s);}}
 function nextWave(){
-  G.wave++; G.waveLeft=3+G.wave*2; G.boss=G.wave%3===0; G.spawnT=.8;
+  G.wave++; G.shield=G.st.shield; if(G.hp) renderHearts(); G.waveLeft=3+G.wave*2; G.boss=G.wave%3===0; G.spawnT=.8;
   G.banner={txt:G.boss?`${G.wave}번째 습격 · 두목 출현`:`${G.wave}번째 습격`,t:0};
   $('wave').textContent=`${G.wave}번째 습격`; SFX.wave();
 }
@@ -685,26 +756,47 @@ function aimNearest(){
   let best=null,bd=1e9; for(const e of G.enemies){if(e.state==='die'||e.state==='in')continue;const d=Math.abs(e.x*sOf(e.z)-G.px)+e.z*.3;if(d<bd){bd=d;best=e;}}
   return best?{enemy:best}:{pt:{x:G.px,z:.8}};
 }
-function releaseKunai(){
+function fireKunai(aim,count,ghost){
   const st=G.st, vz=1.9*st.kspeed; let tx,tz;
   const x0=G.px+.06, z0=.02;
-  if(G.aim.enemy&&G.enemies.includes(G.aim.enemy)){const e=G.aim.enemy; const lead=(e.z-z0)/vz; tx=e.x+e.vx*lead; tz=e.z;} else if(G.aim.pt){tx=G.aim.pt.x;tz=G.aim.pt.z;} else {tx=G.px;tz=.8;}
+  if(aim.enemy&&G.enemies.includes(aim.enemy)){const e=aim.enemy; const lead=(e.z-z0)/vz; tx=e.x+e.vx*lead; tz=e.z;} else if(aim.pt){tx=aim.pt.x;tz=aim.pt.z;} else {tx=G.px;tz=.8;}
   tz=Math.max(.2,tz);
-  G.kunais.push({x:x0,z:z0,vx:(tx-x0)/(tz-z0)*vz,vz,tz,t:0,hit:new Set(),trail:[]});
+  for(let i=0;i<count;i++){
+    const off=(i-(count-1)/2)*.22; // 쌍투·삼연투는 부채꼴로 퍼진다
+    G.kunais.push({x:x0,z:z0,vx:(tx+off-x0)/(tz-z0)*vz,vz,tz,t:0,hit:new Set(),trail:[],ghost});
+  }
   SFX.throw();
+}
+function releaseKunai(){fireKunai(G.aim,G.st.multi,false);}
+function damageEnemy(e,dmg,opt={}){
+  if(e.state==='die'||e.state==='in') return;
+  const r=enemyRect(e); let crit=false;
+  if(!opt.fixed&&Math.random()<G.st.crit){crit=true;dmg*=G.st.critMul;}
+  e.hp-=dmg;
+  if(crit) floatText(r.x,r.y-r.h*1.4,`치명! ${dmg}`,'#ffd36a',20);
+  else if(opt.label) floatText(r.x,r.y-r.h*1.2,opt.label,opt.col||'#efe6d2',15);
+  if(e.hp<=0) killEnemy(e,opt.chain);
+  else {e.state='flinch';e.t=0; if(G.st.poison&&!opt.poison) e.poisonT=1;}
 }
 function hurtPlayer(){
   if(G.inv>0||G.dead) return;
-  G.hp--; G.inv=1.1; G.shake=.35; G.flash=.35; G.combo=0; renderHearts(); SFX.hurt();
+  if(G.shield>0){G.shield--;G.inv=.5;renderHearts();SFX.dodge();floatText(GEO.cx+G.px*GEO.L,GEO.floorY-GEO.baseH*1.05,'막음!','#c9d3e0',22);return;}
+  G.hp--; G.inv=G.st.inv; G.shake=.35; G.flash=.35; G.combo=0; renderHearts(); SFX.hurt();
   floatText(GEO.cx+G.px*GEO.L,GEO.floorY-GEO.baseH*1.05,'-1','#ff6a5a',24);
-  if(G.hp<=0){G.dead=true;G.deathT=0;}
+  if(G.hp<=0){G.dead=true;G.deathT=0;puff(GEO.cx+G.px*GEO.L,GEO.floorY-GEO.baseH*.45,GEO.baseH*.7,'#b9aec9');SFX.kill();}
 }
-function killEnemy(e){
-  e.state='die'; e.t=0; G.kills++; G.combo++; G.comboT=G.st.comboWin; G.maxCombo=Math.max(G.maxCombo,G.combo);
+function killEnemy(e,chain){
+  e.state='die'; e.t=0; e.poisonT=0; G.kills++; G.combo++; G.comboT=G.st.comboWin; G.maxCombo=Math.max(G.maxCombo,G.combo);
   const base=e.type==='boss'?2000:e.type==='elite'?250:100;
-  const pts=Math.round(base*(1+.1*Math.min(G.combo-1,20))*(1+G.st.score));
+  let pts=Math.round(base*(1+.1*Math.min(G.combo-1,20))*(1+G.st.score));
+  if(G.st.comboDouble&&G.combo>=10) pts*=2;
   G.score+=pts; $('score').textContent=G.score.toLocaleString();
   const r=enemyRect(e); floatText(r.x,r.y-r.h*1.05,'+'+pts,e.type==='boss'?'#e6b450':'#efe6d2',e.type==='boss'?28:18);
+  puff(r.x,r.y-r.h*.45,r.h*.55,'#b9aec9'); // 연막을 남기고 사라진다
+  if(G.st.blast&&!chain){ // 폭염: 주변 적에게 1 피해
+    puff(r.x,r.y-r.h*.45,r.h*.9,'#ff8a3a'); G.shake=Math.max(G.shake,.15);
+    for(const o of G.enemies) if(o!==e&&Math.abs(o.z-e.z)<.25&&Math.abs(o.x-e.x)<.45) damageEnemy(o,1,{fixed:true,chain:true,label:'폭발',col:'#ff8a3a'});
+  }
   if(e.type==='boss'&&G.hp<G.st.hp){G.hp++;renderHearts();floatText(GEO.cx+G.px*GEO.L,GEO.floorY-GEO.baseH*1.1,'체력 +1','#7fdc8a',20);}
   SFX.kill();
 }
@@ -734,6 +826,7 @@ function update(dt){
   const fireBase=Math.max(1.05,3.1-G.wave*.17);
   for(const e of G.enemies){
     e.t+=dt; e.at+=dt;
+    if(e.poisonT>0){e.poisonT-=dt; if(e.poisonT<=0) damageEnemy(e,1,{fixed:true,poison:true,label:'맹독',col:'#5cf08a'});}
     if(e.state==='in'&&e.t>.35){e.state='live';e.t=0;}
     if(e.state==='flinch'&&e.t>.35){e.state='live';e.t=0;}
     if(e.state==='live'||e.state==='flinch'){
@@ -754,7 +847,7 @@ function update(dt){
       }
     }
   }
-  G.enemies=G.enemies.filter(e=>!(e.state==='die'&&e.t>.95));
+  G.enemies=G.enemies.filter(e=>!(e.state==='die'&&e.t>.45));
   // 쿠나이
   const tolX=.22*GEO.baseH/GEO.L;
   for(const k of G.kunais){
@@ -764,8 +857,8 @@ function update(dt){
     for(const e of G.enemies){
       if(e.state==='die'||e.state==='in'||k.hit.has(e)) continue;
       if(Math.abs(k.z-e.z)<.045+k.vz*dt&&Math.abs(k.x-e.x)<tolX*e.big){
-        k.hit.add(e); e.hp-=G.st.dmg; const r=enemyRect(e); sparks(r.x,r.y-r.h*.55,SETS[G.eq[7]].glow); SFX.hit();
-        if(e.hp<=0) killEnemy(e); else {e.state='flinch';e.t=0; floatText(r.x,r.y-r.h*1.05,'명중','#efe6d2',14);}
+        k.hit.add(e); const r=enemyRect(e); sparks(r.x,r.y-r.h*.55,SETS[G.eq[7]].glow); SFX.hit();
+        damageEnemy(e,G.st.dmg);
         if(!G.st.pierce){k.dead=true;break;}
       }
     }
@@ -779,7 +872,8 @@ function update(dt){
       s.done=true;
       const phw=.2*GEO.baseH/GEO.L;
       if(Math.abs(s.x1-G.px)<phw&&!G.dead&&G.inv<=0){
-        if(Math.random()<G.st.dodge){floatText(GEO.cx+G.px*GEO.L,GEO.floorY-GEO.baseH*1.05,'회피!','#9fd0ff',20);SFX.dodge();}
+        if(Math.random()<G.st.dodge){floatText(GEO.cx+G.px*GEO.L,GEO.floorY-GEO.baseH*1.05,'회피!','#9fd0ff',20);SFX.dodge();
+          if(G.st.shadow){const a=aimNearest(); if(a.enemy) fireKunai(a,1,true);}} // 분신 반격
         else {hurtPlayer(); s.gone=true;}
       }
     }
@@ -791,7 +885,7 @@ function update(dt){
   for(const t of G.texts) t.t+=dt;
   G.texts=G.texts.filter(t=>t.t<.9);
   // 죽음 → 결과
-  if(G.dead){G.deathT+=dt; if(G.deathT>1.9&&mode==='game') endGame();}
+  if(G.dead){G.deathT+=dt; if(G.deathT>1.4&&mode==='game') endGame();}
 }
 function drawShuriken(c,x,y,r,rot){
   c.save(); c.translate(x,y); c.rotate(rot);
@@ -817,11 +911,14 @@ function render(dt){
     const r=enemyRect(e);
     let a='idle', f=Math.floor(e.at*8), al=1;
     if(e.state==='in'){al=Math.min(1,e.t/.35);}
-    if(e.state==='flinch'){a='crouch';f=1+Math.min(4,Math.floor(e.t*14));}
-    if(e.state==='die'){a='hit';f=Math.min(7,Math.floor(e.t*9));}
-    if(e.state!=='die'||e.t<.4) shadow(ctx,r.x,r.y,r.h*.22);
+    let dx=0, lit=0;
+    if(e.state==='flinch'){const k=1-e.t/.35; dx=Math.sin(e.t*70)*r.h*.05*k; lit=.7*k;}
+    if(e.state==='die'){al=Math.max(0,1-e.t/.35);}
+    shadow(ctx,r.x,r.y,r.h*.22*al);
     if(e.type==='boss') aura(ctx,r.x,r.y,r.h,SETS[e.eq[0]].glow,T);
-    drawNinja(ctx,e.g,e.eq,a,f,r.x,r.y,r.h,al,e.vx<0&&a==='idle');
+    drawNinja(ctx,e.g,e.eq,a,f,r.x+dx,r.y,r.h,al,e.vx<0);
+    if(lit>0){ctx.save();ctx.globalCompositeOperation='lighter';drawNinja(ctx,e.g,e.eq,a,f,r.x+dx,r.y,r.h,lit,e.vx<0);ctx.restore();}
+    if(e.poisonT>0){ctx.fillStyle='rgba(92,240,138,.5)';for(let i=0;i<3;i++){const p=(T*1.5+i/3)%1;ctx.beginPath();ctx.arc(r.x+Math.sin(i*2+T*3)*r.hw*.6,r.y-r.h*(.3+p*.7),3,0,7);ctx.fill();}}
     if(e.warn&&e.state!=='die'){ctx.fillStyle='#ff5a4a';ctx.font=`700 ${Math.max(14,r.h*.28)}px ${getComputedStyle(document.body).fontFamily}`;ctx.textAlign='center';ctx.fillText('!',r.x,r.y-r.h*1.08);}
     if(e.maxHp>1&&e.state!=='die'){const bw=r.hw*1.6;ctx.fillStyle='rgba(0,0,0,.55)';ctx.fillRect(r.x-bw/2,r.y-r.h*1.02,bw,4);ctx.fillStyle=e.type==='boss'?'#e6b450':'#ff6a5a';ctx.fillRect(r.x-bw/2,r.y-r.h*1.02,bw*Math.max(0,e.hp)/e.maxHp,4);}
   }
@@ -834,14 +931,16 @@ function render(dt){
   for(const k of G.kunais){
     if(k.trail.length>1){ctx.strokeStyle=kc+'88';ctx.lineWidth=3*sOf(k.z);ctx.beginPath();ctx.moveTo(k.trail[0][0],k.trail[0][1]);for(const p of k.trail)ctx.lineTo(p[0],p[1]);ctx.stroke();}
     const p=k.trail.length>1?k.trail[k.trail.length-2]:[k.sx,k.sy+1];
+    if(k.ghost){ctx.save();ctx.globalAlpha=.6;}
     drawKunaiIcon(ctx,G.g,G.eq[7],k.sx,k.sy,GEO.baseH*.45*sOf(k.z),Math.atan2(k.sy-p[1],k.sx-p[0]));
+    if(k.ghost) ctx.restore();
   }
   // 플레이어 (뒷모습)
   const px=GEO.cx+G.px*GEO.L, py=GEO.floorY, ph=GEO.baseH;
   shadow(ctx,px,py,ph*.25);
   if(G.st.full>=0) aura(ctx,px,py,ph,SETS[G.st.full].glow,T);
   const blink=G.inv>0&&!G.dead&&Math.floor(G.inv*14)%2===0;
-  if(G.dead) drawNinja(ctx,G.g,G.eq,'hit',Math.min(7,Math.floor(G.deathT*8)),px,py,ph);
+  if(G.dead) drawNinja(ctx,G.g,G.eq,'rear',0,px,py,ph,Math.max(0,1-G.deathT/.4));
   else if(G.throwT>=0) drawNinja(ctx,G.g,G.eq,'throw',Math.floor(G.throwT*22*G.st.rate),px,py,ph,blink?.35:1);
   else drawNinja(ctx,G.g,G.eq,'rear',Math.floor(G.rearT*8),px,py,ph,blink?.35:1);
   // 이펙트
@@ -877,8 +976,9 @@ function renderLobbyScene(dt){
   shadow(ctx,x,y,h*.3);
   const st=calcStats(eq); if(st.full>=0) aura(ctx,x,y,h,SETS[st.full].glow,T);
   lobbyAnim.t+=dt;
-  if(lobbyAnim.a==='crouch'){const f=Math.floor(lobbyAnim.t*12); if(f>=8){lobbyAnim.a='idle';lobbyAnim.t=0;} else drawNinja(ctx,g,eq,'crouch',f,x,y,h);}
-  if(lobbyAnim.a==='idle') drawNinja(ctx,g,eq,'idle',Math.floor(lobbyAnim.t*8),x,y,h);
+  let hop=0;
+  if(lobbyAnim.a==='hop'){const u=lobbyAnim.t/.45; if(u>=1){lobbyAnim.a='idle';} else hop=Math.sin(Math.PI*u)*h*.12;}
+  drawNinja(ctx,g,eq,'idle',Math.floor(T*8),x,y-hop,h);
 }
 function endGame(){
   mode='result';
@@ -895,7 +995,7 @@ function endGame(){
 cv.addEventListener('pointerdown',ev=>{
   const r=cv.getBoundingClientRect(), x=ev.clientX-r.left, y=ev.clientY-r.top;
   if(mode==='game'){requestThrow(aimFromPoint(x,y));ev.preventDefault();}
-  else if(mode==='lobby'){const f=lobbyFeet; if(Math.abs(x-f.x)<f.h*.35&&y<f.y&&y>f.y-f.h){lobbyAnim.a='crouch';lobbyAnim.t=0;SFX.hurt();}}
+  else if(mode==='lobby'){const f=lobbyFeet; if(Math.abs(x-f.x)<f.h*.35&&y<f.y&&y>f.y-f.h){lobbyAnim.a='hop';lobbyAnim.t=0;SFX.dodge();}}
 });
 const KL=['ArrowLeft','a','A'],KR=['ArrowRight','d','D'];
 addEventListener('keydown',e=>{
