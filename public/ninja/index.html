@@ -239,7 +239,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
       <div class="score"><span class="num" id="score">0</span><small id="wave">1번째 습격</small></div>
       <div class="hud-r"><button class="iconbtn" id="pauseBtn" aria-label="일시정지">Ⅱ</button></div>
     </div>
-    <div class="keyhint">쿠나이는 가장 가까이 온 적에게 자동으로 날아가요 · 적을 누르면 그 적부터 노려요</div>
+    <div class="keyhint">가장 가까이 온 적에게 자동으로 공격해요</div>
   </section>
 
   <section id="pause" class="screen modal" hidden>
@@ -307,45 +307,48 @@ const priceOf=(slot,set)=>Math.round(PRICE[set]*(slot===7?1.5:slot===2?1.2:1)/10
 const slotName=(slot,g)=>{const n=SLOTS[slot].n;return typeof n==='string'?n:n[g]};
 const itemName=(slot,set,g)=>`${SETS[set].n} ${slotName(slot,g)}`;
 /* ---- 능력치 ---- */
-const STAT_LABEL={hp:['체력','칸'],atk:['공격력',''],crit:['치명타','%'],rate:['던지기 속도','%'],slow:['적 이동 둔화','%'],dodge:['회피','%'],combo:['연속 유지','초'],inv:['피격 후 무적','초'],kspeed:['쿠나이 속도','%'],score:['점수','%'],coin:['엽전','%']};
-const fmtStat=(k,v)=>{const [n,u]=STAT_LABEL[k];return u==='%'?`${n} +${Math.round(v*100)}%`:u==='초'?`${n} +${+v.toFixed(2)}초`:`${n} +${v}${u}`;};
+const BASE_APS=1.4; // 기본 공격 속도: 초당 1.4회
+const STAT_LABEL={atk:'공격력',aspd:'공격 속도',crit:'크리티컬',cdmg:'크리티컬 데미지'};
+const pct1=v=>+(v*100).toFixed(1);
+const fmtStat=(k,v)=>k==='atk'?`${STAT_LABEL[k]} +${v}`:`${STAT_LABEL[k]} +${pct1(v)}%`;
 const fmtStats=o=>Object.keys(o).filter(k=>o[k]&&STAT_LABEL[k]).map(k=>fmtStat(k,o[k]));
 // 부위마다 고유 능력치 (t = 세트 단계 0~9, 높을수록 강함)
 const MAIN=[
-  t=>({combo:.15*t}),                                          // 두건
-  t=>({coin:.05*t}),                                           // 목도리
-  t=>({hp:Math.floor((t+1)/3),inv:.05*t}),                     // 상의
-  t=>({rate:.07*t}),                                           // 장갑
-  t=>({slow:.03*t}),                                           // 치마·바지
-  t=>({dodge:.03*t}),                                          // 신발
-  t=>({score:.05*t}),                                          // 허리띠
-  t=>({atk:Math.floor((t+1)/3),kspeed:.05*t,crit:.01*t})       // 쿠나이
+  t=>({crit:.012*t}),            // 두건: 크리티컬
+  t=>({cdmg:.1*t}),              // 목도리: 크리티컬 데미지
+  t=>({atk:2*t}),                // 상의: 공격력
+  t=>({aspd:.06*t}),             // 장갑: 공격 속도
+  t=>({cdmg:.06*t}),             // 치마·바지: 크리티컬 데미지
+  t=>({aspd:.04*t}),             // 신발: 공격 속도
+  t=>({crit:.008*t}),            // 허리띠: 크리티컬
+  t=>({atk:5*t})                 // 쿠나이: 공격력 (주무기)
 ];
 // 세트 특성: 같은 세트 장비라면 부위와 상관없이 하나씩 더 붙는 능력치
-const TRAIT=[null,{crit:.02},{slow:.02},{inv:.1},{kspeed:.04},{crit:.03},{dodge:.02},{rate:.04},{score:.04},{coin:.05,crit:.02}];
+const TRAIT=[null,{atk:1},{aspd:.02},{atk:2},{aspd:.03},{crit:.01},{crit:.015},{atk:3},{cdmg:.08},{atk:3,cdmg:.08}];
 // 세트 효과: 같은 세트를 2 / 4 / 8부위 입으면 켜진다 (여러 세트를 섞으면 각각 따로 계산)
 const SETFX=[
   [],
-  [[2,'체력 +1',{hp:1}],[4,'피격 후 무적 +0.3초',{inv:.3}],[8,'철벽: 습격마다 수리검 1번 막는 보호막',{shield:1}]],
-  [[2,'적 이동 둔화 +8%',{slow:.08}],[4,'회피 +5%',{dodge:.05}],[8,'올가미: 적 이동 둔화 +20% · 회피 +10%',{slow:.2,dodge:.1}]],
-  [[2,'공격력 +1',{atk:1}],[4,'체력 +1',{hp:1}],[8,'관통: 쿠나이가 적을 뚫고 날아감',{pierce:1}]],
-  [[2,'쿠나이 속도 +15%',{kspeed:.15}],[4,'던지기 속도 +10%',{rate:.1}],[8,'쌍투: 쿠나이 2개 동시 투척',{multi:2}]],
-  [[2,'치명타 +8%',{crit:.08}],[4,'치명타 피해 2배 → 3배',{critMul:1}],[8,'맹독: 맞은 적이 1초 뒤 한 번 더 피해',{poison:1}]],
-  [[2,'회피 +8%',{dodge:.08}],[4,'연속 유지 +1초',{combo:1}],[8,'분신: 피하면 그림자가 대신 반격',{shadow:1}]],
-  [[2,'공격력 +1',{atk:1}],[4,'던지기 속도 +15%',{rate:.15}],[8,'폭염: 적을 쓰러뜨리면 주변이 폭발',{blast:1}]],
-  [[2,'점수 +15%',{score:.15}],[4,'엽전 +15%',{coin:.15}],[8,'명성: 10연속부터 점수 2배',{comboDouble:1}]],
-  [[2,'치명타 +5% · 회피 +5%',{crit:.05,dodge:.05}],[4,'체력 +1 · 공격력 +1',{hp:1,atk:1}],[8,'삼연투: 쿠나이 3개 · 엽전 +30%',{multi:3,coin:.3}]]
+  [[2,'공격력 +5',{atk:5}],[4,'공격력 +10',{atk:10}],[8,'철벽: 습격마다 공격 1번 막는 보호막',{shield:1}]],
+  [[2,'공격 속도 +8%',{aspd:.08}],[4,'공격 속도 +12%',{aspd:.12}],[8,'연사: 공격 속도 +25%',{aspd:.25}]],
+  [[2,'공격력 +8',{atk:8}],[4,'크리티컬 데미지 +20%',{cdmg:.2}],[8,'관통: 쿠나이가 적을 뚫고 날아감',{pierce:1}]],
+  [[2,'공격 속도 +10%',{aspd:.1}],[4,'크리티컬 +5%',{crit:.05}],[8,'쌍투: 쿠나이 2개 동시 투척',{multi:2}]],
+  [[2,'크리티컬 +6%',{crit:.06}],[4,'크리티컬 데미지 +30%',{cdmg:.3}],[8,'맹독: 맞은 적이 1초 뒤 공격력 50% 추가 피해',{poison:1}]],
+  [[2,'크리티컬 +8%',{crit:.08}],[4,'공격 속도 +10%',{aspd:.1}],[8,'분신: 크리티컬이 터지면 그림자 쿠나이 추가 발사',{shadow:1}]],
+  [[2,'공격력 +12',{atk:12}],[4,'공격 속도 +12%',{aspd:.12}],[8,'폭염: 적을 쓰러뜨리면 주변에 공격력 60% 폭발',{blast:1}]],
+  [[2,'크리티컬 데미지 +30%',{cdmg:.3}],[4,'크리티컬 +8%',{crit:.08}],[8,'일섬: 크리티컬 데미지 +100%',{cdmg:1}]],
+  [[2,'공격력 +15 · 크리티컬 +5%',{atk:15,crit:.05}],[4,'공격 속도 +15% · 크리티컬 데미지 +40%',{aspd:.15,cdmg:.4}],[8,'삼연투: 쿠나이 3개 동시 투척',{multi:3}]]
 ];
 function itemStats(slot,t){return MAIN[slot](t);}
 function setCounts(eq){const c=Array(SETS.length).fill(0);eq.forEach(v=>c[v]++);return c;}
 function calcStats(eq){
-  const s={hp:3,atk:1,crit:.05,critMul:2,rate:0,slow:0,dodge:0,combo:2,inv:1,kspeed:0,score:0,coin:0,shield:0,multi:1,pierce:0,poison:0,shadow:0,blast:0,comboDouble:0};
+  const s={atk:10,aspd:0,crit:.05,cdmg:1.5,shield:0,multi:1,pierce:0,poison:0,shadow:0,blast:0};
   const add=o=>{for(const k in o){if(k==='multi') s.multi=Math.max(s.multi,o[k]); else s[k]+=o[k];}};
   eq.forEach((t,slot)=>{add(itemStats(slot,t)); if(TRAIT[t]) add(TRAIT[t]);});
   const counts=setCounts(eq), active=[];
   counts.forEach((n,set)=>SETFX[set].forEach(([need,txt,fx])=>{if(n>=need){add(fx);active.push({set,need,txt});}}));
-  s.dodge=Math.min(.6,s.dodge); s.crit=Math.min(.8,s.crit);
-  s.slow=Math.min(.6,s.slow); s.rate+=1; s.kspeed+=1; s.dmg=s.atk; s.comboWin=s.combo;
+  s.crit=Math.min(1,s.crit);
+  s.aps=BASE_APS*(1+s.aspd); // 초당 공격 횟수
+  s.hp=3; // 체력은 장비와 상관없이 3칸
   s.full=counts.findIndex((n,i)=>i>0&&n===8); // 8부위 세트면 오라
   s.active=active; s.counts=counts;
   return s;
@@ -583,15 +586,12 @@ function renderLobby(){
 }
 const pct=v=>Math.round(v*100);
 function statSummary(st){
-  return [['체력',st.hp],['공격력',st.atk],['치명타',pct(st.crit)+'%'],['던지기',`+${pct(st.rate-1)}%`],['적 둔화',pct(st.slow)+'%'],
-    ['회피',pct(st.dodge)+'%'],['연속 유지',st.combo.toFixed(1)+'초'],['점수',`+${pct(st.score)}%`],['엽전',`+${pct(st.coin)}%`]]
+  return [['공격력',st.atk],['공격 속도',`초당 ${st.aps.toFixed(2)}회`],['크리티컬',pct1(st.crit)+'%'],['크리티컬 데미지',pct1(st.cdmg)+'%']]
     .map(([k,v])=>`<span>${k} <b class="num">${v}</b></span>`).join('');
 }
-// 두 장비 조합의 능력치 차이를 "공격력 1 → 2" 형태로
+// 두 장비 조합의 능력치 차이를 "공격력 10 → 20" 형태로
 function statDiff(a,b){
-  const rows=[['hp','체력',v=>v],['atk','공격력',v=>v],['crit','치명타',v=>pct(v)+'%'],['rate','던지기 속도',v=>`+${pct(v-1)}%`],['slow','적 이동 둔화',v=>pct(v)+'%'],
-    ['dodge','회피',v=>pct(v)+'%'],['combo','연속 유지',v=>v.toFixed(2)+'초'],['inv','피격 후 무적',v=>v.toFixed(2)+'초'],['kspeed','쿠나이 속도',v=>`+${pct(v-1)}%`],
-    ['score','점수',v=>`+${pct(v)}%`],['coin','엽전',v=>`+${pct(v)}%`]];
+  const rows=[['atk','공격력',v=>v],['aps','공격 속도',v=>`초당 ${v.toFixed(2)}회`],['crit','크리티컬',v=>pct1(v)+'%'],['cdmg','크리티컬 데미지',v=>pct1(v)+'%']];
   const out=[];
   for(const [k,n,f] of rows){if(Math.abs(a[k]-b[k])>1e-6){const up=b[k]>a[k];out.push(`<span class="${up?'up':'down'}">${n} ${f(a[k])} → ${f(b[k])}</span>`);}}
   return out.join('');
@@ -737,7 +737,7 @@ function drawFloor(scroll){
 function newGame(){
   const g=save.g, eq=[...save.eq[g]], st=calcStats(eq);
   G={g,eq,st,hp:st.hp,score:0,combo:0,comboT:0,maxCombo:0,kills:0,wave:0,waveLeft:0,waveGap:1.2,spawnT:0,
-     enemies:[],kunais:[],shots:[],fx:[],texts:[],inv:0,throwT:-1,released:false,aim:null,cool:.4,focus:null,shake:0,
+     enemies:[],kunais:[],shots:[],fx:[],texts:[],inv:0,throwT:-1,tfps:22,released:false,aim:null,cool:.4,shake:0,
      dead:false,deathT:0,banner:{txt:'',t:9},flash:0,rearT:0,shield:0,scroll:0};
   mode='game'; show('hud'); renderHearts(); $('score').textContent='0';
   nextWave();
@@ -753,9 +753,10 @@ function spawnEnemy(type){
   const w=G.wave, other=G.g==='f'?'m':'f';
   const g=Math.random()<.6?other:G.g;
   let set,hp,travel;
-  if(type==='boss'){set=7+Math.floor(Math.random()*3); hp=8+w*2; travel=5;}
-  else if(type==='elite'){set=4+Math.floor(Math.random()*3); hp=2+Math.floor(w/4); travel=Math.max(5,10-w*.35);}
-  else {set=1+Math.floor(Math.random()*3); hp=1+Math.floor(w/5); travel=Math.max(4,8.5-w*.35);}
+  // 적 체력: 기본 공격력 10 기준, 습격이 거듭될수록 늘어난다
+  if(type==='boss'){set=7+Math.floor(Math.random()*3); hp=Math.round(160*(1+.4*(w-1))); travel=5;}
+  else if(type==='elite'){set=4+Math.floor(Math.random()*3); hp=Math.round(30*(1+.35*(w-1))); travel=Math.max(5,10-w*.35);}
+  else {set=1+Math.floor(Math.random()*3); hp=Math.round(10*(1+.3*(w-1))); travel=Math.max(4,8.5-w*.35);}
   G.enemies.push({g,eq:Array(8).fill(set),type,hp,maxHp:hp,u:type==='boss'?.5:rnd(.05,.95),p:0,speed:1/travel,
     stopAt:type==='boss'?.42:1,sway:rnd(0,6),state:'live',t:0,at:Math.random()*8,
     fireT:type==='grunt'?1e9:rnd(1.2,2.4),warn:0,big:type==='boss'?1.5:type==='elite'?1.12:1});
@@ -772,15 +773,7 @@ function enemyRect(e){
 }
 // 사거리: 적의 발이 화면 30% 아래로 내려와야 조준·공격한다
 const targetable=e=>e.state!=='die'&&enemyRect(e).y>H*.3;
-function pickTarget(px,py){
-  let best=null,bd=1e9;
-  for(const e of G.enemies){ if(!targetable(e)) continue;
-    const r=enemyRect(e), pad=24;
-    if(px>r.x-r.hw-pad&&px<r.x+r.hw+pad&&py>r.y-r.h-pad&&py<r.y+pad){const d=Math.hypot(px-r.x,py-r.cy);if(d<bd){bd=d;best=e;}}
-  }
-  return best;
-}
-// 자동 조준: 누른 적(집중 대상)이 있으면 그 적, 없으면 가장 가까이 내려온 적
+// 자동 조준: 가장 가까이 내려온 적부터
 function autoTargets(n,first){
   const list=G.enemies.filter(targetable).sort((a,b)=>b.p-a.p);
   if(first&&list.includes(first)){list.splice(list.indexOf(first),1);list.unshift(first);}
@@ -789,7 +782,7 @@ function autoTargets(n,first){
 function handPos(){const A=arena();return {x:A.px+A.ph*.12,y:A.py-A.ph*.88};}
 function fireKunai(targets,count,ghost){
   if(!targets.length) return;
-  const h=handPos(), sp=H*1.25*G.st.kspeed;
+  const h=handPos(), sp=H*1.25;
   for(let i=0;i<count;i++){
     const tg=targets[i%targets.length], r=enemyRect(tg), spread=targets.length>=count?0:(i-(count-1)/2)*.25;
     const a=Math.atan2(r.cy-h.y,r.x-h.x)+spread;
@@ -799,45 +792,39 @@ function fireKunai(targets,count,ghost){
 }
 function releaseKunai(){
   const n=G.st.multi, first=G.enemies.includes(G.aim)&&targetable(G.aim)?G.aim:null;
-  fireKunai(autoTargets(n,first||G.focus),n,false);
+  fireKunai(autoTargets(n,first),n,false);
 }
 function damageEnemy(e,dmg,opt={}){
   if(e.state==='die') return;
   const r=enemyRect(e); let crit=false;
-  if(!opt.fixed&&Math.random()<G.st.crit){crit=true;dmg*=G.st.critMul;}
+  if(!opt.fixed&&Math.random()<G.st.crit){crit=true;dmg=Math.round(dmg*G.st.cdmg);}
   e.hp-=dmg;
-  if(crit) floatText(r.x,r.y-r.h*1.4,`치명! ${dmg}`,'#ffd36a',20);
-  else if(opt.label) floatText(r.x,r.y-r.h*1.2,opt.label,opt.col||'#efe6d2',15);
+  const jx=rnd(-.25,.25)*r.hw;
+  if(crit) floatText(r.x+jx,r.y-r.h*1.15,`크리티컬 ${dmg}`,'#ffd36a',22);
+  else floatText(r.x+jx,r.y-r.h*1.05,`${dmg}`,opt.col||'#efe6d2',opt.fixed?15:17);
+  // 분신: 크리티컬이 터지면 다른 적에게 그림자 쿠나이
+  if(crit&&G.st.shadow&&!opt.ghost){const t=autoTargets(2,null).filter(o=>o!==e);fireKunai(t.length?t:[e],1,true);}
   if(e.hp<=0) killEnemy(e,opt.chain);
   else {e.state='flinch';e.t=0; if(G.st.poison&&!opt.poison) e.poisonT=1;}
 }
-function playerText(txt,col,size){const A=arena();floatText(A.px,A.py-A.ph*1.05,txt,col,size);}
-function dodgeOrHurt(dmg=1){
-  if(G.dead||G.inv>0) return;
-  if(Math.random()<G.st.dodge){playerText('회피!','#9fd0ff',20);SFX.dodge();
-    if(G.st.shadow){const t=autoTargets(1,G.focus); if(t.length) fireKunai(t,1,true);} // 분신 반격
-    return;}
-  hurtPlayer(dmg);
-}
+function dodgeOrHurt(dmg=1){hurtPlayer(dmg);}
 function hurtPlayer(dmg=1){
   if(G.inv>0||G.dead) return;
   if(G.shield>0){G.shield--;G.inv=.5;renderHearts();SFX.dodge();playerText('막음!','#c9d3e0',22);return;}
-  G.hp=Math.max(0,G.hp-dmg); G.inv=G.st.inv; G.shake=.35; G.flash=.35; G.combo=0; renderHearts(); SFX.hurt();
+  G.hp=Math.max(0,G.hp-dmg); G.inv=1; G.shake=.35; G.flash=.35; G.combo=0; renderHearts(); SFX.hurt();
   playerText('-'+dmg,'#ff6a5a',24);
   if(G.hp<=0){const A=arena();G.dead=true;G.deathT=0;puff(A.px,A.py-A.ph*.45,A.ph*.7,'#b9aec9');SFX.kill();}
 }
 function killEnemy(e,chain){
-  e.state='die'; e.t=0; e.poisonT=0; G.kills++; G.combo++; G.comboT=G.st.comboWin; G.maxCombo=Math.max(G.maxCombo,G.combo);
-  if(G.focus===e) G.focus=null;
+  e.state='die'; e.t=0; e.poisonT=0; G.kills++; G.combo++; G.comboT=2.5; G.maxCombo=Math.max(G.maxCombo,G.combo);
   const base=e.type==='boss'?2000:e.type==='elite'?250:100;
-  let pts=Math.round(base*(1+.1*Math.min(G.combo-1,20))*(1+G.st.score));
-  if(G.st.comboDouble&&G.combo>=10) pts*=2;
+  const pts=Math.round(base*(1+.1*Math.min(G.combo-1,20)));
   G.score+=pts; $('score').textContent=G.score.toLocaleString();
   const r=enemyRect(e); floatText(r.x,r.y-r.h*1.05,'+'+pts,e.type==='boss'?'#e6b450':'#efe6d2',e.type==='boss'?28:18);
   puff(r.x,r.cy,r.h*.55,'#b9aec9'); // 연막을 남기고 사라진다
   if(G.st.blast&&!chain){ // 폭염: 주변 적에게 1 피해
     puff(r.x,r.cy,r.h*.9,'#ff8a3a'); G.shake=Math.max(G.shake,.15);
-    for(const o of G.enemies){if(o===e||o.state==='die')continue; const q=enemyRect(o); if(Math.hypot(q.x-r.x,q.cy-r.cy)<r.h*1.3) damageEnemy(o,1,{fixed:true,chain:true,label:'폭발',col:'#ff8a3a'});}
+    for(const o of G.enemies){if(o===e||o.state==='die')continue; const q=enemyRect(o); if(Math.hypot(q.x-r.x,q.cy-r.cy)<r.h*1.3) damageEnemy(o,Math.round(G.st.atk*.6),{fixed:true,chain:true,col:'#ff8a3a'});}
   }
   if(e.type==='boss'&&G.hp<G.st.hp){G.hp++;renderHearts();playerText('체력 +1','#7fdc8a',20);}
   SFX.kill();
@@ -847,14 +834,15 @@ function update(dt){
   if(G.inv>0) G.inv-=dt; if(G.shake>0) G.shake-=dt; if(G.flash>0) G.flash-=dt;
   if(G.comboT>0){G.comboT-=dt; if(G.comboT<=0) G.combo=0;}
   G.banner.t+=dt; G.rearT+=dt; if(!G.dead) G.scroll+=H*.05*dt;
-  if(G.focus&&!G.enemies.includes(G.focus)) G.focus=null;
   // 자동 던지기
   if(!G.dead){
-    if(G.throwT<0){G.cool-=dt; if(G.cool<=0){const t=autoTargets(1,G.focus); if(t.length){G.throwT=0;G.released=false;G.aim=t[0];}}}
+    // 공격 속도(초당 횟수)에 맞춰 던지기 동작을 빠르게 재생하고, 남는 시간은 대기
+    const m=META[G.g].throw, interval=1/st.aps;
+    if(G.throwT<0){G.cool-=dt; if(G.cool<=0){const t=autoTargets(1,null); if(t.length){G.throwT=0;G.released=false;G.aim=t[0];G.tfps=Math.max(22,m.n/(interval*.8));}}}
     else{
-      const m=META[G.g].throw, fps=22*st.rate; G.throwT+=dt; const f=Math.floor(G.throwT*fps);
+      G.throwT+=dt; const f=Math.floor(G.throwT*G.tfps);
       if(!G.released&&f>=3){G.released=true;releaseKunai();}
-      if(f>=m.n){G.throwT=-1;G.cool=.2/st.rate;}
+      if(f>=m.n){G.throwT=-1;G.cool=Math.max(0,interval-m.n/G.tfps);}
     }
   }
   // 스폰
@@ -865,13 +853,12 @@ function update(dt){
     else if(alive===0&&G.enemies.length===0){G.waveGap-=dt; if(G.waveGap<=0){G.waveGap=1.4;nextWave();}}
   }
   // 적: 내려오기 · 수리검 · 방어선 도착
-  const slowK=Math.max(.35,1-st.slow);
   for(const e of G.enemies){
     e.t+=dt; e.at+=dt;
-    if(e.poisonT>0){e.poisonT-=dt; if(e.poisonT<=0) damageEnemy(e,1,{fixed:true,poison:true,label:'맹독',col:'#5cf08a'});}
+    if(e.poisonT>0){e.poisonT-=dt; if(e.poisonT<=0) damageEnemy(e,Math.round(G.st.atk*.5),{fixed:true,poison:true,col:'#5cf08a'});}
     if(e.state==='flinch'&&e.t>.3){e.state='live';e.t=0;}
     if(e.state==='die'||G.dead) continue;
-    if(e.state==='live') e.p=Math.min(e.stopAt,e.p+e.speed*slowK*dt);
+    if(e.state==='live') e.p=Math.min(e.stopAt,e.p+e.speed*dt);
     if(e.p>=1){ // 캐릭터 앞까지 내려와 베고 연막으로 사라짐
       const r=enemyRect(e); e.state='die'; e.t=0; e.struck=true; puff(r.x,r.cy,r.h*.5,'#6b5a7a');
       G.shake=Math.max(G.shake,.2); dodgeOrHurt(1); continue;
@@ -900,7 +887,7 @@ function update(dt){
       const r=enemyRect(e);
       if(Math.abs(k.x-r.x)<r.hw&&k.y<r.y&&k.y>r.y-r.h*.95){
         k.hit.add(e); sparks(k.x,k.y,SETS[G.eq[7]].glow); SFX.hit();
-        damageEnemy(e,G.st.dmg);
+        damageEnemy(e,G.st.atk,{ghost:k.ghost});
         if(!G.st.pierce){k.dead=true;break;}
         k.target=autoTargets(3,null).find(o=>!k.hit.has(o))||null;
       }
@@ -951,9 +938,8 @@ function render(dt){
     drawNinja(ctx,e.g,e.eq,a,f,r.x,r.y+dy,r.h,al);
     if(lit>0){ctx.save();ctx.globalCompositeOperation='lighter';drawNinja(ctx,e.g,e.eq,a,f,r.x,r.y+dy,r.h,lit);ctx.restore();}
     if(e.poisonT>0){ctx.fillStyle='rgba(92,240,138,.5)';for(let i=0;i<3;i++){const p=(T*1.5+i/3)%1;ctx.beginPath();ctx.arc(r.x+Math.sin(i*2+T*3)*r.hw*.6,r.y-r.h*(.3+p*.7),3,0,7);ctx.fill();}}
-    if(e===G.focus){ctx.strokeStyle='#e6b450';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(r.x,r.y,r.hw*1.1,r.hw*.35,0,0,7);ctx.stroke();}
     if(e.warn&&e.state!=='die'){ctx.fillStyle='#ff5a4a';ctx.font=`${Math.max(16,r.h*.28)}px "Black Han Sans",sans-serif`;ctx.textAlign='center';ctx.fillText('!',r.x,r.y-r.h*1.08);}
-    if(e.maxHp>1&&e.state!=='die'){const bw=r.hw*1.6;ctx.fillStyle='rgba(0,0,0,.55)';ctx.fillRect(r.x-bw/2,r.y-r.h*1.02,bw,4);ctx.fillStyle=e.type==='boss'?'#e6b450':'#ff6a5a';ctx.fillRect(r.x-bw/2,r.y-r.h*1.02,bw*Math.max(0,e.hp)/e.maxHp,4);}
+    if((e.type!=='grunt'||e.hp<e.maxHp)&&e.state!=='die'){const bw=r.hw*1.6;ctx.fillStyle='rgba(0,0,0,.55)';ctx.fillRect(r.x-bw/2,r.y-r.h*1.02,bw,4);ctx.fillStyle=e.type==='boss'?'#e6b450':'#ff6a5a';ctx.fillRect(r.x-bw/2,r.y-r.h*1.02,bw*Math.max(0,e.hp)/e.maxHp,4);}
   }
   // 적 수리검
   const tgt={x:A.px,y:A.py-A.ph*.55};
@@ -972,7 +958,7 @@ function render(dt){
   if(G.st.full>=0) aura(ctx,A.px,A.py,A.ph,SETS[G.st.full].glow,T);
   const blink=G.inv>0&&!G.dead&&Math.floor(G.inv*14)%2===0;
   if(G.dead) drawNinja(ctx,G.g,G.eq,'rear',0,A.px,A.py,A.ph,Math.max(0,1-G.deathT/.4));
-  else if(G.throwT>=0) drawNinja(ctx,G.g,G.eq,'throw',Math.floor(G.throwT*22*G.st.rate),A.px,A.py,A.ph,blink?.35:1);
+  else if(G.throwT>=0) drawNinja(ctx,G.g,G.eq,'throw',Math.floor(G.throwT*G.tfps),A.px,A.py,A.ph,blink?.35:1);
   else drawNinja(ctx,G.g,G.eq,'rear',Math.floor(G.rearT*8),A.px,A.py,A.ph,blink?.35:1);
   // 이펙트
   for(const f of G.fx){const p=f.t/f.life;
@@ -984,9 +970,9 @@ function render(dt){
   ctx.restore();
   drawPetals(ctx,dt,T);
   // 연속 + 배너
-  if(G.combo>=2){const pop=1+Math.max(0,.3-(G.st.comboWin-G.comboT))*1.2;ctx.save();ctx.translate(W/2,A.lineY-A.ph*.62);ctx.scale(pop,pop);ctx.textAlign='center';
+  if(G.combo>=2){const pop=1+Math.max(0,.3-(2.5-G.comboT))*1.2;ctx.save();ctx.translate(W/2,A.lineY-A.ph*.62);ctx.scale(pop,pop);ctx.textAlign='center';
     ctx.font='30px "Black Han Sans",sans-serif';ctx.fillStyle='#e6b450';ctx.fillText(`${G.combo} 연속`,0,0);
-    ctx.fillStyle='rgba(239,230,210,.25)';ctx.fillRect(-50,10,100,4);ctx.fillStyle='#e6b450';ctx.fillRect(-50,10,100*Math.max(0,G.comboT/G.st.comboWin),4);ctx.restore();}
+    ctx.fillStyle='rgba(239,230,210,.25)';ctx.fillRect(-50,10,100,4);ctx.fillStyle='#e6b450';ctx.fillRect(-50,10,100*Math.max(0,G.comboT/2.5),4);ctx.restore();}
   if(G.banner.t<1.8){const a=Math.min(1,G.banner.t*4,(1.8-G.banner.t)*3);ctx.globalAlpha=a;ctx.textAlign='center';ctx.font=`${Math.min(44,W*.09)}px "Black Han Sans",sans-serif`;
     ctx.fillStyle='rgba(20,17,27,.6)';ctx.fillRect(0,H*.34,W,64);ctx.fillStyle='#efe6d2';ctx.fillText(G.banner.txt,W/2,H*.34+46);ctx.globalAlpha=1;}
   if(G.flash>0){ctx.fillStyle=`rgba(210,58,47,${G.flash*.6})`;ctx.fillRect(0,0,W,H);}
@@ -1014,7 +1000,7 @@ function renderLobbyScene(dt){
 function endGame(){
   mode='result';
   const g=G.g, st=G.st;
-  const earned=Math.floor(G.score/20*(1+st.coin))+G.kills*2;
+  const earned=Math.floor(G.score/20)+G.kills*2;
   save.coins+=earned; const rec=G.score>save.best; if(rec) save.best=G.score; persist();
   $('rScore').textContent=G.score.toLocaleString(); $('rKills').textContent=G.kills; $('rCombo').textContent=G.maxCombo; $('rWave').textContent=G.wave;
   $('rCoins').textContent='+'+earned.toLocaleString(); $('newrec').hidden=!rec||G.score===0;
@@ -1025,8 +1011,7 @@ function endGame(){
 /* ================= INPUT ================= */
 cv.addEventListener('pointerdown',ev=>{
   const r=cv.getBoundingClientRect(), x=ev.clientX-r.left, y=ev.clientY-r.top;
-  if(mode==='game'){const e=pickTarget(x,y); if(e){G.focus=e;SFX.tap();} ev.preventDefault();}
-  else if(mode==='lobby'){const f=lobbyFeet; if(Math.abs(x-f.x)<f.h*.35&&y<f.y&&y>f.y-f.h){lobbyAnim.a='hop';lobbyAnim.t=0;SFX.dodge();}}
+  if(mode==='lobby'){const f=lobbyFeet; if(Math.abs(x-f.x)<f.h*.35&&y<f.y&&y>f.y-f.h){lobbyAnim.a='hop';lobbyAnim.t=0;SFX.dodge();}}
 });
 addEventListener('keydown',e=>{
   if(e.key==='Escape'){if(mode==='game') pause(); else if(mode==='paused') resume(); else if(mode==='shop') goLobby();}
