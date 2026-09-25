@@ -97,17 +97,18 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 
 /* ---------- shop ---------- */
 #shop{background:rgba(14,11,20,.94)}
-.shop{position:absolute;inset:0;display:grid;grid-template-columns:minmax(260px,340px) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}
-.shop-head{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line)}
+.shop{position:absolute;inset:0;display:grid;grid-template-columns:minmax(280px,340px) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;
+  grid-template-areas:"head head" "prev cat" "det cat"}
+.shop-head{grid-area:head;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line)}
 .shop-head h2{margin:0;font-family:var(--display);font-weight:400;font-size:22px}
 .shop-head .left{display:flex;align-items:center;gap:12px}
-.preview{position:relative;border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
-.preview canvas{flex:1;min-height:0;width:100%;display:block}
-.pv-tools{display:flex;justify-content:center;gap:6px;padding:10px 16px 14px}
-.chip{padding:7px 12px;border-radius:999px;border:1px solid var(--line);font-size:13px;color:var(--muted)}
+.preview{grid-area:prev;position:relative;border-right:1px solid var(--line);min-height:0}
+.preview canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.pv-tools{position:absolute;left:0;right:0;bottom:10px;display:flex;justify-content:center;gap:6px}
+.chip{padding:6px 12px;border-radius:999px;border:1px solid var(--line);font-size:12px;color:var(--muted);background:rgba(20,17,27,.7)}
 .chip[aria-pressed="true"]{border-color:var(--paper);color:var(--paper)}
-.tryon{position:absolute;top:10px;left:0;right:0;text-align:center;font-size:12px;color:var(--gold)}
-.catalog{min-height:0;overflow-y:auto;padding:14px 16px 24px;display:flex;flex-direction:column;gap:14px}
+.tryon{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:1;font-size:11px;color:#241a08;background:var(--gold);padding:2px 10px;border-radius:999px}
+.catalog{grid-area:cat;min-height:0;overflow-y:auto;padding:14px 16px 24px;display:flex;flex-direction:column;gap:12px}
 .catalog>*{flex-shrink:0} /* 스크롤 영역 안에서 세트 탭 줄이 눌려 잘리지 않게 */
 .sets{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
 .sets button{min-width:0;padding:7px 4px;border-radius:10px;border:1px solid var(--line);font-size:12px;display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--muted);line-height:1.2}
@@ -115,38 +116,41 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .sets button .nm{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sets button .dot{width:8px;height:8px;border-radius:50%;background:var(--rc)}
 .sets button[aria-pressed="true"]{background:var(--night-2);border-color:var(--rc);color:var(--text)}
-.set-title{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
-.set-title h3{margin:0;font-family:var(--display);font-weight:400;font-size:24px}
-.rar{font-size:12px;padding:3px 8px;border-radius:999px;background:var(--rc);color:#16121c;font-weight:700;letter-spacing:.06em}
-.set-title span.en{font-size:11px;letter-spacing:.2em;color:var(--muted)}
-.items{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-.item{background:var(--paper);color:var(--paper-ink);border-radius:12px;box-shadow:inset 0 0 0 2px var(--paper-ink);padding:8px 6px 8px;display:flex;flex-direction:column;align-items:center;gap:4px;position:relative;text-align:center}
-.item .ic{width:72%;aspect-ratio:1}
+.set-title{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.set-title h3{margin:0;font-family:var(--display);font-weight:400;font-size:22px}
+.rar{font-size:11px;padding:2px 8px;border-radius:999px;background:var(--rc);color:#16121c;font-weight:700;letter-spacing:.06em}
+.set-title .own{margin-left:auto;font-size:12px;color:var(--muted)}
+.items{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.item{background:var(--paper);color:var(--paper-ink);border-radius:12px;box-shadow:inset 0 0 0 2px var(--paper-ink);padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center;min-width:0}
+.item .ic{width:min(70%,88px);aspect-ratio:1}
 .item .nm{font-size:12px;font-weight:700}
-.item .pr{font-size:12px;display:flex;align-items:center;gap:4px;color:#6a5a44}
+.item .pr{font-size:11px;display:flex;align-items:center;gap:3px;color:#6a5a44;min-height:18px}
 .item .pr .coin{width:12px;height:12px}
 .item .pr .coin::after{inset:4px}
+.item .pr.on{background:var(--lacquer);color:#fff;border-radius:999px;padding:0 8px;font-weight:700}
+.item .pr.have{color:#3f7a3a;font-weight:700}
 .item[aria-pressed="true"]{box-shadow:inset 0 0 0 3px var(--gold),0 0 0 2px var(--gold)}
-.badge{position:absolute;top:6px;right:6px;font-size:10px;padding:2px 6px;border-radius:999px;background:var(--paper-ink);color:var(--paper)}
-.badge.on{background:var(--lacquer);color:#fff}
-.detail{background:var(--night-2);border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;grid-template-columns:72px 1fr;gap:12px 14px;align-items:center}
-.detail .big{width:72px;height:72px;background-color:var(--paper);border-radius:12px;box-shadow:inset 0 0 0 2px var(--paper-ink)}
-.detail h4{margin:0 0 4px;font-family:var(--display);font-weight:400;font-size:19px}
-.detail p{margin:0;font-size:14px;color:var(--muted)}
-.detail p b{color:var(--text)}
-.detail .row{grid-column:1/-1;display:flex;gap:8px}
-.detail .row .btn{flex:1;font-size:17px;padding:12px}
+.detail{grid-area:det;border-right:1px solid var(--line);border-top:1px solid var(--line);background:var(--night-2);padding:12px 14px 14px;display:flex;flex-direction:column;gap:10px}
+.detail .head{display:flex;align-items:center;gap:10px}
+.detail .big{flex:none;width:52px;height:52px;background-color:var(--paper);border-radius:10px;box-shadow:inset 0 0 0 2px var(--paper-ink)}
+.detail h4{margin:0;font-family:var(--display);font-weight:400;font-size:18px}
+.detail .sub{font-size:12px;color:var(--muted)}
+.detail .row{display:flex;gap:6px}
+.detail .row .btn{flex:1;font-size:15px;padding:11px 6px;white-space:nowrap}
+.detail .row .btn-primary{flex:2}
 .note{font-size:12px;color:var(--muted);line-height:1.5}
-.detail .lines{grid-column:1/-1;display:flex;flex-direction:column;gap:6px;font-size:13px}
-.detail .lines>div{display:flex;gap:10px;align-items:baseline}
-.detail .lbl{flex:none;width:68px;font-size:12px;color:var(--muted)}
-.detail .diff>div{display:flex;flex-wrap:wrap;gap:4px 12px}
+.detail .lines{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:12px;align-items:baseline}
+.detail .lbl{color:var(--muted);white-space:nowrap}
+.detail .lines b{font-weight:700}
+.detail .lines .dim{font-weight:400;color:var(--muted)}
+.detail .diff{display:flex;flex-wrap:wrap;gap:2px 10px}
 .detail .up{color:#8fdc8a}.detail .down{color:#ff8a7a}
 .setfx{background:var(--night-2);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
 .setfx h5{margin:0;font-size:14px;font-weight:700;display:flex;justify-content:space-between;gap:10px}
 .setfx h5 .num{color:var(--muted);font-weight:400;font-size:13px}
+.setfx .inherit{font-size:11px;color:var(--muted);line-height:1.5}
 .fx{display:flex;gap:10px;align-items:center;font-size:13px;color:var(--muted)}
-.fx .need{flex:none;min-width:48px;text-align:center;padding:2px 6px;border-radius:999px;border:1px solid var(--line);font-size:12px}
+.fx .need{flex:none;min-width:56px;text-align:center;padding:2px 6px;border-radius:999px;border:1px solid var(--line);font-size:12px}
 .fx.on{color:var(--text)}
 .fx.on .need{background:var(--rc);border-color:var(--rc);color:#16121c;font-weight:700}
 .fx.pre .need{border-color:var(--rc);color:var(--rc)}
@@ -219,9 +223,10 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .toast{position:absolute;left:50%;top:70px;transform:translateX(-50%);background:var(--paper);color:var(--paper-ink);padding:8px 14px;border-radius:999px;font-size:14px;box-shadow:0 0 0 2px var(--paper-ink);pointer-events:none;transition:opacity .3s}
 
 @media (max-width:720px){
-  .shop{grid-template-columns:minmax(0,1fr);grid-template-rows:auto 230px minmax(0,1fr)}
+  .shop{grid-template-columns:minmax(0,1fr);grid-template-rows:auto 190px minmax(0,1fr) auto;grid-template-areas:"head" "prev" "cat" "det"}
   .preview{border-right:0;border-bottom:1px solid var(--line)}
-  .pv-tools{padding:6px 16px 8px}
+  .detail{border-right:0;box-shadow:0 -8px 20px rgba(0,0,0,.35);padding-bottom:calc(12px + env(safe-area-inset-bottom,0px))}
+  .detail .lines{font-size:11px}
   .brand small{display:none}
 }
 @media (max-width:420px){
@@ -277,21 +282,21 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
         <div class="purse"><i class="coin"></i><b class="num" id="coinS">0</b></div>
       </div>
       <div class="preview">
-        <div class="tryon" id="tryon" hidden>입어보는 중 · 구매 전 미리보기</div>
+        <div class="tryon" id="tryon" hidden>입어보는 중</div>
         <canvas id="pv"></canvas>
         <div class="pv-tools">
           <button class="chip" id="pvFront" aria-pressed="true">정면</button>
-          <button class="chip" id="pvRear" aria-pressed="false">뒷모습 (전투)</button>
+          <button class="chip" id="pvRear" aria-pressed="false">뒷모습</button>
           <button class="chip" id="pvThrow" aria-pressed="false">던지기</button>
         </div>
       </div>
+      <div class="detail" id="detail"></div>
       <div class="catalog">
         <div class="sets" id="sets"></div>
         <div class="set-title" id="setTitle"></div>
         <div class="items" id="items"></div>
-        <div class="detail" id="detail"></div>
         <div class="setfx" id="setfx"></div>
-        <p class="note">두건·목도리·상의·장갑·하의·신발·허리띠는 캐릭터 옷 색으로 바로 보이고, 쿠나이는 전투에서 던지는 무기 모양이 바뀌어요. 같은 세트를 2·4·8부위 입으면 세트 효과가 차례로 켜지고, 8부위를 다 맞추면 오라가 생겨요. 여러 세트를 섞으면 세트마다 따로 계산돼요.</p>
+        <p class="note">옷은 캐릭터 색으로, 쿠나이는 던지는 무기 모양으로 바로 보여요.</p>
       </div>
     </div>
   </section>
@@ -449,10 +454,14 @@ function calcStats(eq){
   for(const t of TRAIN) s[t.k]+=(save.train[t.k]||0)*t.per; // 훈련소
   add(ownTotal(save.g)); // 보유 효과
   const counts=setCounts(eq), active=[];
-  counts.forEach((n,set)=>SETFX[set].forEach(([need,txt,fx])=>{if(n>=need){add(fx);active.push({set,need,txt});}}));
+  // 2·4세트 효과: 같은 세트를 입은 개수로
+  counts.forEach((n,set)=>SETFX[set].forEach(([need,txt,fx])=>{if(need<8&&n>=need){add(fx);active.push({set,need,txt});}}));
+  // 고유 능력(8세트): 8부위 모두 k세트 이상이면 1~k세트의 고유 능력을 전부 이어받는다
+  const minTier=Math.min(...eq);
+  for(let k=1;k<=minTier;k++){const u=SETFX[k].find(x=>x[0]===8); if(u){add(u[2]);active.push({set:k,need:8,txt:u[1],unique:true});}}
   s.crit=Math.min(1,s.crit);
   s.aps=BASE_APS*(1+s.aspd); // 초당 공격 횟수
-  s.full=counts.findIndex((n,i)=>i>0&&n===8); // 8부위 세트면 오라
+  s.minTier=minTier; s.full=minTier>0?minTier:-1; // 고유 능력이 켜지면 오라
   s.active=active; s.counts=counts;
   return s;
 }
@@ -726,7 +735,7 @@ function statSummary(st){
 function openInfo(){
   const g=save.g, st=calcStats(save.eq[g]), own=fmtStats(ownTotal(g)), ownN=Object.keys(save.owned[g]||{}).length;
   $('infoBody').innerHTML=
-    `<div><h5>세트 효과</h5><div class="chips">${st.active.length?st.active.map(a=>`<span class="chip2" style="--rc:${RARITY[SETS[a.set].r].c}">${SETS[a.set].n} ${a.need}세트 · ${a.txt}</span>`).join(''):'<span class="note">같은 세트를 2부위 이상 입으면 켜져요.</span>'}</div></div>`+
+    `<div><h5>세트 효과</h5><div class="chips">${st.active.length?st.active.map(a=>`<span class="chip2" style="--rc:${RARITY[SETS[a.set].r].c}">${SETS[a.set].n} ${a.unique?'고유':a.need+'세트'} · ${a.txt}</span>`).join(''):'<span class="note">같은 세트를 2부위 이상 입으면 켜져요.</span>'}</div></div>`+
     `<div><h5>보유 효과 · 장비 ${ownN}개</h5><div class="chips">${own.length?own.map(t=>`<span class="chip2">${t}</span>`).join(''):'<span class="note">장비를 사면 착용하지 않아도 능력치 일부가 붙어요.</span>'}</div></div>`+
     `<div><h5>전체 능력치</h5><div class="grid2">${[['공격력',st.atk],['공격 속도',`초당 ${st.aps.toFixed(2)}회`],['크리티컬',pct1(st.crit)+'%'],['크리티컬 데미지',pct1(st.cdmg)+'%'],['체력',Math.round(st.hp)],['체력 재생',`${+st.regen.toFixed(2)}/초`]].map(([k,v])=>`<span>${k}</span><b class="num">${v}</b>`).join('')}</div></div>`;
   $('infoM').hidden=false;
@@ -779,12 +788,12 @@ function renderShop(){
   });
   const S=SETS[set], R=RARITY[S.r];
   const ownedN=SLOTS.filter((_,i)=>owns(g,i,set)).length;
-  $('setTitle').innerHTML=`<h3>${S.n}</h3><span class="rar" style="--rc:${R.c};background:${R.c}">${R.n}</span><span class="en">${g==='f'?'FEMALE ':''}SET ${String(set+1).padStart(2,'0')} · ${S.en}</span><span class="note">보유 ${ownedN}/8</span>`;
+  $('setTitle').innerHTML=`<h3>${S.n}</h3><span class="rar" style="--rc:${R.c};background:${R.c}">${R.n}</span><span class="own num">보유 ${ownedN} / 8</span>`;
   const items=$('items'); items.innerHTML='';
   SLOTS.forEach((_,i)=>{
     const b=document.createElement('button'); b.className='item'; b.setAttribute('aria-pressed',i===sel);
     const own=owns(g,i,set), on=eq[i]===set;
-    b.innerHTML=`${on?'<span class="badge on">장착</span>':own?'<span class="badge">보유</span>':''}<i class="ic"></i><span class="nm">${slotName(i,g)}</span><span class="pr">${own?(on?'착용 중':'보유함'):`<i class="coin"></i><span class="num">${priceOf(i,set).toLocaleString()}</span>`}</span>`;
+    b.innerHTML=`<i class="ic"></i><span class="nm">${slotName(i,g)}</span>${on?'<span class="pr on">착용 중</span>':own?'<span class="pr have">보유</span>':`<span class="pr"><i class="coin"></i><span class="num">${priceOf(i,set).toLocaleString()}</span></span>`}`;
     iconStyle(b.querySelector('.ic'),g,i,set);
     b.onclick=()=>{shopView.sel=i;SFX.tap();
       // 입어보기: 아직 장착 안 한 옷을 누르면 미리보기에 입혀본다
@@ -798,11 +807,11 @@ function renderShop(){
   const main=fmtStats(itemStats(sel,set)), trait=TRAIT[set]?fmtStats(TRAIT[set]):[];
   const next=[...eq]; next[sel]=set;
   const diff=on?'':statDiff(calcStats(eq),calcStats(next));
-  d.innerHTML=`<i class="big ic"></i><div><h4>${itemName(sel,set,g)}</h4><p>${slotName(sel,g)} · ${R.n}</p></div>
-    <div class="lines"><div><span class="lbl">부위 능력치</span><b>${main.join(' · ')||'없음 (기본 장비)'}</b></div>
-    <div><span class="lbl">세트 특성</span><b>${trait.join(' · ')||'없음'}</b></div>
-    <div><span class="lbl">보유 효과</span><b>${fmtStats(ownItem(sel,set)).join(' · ')||'없음'}<span style="font-weight:400;color:var(--muted)"> · ${set===0?'기본 장비':own?'착용 안 해도 적용 중':'구매하면 착용 안 해도 적용'}</span></b></div>
-    ${diff?`<div class="diff"><span class="lbl">장착하면</span><div>${diff}</div></div>`:''}</div>
+  const ownFx=fmtStats(ownItem(sel,set)).join(' · ');
+  d.innerHTML=`<div class="head"><i class="big ic"></i><div><h4>${itemName(sel,set,g)}</h4><div class="sub">${slotName(sel,g)} · ${R.n}${own&&set?' · 보유 중':''}</div></div></div>
+    <div class="lines"><span class="lbl">능력치</span><b>${[...main,...trait].join(' · ')||'없음 (기본 장비)'}</b>
+    ${ownFx?`<span class="lbl">보유 효과</span><b>${ownFx} <span class="dim">${own?'· 적용 중':'· 구매 시 적용'}</span></b>`:''}
+    ${diff?`<span class="lbl">장착하면</span><span class="diff">${diff}</span>`:''}</div>
     <div class="row"></div>`;
   iconStyle(d.querySelector('.ic'),g,sel,set);
   const row=d.querySelector('.row');
@@ -810,21 +819,25 @@ function renderShop(){
   if(!own){
     const lack=save.coins<price;
     mkBtn(`<i class="coin"></i> ${price.toLocaleString()} 구매`,'btn-primary',()=>buy(sel,set),lack);
-    if(lack) mkBtn(`엽전 ${ (price-save.coins).toLocaleString()} 부족`,'btn-paper',()=>{},true);
+    if(lack) mkBtn(`${(price-save.coins).toLocaleString()} 부족`,'btn-paper',()=>{},true);
   }else if(!on){
     mkBtn('장착하기','btn-primary',()=>equip(sel,set));
   }else{
     mkBtn('착용 중','btn-paper',()=>{},true);
-    if(set!==0) mkBtn('벗기 (기본으로)','btn-paper',()=>equip(sel,0));
+    if(set!==0) mkBtn('벗기','btn-paper',()=>equip(sel,0));
   }
-  if(own&&!SLOTS.every((_,i)=>eq[i]===set)&&SLOTS.every((_,i)=>owns(g,i,set))) mkBtn('세트 전부 장착','btn-paper',()=>{SLOTS.forEach((_,i)=>eq[i]=set);persist();SFX.equip();toast(`${S.n} 세트 장착!`);shopView.try=null;renderShop();});
+  if(own&&!SLOTS.every((_,i)=>eq[i]===set)&&SLOTS.every((_,i)=>owns(g,i,set))) mkBtn('세트 장착','btn-paper',()=>{SLOTS.forEach((_,i)=>eq[i]=set);persist();SFX.equip();toast(`${S.n} 세트 장착!`);shopView.try=null;renderShop();});
   $('tryon').hidden=!shopView.try;
   // 세트 효과 표
   const cur=setCounts(eq)[set], pre=shopView.try?setCounts(shopView.try)[set]:cur;
+  const minNow=Math.min(...eq), minPre=shopView.try?Math.min(...shopView.try):minNow;
   const fx=$('setfx'); fx.style.setProperty('--rc',R.c);
   fx.innerHTML=`<h5><span>${S.n} 세트 효과</span><span class="num">착용 ${cur}/8${pre!==cur?` → ${pre}/8`:''}</span></h5>`+
-    (SETFX[set].length?SETFX[set].map(([need,txt])=>`<div class="fx${cur>=need?' on':pre>=need?' pre':''}"><span class="need">${need}세트</span><span>${txt}</span></div>`).join('')
-      :'<div class="fx"><span>입문자 세트는 세트 효과가 없어요. 다른 세트를 2부위 이상 맞춰 보세요.</span></div>');
+    (SETFX[set].length?SETFX[set].map(([need,txt])=>{
+      const on=need<8?cur>=need:minNow>=set, pv=need<8?pre>=need:minPre>=set;
+      return `<div class="fx${on?' on':pv?' pre':''}"><span class="need">${need<8?need+'세트':'고유'}</span><span>${txt}</span></div>`;}).join('')+
+      `<div class="inherit">고유 능력은 8부위 모두 이 세트 이상이면 켜지고, 더 높은 세트로 바꿔도 그대로 이어져요.${set>1?` 이 세트를 모두 입으면 아래 ${set-1}개 세트의 고유 능력도 함께 발동해요.`:''}</div>`
+      :'<div class="fx"><span>입문자 세트는 세트 효과가 없어요.</span></div>');
 }
 function buy(slot,set){
   const g=save.g, p=priceOf(slot,set); if(save.coins<p) return;
@@ -839,7 +852,7 @@ function drawShopPreview(dt){
   const g=save.g, eq=shopView.try||save.eq[g];
   const gr=pctx.createRadialGradient(w/2,h*.6,10,w/2,h*.6,Math.max(w,h)*.6); gr.addColorStop(0,'#2d2140'); gr.addColorStop(1,'#14111b');
   pctx.fillStyle=gr; pctx.fillRect(0,0,w,h);
-  const hgt=Math.min(h*.78,w*.9,300), fy=h*.5+hgt*.5;
+  const hgt=Math.min((h-64)*.95,w*.9,300), fy=h-52; // 아래 보기 버튼과 겹치지 않게
   shadow(pctx,w/2,fy,hgt*.28);
   const st=calcStats(eq); if(st.full>=0) aura(pctx,w/2,fy,hgt,SETS[st.full].glow,T);
   shopView.t+=dt;
