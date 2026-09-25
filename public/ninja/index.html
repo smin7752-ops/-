@@ -165,6 +165,13 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .plus{width:38px;height:38px;border-radius:10px;background:var(--lacquer);color:#fff;font-size:20px;line-height:1}
 .plus[disabled]{background:#c9bca0;cursor:not-allowed}
 .sp-left{font-family:var(--display);font-size:20px}
+.sheet{max-height:calc(100% - 24px);overflow-y:auto}
+.actions .wide{grid-column:1/-1}
+.buyup{min-width:88px;height:38px;border-radius:10px;background:var(--lacquer);color:#fff;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:5px;padding:0 10px}
+.buyup .coin{width:14px;height:14px}.buyup .coin::after{inset:5px}
+.buyup[disabled]{background:#c9bca0;cursor:not-allowed}
+.train-purse{display:flex;justify-content:center}
+.train-purse .purse{background:var(--paper-ink);color:var(--paper)}
 .sp-left b{color:var(--lacquer)}
 .keyhint{display:none}}
 .keyhint{position:absolute;top:64px;left:16px;right:16px;text-align:center;font-size:12px;color:var(--muted)}
@@ -224,7 +231,8 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
         <div class="set-bonus" id="bonusL" hidden></div>
         <div class="actions">
           <button class="btn btn-paper" id="toShop">장비 상점</button>
-          <button class="btn btn-primary" id="toGame">출전하기</button>
+          <button class="btn btn-paper" id="toTrain">훈련소</button>
+          <button class="btn btn-primary wide" id="toGame">출전하기</button>
         </div>
       </div>
       <div class="hint">캐릭터를 누르면 반응해요 · 전투에선 뒷모습으로 서서 자동으로 쿠나이를 던져요</div>
@@ -289,6 +297,16 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
       <div class="stat-rows" id="statRows"></div>
       <p class="note" style="margin:0">레벨이 오를 때마다 포인트 3개를 받아요. 한 번 찍은 포인트는 되돌릴 수 없어요.</p>
       <button class="btn btn-primary" id="spDone">완료</button>
+    </div>
+  </section>
+
+  <section id="trainM" class="screen modal" hidden>
+    <div class="sheet">
+      <h2>훈련소</h2>
+      <div class="train-purse"><div class="purse"><i class="coin"></i><b class="num" id="coinT">0</b></div></div>
+      <div class="stat-rows" id="trainRows"></div>
+      <p class="note" style="margin:0">엽전으로 능력치를 영구히 올려요. 레벨 스탯 포인트와 따로 쌓이고, 올릴수록 다음 훈련 비용이 올라가요.</p>
+      <button class="btn btn-primary" id="trainDone">완료</button>
     </div>
   </section>
 
@@ -381,10 +399,11 @@ const SETFX=[
 function itemStats(slot,t){return MAIN[slot](t);}
 function setCounts(eq){const c=Array(SETS.length).fill(0);eq.forEach(v=>c[v]++);return c;}
 function calcStats(eq){
-  const s={hp:100,atk:10,aspd:0,crit:.05,cdmg:1.5,shield:0,multi:1,pierce:0,poison:0,shadow:0,blast:0};
+  const s={hp:100,regen:1,atk:10,aspd:0,crit:.05,cdmg:1.5,shield:0,multi:1,pierce:0,poison:0,shadow:0,blast:0};
   const add=o=>{for(const k in o){if(k==='multi') s.multi=Math.max(s.multi,o[k]); else s[k]+=o[k];}};
   eq.forEach((t,slot)=>{add(itemStats(slot,t)); if(TRAIT[t]) add(TRAIT[t]);});
-  for(const a of ALLOC) s[a.k]+=(save.alloc[a.k]||0)*a.per; // 직접 찍은 스탯
+  for(const a of ALLOC) s[a.k]+=(save.alloc[a.k]||0)*a.per; // 레벨 스탯 포인트
+  for(const t of TRAIN) s[t.k]+=(save.train[t.k]||0)*t.per; // 훈련소
   const counts=setCounts(eq), active=[];
   counts.forEach((n,set)=>SETFX[set].forEach(([need,txt,fx])=>{if(n>=need){add(fx);active.push({set,need,txt});}}));
   s.crit=Math.min(1,s.crit);
@@ -396,7 +415,7 @@ function calcStats(eq){
 
 /* ================= SAVE ================= */
 const SKEY='shadow-shuriken-v1';
-const save={coins:300,best:0,bestRound:0,lv:1,xp:0,alloc:{},g:'f',mute:false,owned:{f:{},m:{}},eq:{f:[0,0,0,0,0,0,0,0],m:[0,0,0,0,0,0,0,0]}};
+const save={coins:300,best:0,bestRound:0,lv:1,xp:0,alloc:{},train:{},g:'f',mute:false,owned:{f:{},m:{}},eq:{f:[0,0,0,0,0,0,0,0],m:[0,0,0,0,0,0,0,0]}};
 try{const s=JSON.parse(localStorage.getItem(SKEY)||'null');if(s&&typeof s==='object'){Object.assign(save,s);}}catch(e){}
 function persist(){try{localStorage.setItem(SKEY,JSON.stringify(save))}catch(e){}}
 /* ---- 레벨: 적을 쓰러뜨려 경험치를 모으면 오르고, 레벨마다 공격력 +2 ---- */
@@ -407,8 +426,19 @@ const ALLOC=[
   {k:'atk',n:'공격력',per:2,show:v=>`+${v}`},
   {k:'aspd',n:'공격 속도',per:.02,show:v=>`+${pct1(v)}%`},
   {k:'crit',n:'크리티컬',per:.005,show:v=>`+${pct1(v)}%`},
-  {k:'cdmg',n:'크리티컬 데미지',per:.05,show:v=>`+${pct1(v)}%`}
+  {k:'cdmg',n:'크리티컬 데미지',per:.05,show:v=>`+${pct1(v)}%`},
+  {k:'regen',n:'체력 재생',per:.5,show:v=>`+${+v.toFixed(2)}/초`}
 ];
+// 훈련소: 엽전으로 올리는 능력치 (비용 = base × grow^현재단계)
+const TRAIN=[
+  {k:'atk',n:'공격력',per:3,base:50,grow:1.18,max:200,show:v=>`+${v}`},
+  {k:'aspd',n:'공격 속도',per:.02,base:80,grow:1.2,max:50,show:v=>`+${pct1(v)}%`},
+  {k:'crit',n:'크리티컬',per:.005,base:80,grow:1.2,max:60,show:v=>`+${pct1(v)}%`},
+  {k:'cdmg',n:'크리티컬 데미지',per:.05,base:70,grow:1.18,max:100,show:v=>`+${pct1(v)}%`},
+  {k:'hp',n:'체력',per:25,base:40,grow:1.16,max:200,show:v=>`+${v}`},
+  {k:'regen',n:'체력 재생',per:.5,base:60,grow:1.18,max:100,show:v=>`+${+v.toFixed(2)}/초`}
+];
+const trainCost=t=>Math.round(t.base*Math.pow(t.grow,save.train[t.k]||0)/5)*5;
 const spent=()=>ALLOC.reduce((a,x)=>a+(save.alloc[x.k]||0),0);
 const spLeft=()=>Math.max(0,SP_PER_LV*(save.lv-1)-spent());
 const xpNeed=lv=>40+lv*25;
@@ -645,7 +675,7 @@ function renderLobby(){
 }
 const pct=v=>Math.round(v*100);
 function statSummary(st){
-  return [['체력',Math.round(st.hp)],['공격력',st.atk],['공격 속도',`초당 ${st.aps.toFixed(2)}회`],['크리티컬',pct1(st.crit)+'%'],['크리티컬 데미지',pct1(st.cdmg)+'%']]
+  return [['체력',Math.round(st.hp)],['체력 재생',`${+st.regen.toFixed(2)}/초`],['공격력',st.atk],['공격 속도',`초당 ${st.aps.toFixed(2)}회`],['크리티컬',pct1(st.crit)+'%'],['크리티컬 데미지',pct1(st.cdmg)+'%']]
     .map(([k,v])=>`<span>${k} <b class="num">${v}</b></span>`).join('');
 }
 // 두 장비 조합의 능력치 차이를 "공격력 10 → 20" 형태로
@@ -655,11 +685,25 @@ function statDiff(a,b){
   for(const [k,n,f] of rows){if(Math.abs(a[k]-b[k])>1e-6){const up=b[k]>a[k];out.push(`<span class="${up?'up':'down'}">${n} ${f(a[k])} → ${f(b[k])}</span>`);}}
   return out.join('');
 }
+function statTotals(st){return {hp:Math.round(st.hp),regen:`${+st.regen.toFixed(2)}/초`,atk:st.atk,aspd:`초당 ${st.aps.toFixed(2)}회`,crit:pct1(st.crit)+'%',cdmg:pct1(st.cdmg)+'%'};}
+function openTrain(){$('trainM').hidden=false;renderTrain();}
+function renderTrain(){
+  const total=statTotals(calcStats(save.eq[save.g]));
+  $('coinT').textContent=save.coins.toLocaleString();
+  $('trainRows').innerHTML=TRAIN.map(t=>{const n=save.train[t.k]||0, cost=trainCost(t), maxed=n>=t.max;
+    return `<div class="srow"><div><b>${t.n}</b><small>훈련 ${n}단계 · 1단계당 ${t.show(t.per)}</small></div>
+      <div class="val num">${total[t.k]}<em>${n?t.show(+(n*t.per).toFixed(4)):'—'}</em></div>
+      <button class="buyup" data-k="${t.k}" ${maxed||save.coins<cost?'disabled':''} aria-label="${t.n} 훈련">${maxed?'최대':`<i class="coin"></i><span class="num">${cost.toLocaleString()}</span>`}</button></div>`;}).join('');
+  $('trainRows').querySelectorAll('.buyup').forEach(b=>b.onclick=()=>{
+    const t=TRAIN.find(x=>x.k===b.dataset.k), cost=trainCost(t);
+    if(save.coins<cost||(save.train[t.k]||0)>=t.max) return;
+    save.coins-=cost; save.train[t.k]=(save.train[t.k]||0)+1; persist(); SFX.buy(); renderTrain(); renderLobby();});
+}
 function openStats(){$('statsM').hidden=false;renderStats();}
 function renderStats(){
   const left=spLeft(), st=calcStats(save.eq[save.g]);
   $('spLeft').textContent=left;
-  const total={hp:Math.round(st.hp),atk:st.atk,aspd:`초당 ${st.aps.toFixed(2)}회`,crit:pct1(st.crit)+'%',cdmg:pct1(st.cdmg)+'%'};
+  const total=statTotals(st);
   $('statRows').innerHTML=ALLOC.map(a=>{const n=save.alloc[a.k]||0;
     return `<div class="srow"><div><b>${a.n}</b><small>1포인트당 ${a.show(a.per)}${a.unit?' '+a.unit:''} · ${n}포인트 찍음</small></div>
       <div class="val num">${total[a.k]}<em>${n?a.show(+(n*a.per).toFixed(4)):'—'}</em></div>
@@ -921,6 +965,8 @@ function update(dt){
   if(G.inv>0) G.inv-=dt; if(G.shake>0) G.shake-=dt; if(G.flash>0) G.flash-=dt;
   if(G.comboT>0){G.comboT-=dt; if(G.comboT<=0) G.combo=0;}
   G.banner.t+=dt; G.rearT+=dt; if(!G.dead) G.scroll+=H*.05*dt;
+  // 체력 재생
+  if(!G.dead&&G.hp<st.hp){const before=Math.ceil(G.hp); G.hp=Math.min(st.hp,G.hp+st.regen*dt); if(Math.ceil(G.hp)!==before) renderHearts();}
   // 자동 던지기
   if(!G.dead){
     // 공격 속도(초당 횟수)에 맞춰 던지기 동작을 빠르게 재생하고, 남는 시간은 대기
@@ -1112,6 +1158,8 @@ $('quitBtn').onclick=()=>{G.dead=false;endGame();};
 $('resAgain').onclick=()=>{SFX.tap();newGame();};
 $('resLobby').onclick=()=>{SFX.tap();goLobby();};
 $('resStats').onclick=()=>{SFX.tap();goLobby();openStats();};
+$('toTrain').onclick=()=>{ac();SFX.tap();openTrain();};
+$('trainDone').onclick=()=>{SFX.tap();$('trainM').hidden=true;renderLobby();};
 $('spDone').onclick=()=>{SFX.tap();$('statsM').hidden=true;renderLobby();};
 $('toGame').onclick=()=>{ac();SFX.tap();newGame();};
 $('toShop').onclick=()=>{ac();SFX.tap();openShop(1,0);};
