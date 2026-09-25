@@ -51,11 +51,33 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .iconbtn{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:rgba(20,17,27,.72);border:1px solid var(--line);font-size:15px}
 
 /* ---------- lobby ---------- */
-.tabs{position:absolute;top:66px;left:50%;transform:translateX(-50%);display:flex;background:rgba(20,17,27,.8);border:1px solid var(--line);border-radius:999px;padding:4px}
+.bar-r{display:flex;gap:8px;align-items:center}
+.lobby-top{position:absolute;top:64px;left:16px;right:16px;display:flex;flex-direction:column;align-items:center;gap:10px}
+.tabs{display:flex;background:rgba(20,17,27,.8);border:1px solid var(--line);border-radius:999px;padding:4px}
+.lvline{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);background:rgba(20,17,27,.6);border:1px solid var(--line);border-radius:999px;padding:4px 12px 4px 4px}
+.lvline .xpbar{width:clamp(80px,26vw,160px)}
 .tabs button{padding:8px 16px;border-radius:999px;font-size:14px;color:var(--muted)}
 .tabs button[aria-pressed="true"]{background:var(--paper);color:var(--paper-ink);font-weight:700}
-.lobby-foot{position:absolute;left:0;right:0;bottom:0;display:flex;flex-direction:column;align-items:center;gap:12px;padding:0 16px 18px}
-.lobby-card{width:100%;max-width:560px;background:linear-gradient(180deg,rgba(30,25,40,.92),rgba(20,17,27,.96));border:1px solid var(--line);border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:12px}
+.lobby-foot{position:absolute;left:0;right:0;bottom:0;display:flex;flex-direction:column;align-items:center;padding:0 16px 16px}
+.lobby-card{width:100%;max-width:520px;background:linear-gradient(180deg,rgba(30,25,40,.94),rgba(20,17,27,.97));border:1px solid var(--line);border-radius:18px;padding:12px;display:flex;flex-direction:column;gap:10px;box-shadow:0 -10px 30px rgba(0,0,0,.35)}
+.stat-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.stile{background:rgba(239,230,210,.05);border:1px solid rgba(239,230,210,.08);border-radius:10px;padding:7px 10px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.stile span{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stile b{font-size:15px;font-weight:700;white-space:nowrap}
+.fxlink{align-self:center;font-size:12px;color:var(--gold);padding:2px 8px}
+.fxlink:empty{display:none}
+.menu{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.mbtn{position:relative;padding:11px 6px;border-radius:12px;background:var(--paper);color:var(--paper-ink);font-family:var(--display);font-size:16px;box-shadow:0 3px 0 #a99a7c}
+.mbtn:active{transform:translateY(2px);box-shadow:0 1px 0 #a99a7c}
+.dot-n{position:absolute;top:-6px;right:-4px;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:var(--lacquer);color:#fff;font-family:var(--body);font-size:11px;font-weight:700;display:grid;place-items:center;box-shadow:0 0 0 2px var(--night)}
+.go{flex-direction:column;gap:2px;padding:12px}
+.go small{font-family:var(--body);font-size:12px;opacity:.85;letter-spacing:0}
+.info-body{display:flex;flex-direction:column;gap:12px;text-align:left}
+.info-body h5{margin:0 0 6px;font-size:13px;color:#6a5a44;font-weight:700}
+.info-body .chips{display:flex;flex-wrap:wrap;gap:6px}
+.info-body .chip2{font-size:12px;padding:4px 10px;border-radius:999px;background:var(--paper-2);border-left:4px solid var(--rc,var(--gold))}
+.info-body .grid2{display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:13px}
+.info-body .grid2 b{text-align:right}
 .slots{display:grid;grid-template-columns:repeat(8,1fr);gap:6px}
 .slot{aspect-ratio:1;background:var(--paper);border-radius:10px;box-shadow:inset 0 0 0 2px var(--paper-ink);position:relative;display:grid;place-items:center;overflow:hidden}
 .slot .ic{width:78%;height:78%}
@@ -69,9 +91,6 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .btn-paper{background:var(--paper);color:var(--paper-ink);box-shadow:0 4px 0 #a99a7c}
 .btn-paper:active{transform:translateY(3px);box-shadow:0 1px 0 #a99a7c}
 .btn[disabled]{opacity:.45;cursor:not-allowed}
-.hint{font-size:12px;color:var(--muted);text-align:center}
-.best{position:absolute;top:118px;left:0;right:0;text-align:center;font-size:13px;color:var(--muted)}
-.best b{color:var(--gold)}
 
 /* ---------- icons from atlas ---------- */
 .ic{background-repeat:no-repeat;background-image:var(--atlas);background-size:800% 1000%}
@@ -135,7 +154,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .fxchip{font-size:12px;padding:3px 10px;border-radius:999px;border:1px solid var(--rc);color:var(--text)}
 
 /* ---------- HUD ---------- */
-.hud-top{position:absolute;top:0;left:0;right:0;display:grid;grid-template-columns:1fr auto 1fr;align-items:start;padding:12px 16px;gap:8px}
+.hud-top{position:absolute;top:0;left:0;right:0;display:grid;grid-template-columns:1fr auto 1fr;align-items:start;padding:10px 12px 18px;gap:8px;background:linear-gradient(180deg,rgba(14,11,20,.75),rgba(14,11,20,0))}
 .hearts{display:flex;gap:6px;align-items:center}
 .hpbox{position:relative;width:clamp(110px,30vw,180px);height:18px;border-radius:6px;background:#2a2230;border:1px solid var(--line);overflow:hidden}
 .hpbox i{position:absolute;inset:0;width:100%;background:linear-gradient(180deg,#e2574c,#b52a22);transition:width .2s}
@@ -143,7 +162,15 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .hpbox span{position:absolute;inset:0;display:grid;place-items:center;font-size:11px;font-weight:700;color:#fff;text-shadow:0 1px 1px rgba(0,0,0,.7)}
 .shield{flex:none;width:18px;height:18px;background:#c9d3e0;clip-path:polygon(50% 0,100% 18%,90% 62%,50% 100%,10% 62%,0 18%)}
 .hud-l{display:flex;flex-direction:column;gap:6px;min-width:0}
-.lv{display:flex;align-items:center;gap:8px;background:rgba(20,17,27,.72);border:1px solid var(--line);border-radius:999px;padding:4px 10px 4px 4px;width:max-content;max-width:100%}
+.pcard{justify-self:stretch;width:100%;max-width:200px;box-sizing:border-box;background:rgba(20,17,27,.72);border:1px solid var(--line);border-radius:12px;padding:6px 8px;backdrop-filter:blur(4px)}
+.lv{display:flex;align-items:center;gap:8px}
+.pcard .xpbar{flex:1;width:auto;min-width:0}
+.pcard .hearts{display:flex}
+.pcard .hpbox{flex:1;width:auto;min-width:0}
+.btimer{position:relative;width:96px;height:14px;margin:6px auto 0;border-radius:999px;background:rgba(20,17,27,.8);border:1px solid var(--line);overflow:hidden}
+.btimer i{position:absolute;inset:0;width:100%;background:linear-gradient(90deg,#e6b450,#ffd77a)}
+.btimer.low i{background:linear-gradient(90deg,#d23a2f,#ff6a5a)}
+.btimer span{position:relative;display:block;text-align:center;font-size:10px;line-height:14px;font-weight:700;color:#fff;text-shadow:0 1px 1px rgba(0,0,0,.8)}
 .lv-badge{background:var(--gold);color:#241a08;font-family:var(--display);font-size:14px;border-radius:999px;padding:3px 8px;line-height:1.1;white-space:nowrap}
 .xpbar{width:clamp(56px,16vw,120px);height:6px;border-radius:999px;background:#3b3348;overflow:hidden}
 .xpbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#e6b450,#ffe08a);transition:width .25s}
@@ -215,28 +242,30 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
   <section id="lobby" class="screen" hidden>
     <header class="bar">
       <div class="brand"><div class="seal">影</div><div><h1>그림자 수리검</h1><small>SHADOW SHURIKEN</small></div></div>
-      <div style="display:flex;gap:8px;align-items:center">
+      <div class="bar-r">
         <div class="purse"><i class="coin"></i><b class="num" id="coinL">0</b></div>
         <button class="iconbtn" id="muteL" aria-label="소리 켜기/끄기">♪</button>
       </div>
     </header>
-    <div class="tabs" role="group" aria-label="캐릭터 선택">
-      <button id="pickF" aria-pressed="true">여닌자</button>
-      <button id="pickM" aria-pressed="false">남닌자</button>
+    <div class="lobby-top">
+      <div class="tabs" role="group" aria-label="캐릭터 선택">
+        <button id="pickF" aria-pressed="true">여닌자</button>
+        <button id="pickM" aria-pressed="false">남닌자</button>
+      </div>
+      <div class="lvline" id="bestL"></div>
     </div>
-    <div class="best" id="bestL"></div>
     <div class="lobby-foot" id="lobbyFoot">
       <div class="lobby-card">
         <div class="slots" id="slotsL"></div>
-        <div class="statline" id="statsL"></div>
-        <div class="set-bonus" id="bonusL" hidden></div>
-        <div class="actions">
-          <button class="btn btn-paper" id="toShop">장비 상점</button>
-          <button class="btn btn-paper" id="toTrain">훈련소</button>
-          <button class="btn btn-primary wide" id="toGame">출전하기</button>
+        <div class="stat-grid" id="statsL"></div>
+        <button class="fxlink" id="fxOpen"></button>
+        <div class="menu">
+          <button class="mbtn" id="toShop">장비</button>
+          <button class="mbtn" id="toTrain">훈련소</button>
+          <button class="mbtn" id="spOpen">스탯<span class="dot-n" id="spBadge" hidden></span></button>
         </div>
+        <button class="btn btn-primary go" id="toGame"><span>출전하기</span><small id="goSub"></small></button>
       </div>
-      <div class="hint">캐릭터를 누르면 반응해요 · 전투에선 뒷모습으로 서서 자동으로 쿠나이를 던져요</div>
     </div>
   </section>
 
@@ -270,14 +299,15 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
   <!-- HUD: 뒷모습 전투 -->
   <section id="hud" class="screen" hidden>
     <div class="hud-top">
-      <div class="hud-l">
+      <div class="hud-l pcard">
         <div class="lv"><span class="lv-badge">Lv.<span class="num" id="lvG">1</span></span><div class="xpbar" aria-label="경험치"><i id="xpG"></i></div></div>
         <div class="hearts" id="hearts"><div class="hpbox" role="meter" aria-label="체력"><i class="lag" id="hpLag"></i><i id="hpFill"></i><span class="num" id="hpText">100 / 100</span></div><span id="shieldsG" style="display:flex;gap:4px"></span></div>
       </div>
-      <div class="round"><small>ROUND</small><b class="num" id="roundG">1</b><button class="challenge" id="challengeG" hidden>도전</button></div>
+      <div class="round"><small>ROUND</small><b class="num" id="roundG">1</b>
+        <div class="btimer" id="timerG" hidden><i id="timerFill"></i><span class="num" id="timerText">0:30</span></div>
+        <button class="challenge" id="challengeG" hidden>도전</button></div>
       <div class="hud-r"><div class="purse" id="purseG"><i class="coin"></i><b class="num" id="coinG">0</b></div><button class="iconbtn" id="pauseBtn" aria-label="일시정지">Ⅱ</button></div>
     </div>
-    <div class="keyhint">가장 가까이 온 적에게 자동으로 공격해요</div>
   </section>
 
   <section id="pause" class="screen modal" hidden>
@@ -298,6 +328,14 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
       <div class="stat-rows" id="statRows"></div>
       <p class="note" style="margin:0">레벨이 오를 때마다 포인트 3개를 받아요. 한 번 찍은 포인트는 되돌릴 수 없어요.</p>
       <button class="btn btn-primary" id="spDone">완료</button>
+    </div>
+  </section>
+
+  <section id="infoM" class="screen modal" hidden>
+    <div class="sheet">
+      <h2>적용 중인 효과</h2>
+      <div class="info-body" id="infoBody"></div>
+      <button class="btn btn-primary" id="infoDone">닫기</button>
     </div>
   </section>
 
@@ -663,8 +701,10 @@ function renderLobby(){
   const g=save.g, eq=save.eq[g], st=calcStats(eq);
   $('pickF').setAttribute('aria-pressed',g==='f'); $('pickM').setAttribute('aria-pressed',g==='m');
   $('coinL').textContent=save.coins.toLocaleString();
-  $('bestL').innerHTML=`<div class="lobby-lv"><span class="lv-badge">Lv.<span class="num">${save.lv}</span></span><span class="xpbar"><i style="width:${Math.round(save.xp/xpNeed(save.lv)*100)}%"></i></span><span class="num">${save.xp}/${xpNeed(save.lv)}</span>${save.bestRound?`<span>· 최고 <b class="num">${save.bestRound}</b>라운드</span>`:''}<button class="spbtn${spLeft()?' has':''}" id="spOpen">스탯 찍기${spLeft()?` ${spLeft()}`:''}</button></div>`;
-  $('spOpen').onclick=()=>{SFX.tap();openStats();};
+  $('bestL').innerHTML=`<span class="lv-badge">Lv.<span class="num">${save.lv}</span></span><span class="xpbar"><i style="width:${Math.round(save.xp/xpNeed(save.lv)*100)}%"></i></span><span class="num">${save.xp} / ${xpNeed(save.lv)}</span>`;
+  const sp=spLeft(); $('spBadge').hidden=!sp; $('spBadge').textContent=sp;
+  const rd=save.round||1;
+  $('goSub').textContent=save.loop?`${Math.max(1,rd-1)}라운드 반복 중 · ${rd}라운드 도전 대기`:`${rd}라운드${roundBoss(rd)==='boss'?' · 보스':roundBoss(rd)==='mboss'?' · 중간 보스':''}${save.bestRound?` · 최고 ${save.bestRound}`:''}`;
   const sl=$('slotsL'); sl.innerHTML='';
   SLOTS.forEach((s,i)=>{
     const b=document.createElement('button'); b.className='slot'; b.style.setProperty('--rc',RARITY[SETS[eq[i]].r].c);
@@ -674,16 +714,22 @@ function renderLobby(){
     sl.appendChild(b);
   });
   $('statsL').innerHTML=statSummary(st);
-  const bo=$('bonusL');
-  const own=fmtStats(ownTotal(g)), ownN=Object.keys(save.owned[g]||{}).length;
-  bo.hidden=!st.active.length&&!ownN;
-  bo.innerHTML=(ownN?`<span class="fxchip" style="--rc:var(--gold)">보유 장비 ${ownN}개 · ${own.join(' · ')}</span>`:'')+st.active.map(a=>`<span class="fxchip" style="--rc:${RARITY[SETS[a.set].r].c}">${SETS[a.set].n} ${a.need}세트 · ${a.txt}</span>`).join('');
+  const ownN=Object.keys(save.owned[g]||{}).length, nfx=st.active.length+(ownN?1:0);
+  $('fxOpen').textContent=nfx?`적용 중인 효과 ${nfx}개 보기 ›`:'';
   $('muteL').textContent=save.mute?'✕':'♪';
 }
 const pct=v=>Math.round(v*100);
 function statSummary(st){
-  return [['체력',Math.round(st.hp)],['체력 재생',`${+st.regen.toFixed(2)}/초`],['공격력',st.atk],['공격 속도',`초당 ${st.aps.toFixed(2)}회`],['크리티컬',pct1(st.crit)+'%'],['크리티컬 데미지',pct1(st.cdmg)+'%']]
-    .map(([k,v])=>`<span>${k} <b class="num">${v}</b></span>`).join('');
+  return [['공격력',st.atk],['공격 속도',`${st.aps.toFixed(2)}/초`],['크리티컬',pct1(st.crit)+'%'],['크리티컬 데미지',pct1(st.cdmg)+'%'],['체력',Math.round(st.hp)],['체력 재생',`${+st.regen.toFixed(2)}/초`]]
+    .map(([k,v])=>`<div class="stile"><span>${k}</span><b class="num">${v}</b></div>`).join('');
+}
+function openInfo(){
+  const g=save.g, st=calcStats(save.eq[g]), own=fmtStats(ownTotal(g)), ownN=Object.keys(save.owned[g]||{}).length;
+  $('infoBody').innerHTML=
+    `<div><h5>세트 효과</h5><div class="chips">${st.active.length?st.active.map(a=>`<span class="chip2" style="--rc:${RARITY[SETS[a.set].r].c}">${SETS[a.set].n} ${a.need}세트 · ${a.txt}</span>`).join(''):'<span class="note">같은 세트를 2부위 이상 입으면 켜져요.</span>'}</div></div>`+
+    `<div><h5>보유 효과 · 장비 ${ownN}개</h5><div class="chips">${own.length?own.map(t=>`<span class="chip2">${t}</span>`).join(''):'<span class="note">장비를 사면 착용하지 않아도 능력치 일부가 붙어요.</span>'}</div></div>`+
+    `<div><h5>전체 능력치</h5><div class="grid2">${[['공격력',st.atk],['공격 속도',`초당 ${st.aps.toFixed(2)}회`],['크리티컬',pct1(st.crit)+'%'],['크리티컬 데미지',pct1(st.cdmg)+'%'],['체력',Math.round(st.hp)],['체력 재생',`${+st.regen.toFixed(2)}/초`]].map(([k,v])=>`<span>${k}</span><b class="num">${v}</b>`).join('')}</div></div>`;
+  $('infoM').hidden=false;
 }
 // 두 장비 조합의 능력치 차이를 "공격력 10 → 20" 형태로
 function statDiff(a,b){
@@ -883,6 +929,8 @@ function startRound(r){
   G.wave=r; G.maxRound=Math.max(G.maxRound,r);
   G.bossType=roundBoss(r); G.waveLeft=G.bossType?5:5+Math.min(r,15); G.spawnT=.6; G.waveGap=1.4;
   G.shield=G.st.shield; if(G.hp) renderHearts();
+  // 보스 라운드 제한 시간: 중간 보스 30초, 보스 45초
+  G.timeMax=G.bossType==='boss'?45:G.bossType==='mboss'?30:0; G.timeLeft=G.timeMax; $('timerG').hidden=!G.timeMax; renderTimer();
   G.banner={txt:`${r}라운드`,sub:G.loop?'반복 중 · 도전 버튼으로 재도전':G.bossType==='boss'?'보스 출현':G.bossType==='mboss'?'중간 보스 출현':'',t:0};
   renderTopHud(); SFX.wave();
 }
@@ -894,12 +942,19 @@ function roundCleared(){
   save.round=r+1; persist(); startRound(r+1);
 }
 // 쓰러지면: 게임을 끝내지 않고 이전 라운드로 물러나 반복
-function retreat(){
+function renderTimer(){
+  if(!G.timeMax) return;
+  const t=Math.max(0,G.timeLeft), sec=Math.ceil(t);
+  $('timerFill').style.width=(t/G.timeMax*100)+'%';
+  $('timerText').textContent=`${Math.floor(sec/60)}:${String(sec%60).padStart(2,'0')}`;
+  $('timerG').classList.toggle('low',t<10);
+}
+function retreat(reason){
   if(!G.loop){save.round=G.wave; G.loop=true;}
   save.loop=true; persist();
   G.dead=false; G.deathT=0; G.hp=G.st.hp; G.enemies=[]; G.shots=[]; G.kunais=[]; G.throwT=-1;
   startRound(Math.max(1,G.wave-1));
-  G.banner={txt:'후퇴!',sub:`${G.wave}라운드 반복 · 도전 버튼으로 재도전`,t:0};
+  G.banner={txt:reason||'후퇴!',sub:`${G.wave}라운드 반복 · 도전 버튼으로 재도전`,t:0};
 }
 // 도전 버튼: 실패했던 라운드에 다시 도전
 function challenge(){
@@ -924,7 +979,7 @@ function spawnEnemy(type){
 }
 function puff(x,y,r,col){for(let i=0;i<10;i++){const a=Math.random()*7;G.fx.push({k:'puff',x,y,vx:Math.cos(a)*r*1.2,vy:Math.sin(a)*r*.6-r*.3,r:r*rnd(.25,.45),t:0,life:rnd(.4,.7),col});}}
 function sparks(x,y,col){for(let i=0;i<9;i++){const a=Math.random()*7,v=rnd(80,220);G.fx.push({k:'spark',x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,t:0,life:rnd(.2,.4),col});}}
-function floatText(x,y,txt,col='#efe6d2',size=18){G.texts.push({x,y,txt,col,size,t:0});}
+function floatText(x,y,txt,col='#efe6d2',size=18){G.texts.push({x,y:Math.max(y,120),txt,col,size,t:0});} // HUD와 겹치지 않게
 // 적 화면 위치: y = 발 위치, h = 키
 function enemyRect(e){
   const A=arena(), sc=(.78+.22*e.p)*e.big, h=A.eh*sc;
@@ -1083,6 +1138,9 @@ function update(dt){
   G.coinFly=G.coinFly.filter(c=>!c.done);
   G.texts=G.texts.filter(t=>t.t<.9);
   if(G.dead){G.deathT+=dt; if(G.deathT>1.2&&mode==='game') retreat();}
+  // 보스 제한 시간
+  if(G.timeMax&&!G.dead){const before=Math.ceil(G.timeLeft); G.timeLeft-=dt; if(Math.ceil(G.timeLeft)!==before) renderTimer();
+    if(G.timeLeft<=0){SFX.hurt(); G.flash=.4; retreat('시간 초과!');}}
 }
 // 가운데 안내 문구: 제목 + 부제 두 줄, 화면 폭에 맞게 글자 크기를 줄인다
 function fitFont(txt,size,maxW,face){ctx.font=`${size}px ${face}`;const w=ctx.measureText(txt).width;if(w>maxW){size=Math.floor(size*maxW/w);ctx.font=`${size}px ${face}`;}return size;}
@@ -1176,8 +1234,8 @@ function renderLobbyScene(dt){
   drawLanterns(ctx,T); drawPetals(ctx,dt,T);
   if(mode!=='lobby') return;
   const foot=$('lobbyFoot').getBoundingClientRect(), app=$('app').getBoundingClientRect();
-  const top=150, bottom=foot.top-app.top-8, avail=bottom-top;
-  const h=Math.max(90,Math.min(avail*.95,W*.62,360)); const x=W/2, y=bottom;
+  const lt=$('bestL').getBoundingClientRect(), top=lt.bottom-app.top+12, bottom=foot.top-app.top-6, avail=bottom-top;
+  const h=Math.max(90,Math.min(avail*.97,W*.62,380)); const x=W/2, y=bottom;
   lobbyFeet={x,y,h};
   const g=save.g, eq=save.eq[g];
   const gr=ctx.createRadialGradient(x,y-h*.4,10,x,y-h*.4,h*.9); gr.addColorStop(0,'rgba(239,230,210,.12)'); gr.addColorStop(1,'rgba(239,230,210,0)');
@@ -1218,6 +1276,10 @@ $('challengeG').onclick=()=>{SFX.tap();challenge();};
 $('resAgain').onclick=()=>{SFX.tap();newGame();};
 $('resLobby').onclick=()=>{SFX.tap();goLobby();};
 $('resStats').onclick=()=>{SFX.tap();goLobby();openStats();};
+$('spOpen').onclick=()=>{SFX.tap();openStats();};
+$('fxOpen').onclick=()=>{SFX.tap();openInfo();};
+$('statsL').onclick=()=>{SFX.tap();openInfo();};
+$('infoDone').onclick=()=>{SFX.tap();$('infoM').hidden=true;};
 $('toTrain').onclick=()=>{ac();SFX.tap();openTrain();};
 $('trainDone').onclick=()=>{SFX.tap();$('trainM').hidden=true;renderLobby();};
 $('spDone').onclick=()=>{SFX.tap();$('statsM').hidden=true;renderLobby();};
