@@ -317,7 +317,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
       <div class="kv">
         <div><span>도달 라운드</span><b class="num" id="rWave">0</b></div>
         <div><span>쓰러뜨린 적</span><b class="num" id="rKills">0</b></div>
-        <div><span>최대 연속</span><b class="num" id="rCombo">0</b></div>
+        <div><span>쓰러뜨린 두목</span><b class="num" id="rBoss">0</b></div>
         <div><span>레벨</span><b class="num" id="rLv">1</b></div>
       </div>
       <div class="earn"><i class="coin"></i><span class="num" id="rCoins">+0</span><span style="margin-left:14px;color:#6a5a44">경험치</span><span class="num" id="rXp">+0</span></div>
@@ -850,7 +850,7 @@ function drawFloor(scroll){
 }
 function newGame(){
   const g=save.g, eq=[...save.eq[g]], st=calcStats(eq);
-  G={g,eq,st,hp:st.hp,score:0,combo:0,comboT:0,maxCombo:0,kills:0,wave:0,waveLeft:0,waveGap:1.2,spawnT:0,
+  G={g,eq,st,hp:st.hp,kills:0,bossKills:0,wave:0,waveLeft:0,waveGap:1.2,spawnT:0,
      enemies:[],kunais:[],shots:[],fx:[],texts:[],inv:0,throwT:-1,tfps:22,released:false,aim:null,cool:.4,shake:0,
      dead:false,deathT:0,banner:{txt:'',t:9},flash:0,rearT:0,shield:0,scroll:0};
   G.coinsRun=0; G.xpRun=0; G.lv0=save.lv;
@@ -868,7 +868,7 @@ function renderHearts(){
 }
 function nextWave(){
   G.wave++; G.shield=G.st.shield; if(G.hp) renderHearts(); G.waveLeft=4+G.wave*2; G.boss=G.wave%3===0; G.spawnT=.6;
-  G.banner={txt:G.boss?`${G.wave}라운드 · 두목 출현`:`${G.wave}라운드`,t:0};
+  G.banner={txt:`${G.wave}라운드`,sub:G.boss?'두목 출현':'',t:0};
   $('roundG').textContent=G.wave; SFX.wave();
 }
 function spawnEnemy(type){
@@ -936,21 +936,21 @@ function dodgeOrHurt(dmg){hurtPlayer(dmg);}
 function hurtPlayer(dmg){
   if(G.inv>0||G.dead) return;
   if(G.shield>0){G.shield--;G.inv=.5;renderHearts();SFX.dodge();playerText('막음!','#c9d3e0',22);return;}
-  G.hp=Math.max(0,G.hp-dmg); G.inv=1; G.shake=.35; G.flash=.35; G.combo=0; renderHearts(); SFX.hurt();
+  G.hp=Math.max(0,G.hp-dmg); G.inv=1; G.shake=.35; G.flash=.35; renderHearts(); SFX.hurt();
   playerText('-'+dmg,'#ff6a5a',24);
   if(G.hp<=0){const A=arena();G.dead=true;G.deathT=0;puff(A.px,A.py-A.ph*.45,A.ph*.7,'#b9aec9');SFX.kill();}
 }
 function killEnemy(e,chain){
-  e.state='die'; e.t=0; e.poisonT=0; G.kills++; G.combo++; G.comboT=2.5; G.maxCombo=Math.max(G.maxCombo,G.combo);
-  // 보상: 엽전(연속일수록 더) + 경험치, 라운드가 높을수록 많이
+  e.state='die'; e.t=0; e.poisonT=0; G.kills++; if(e.type==='boss') G.bossKills++;
+  // 보상: 엽전 + 경험치, 라운드가 높을수록 많이
   const rk=1+.15*(G.wave-1);
-  const coin=Math.round((e.type==='boss'?60:e.type==='elite'?12:5)*rk*(1+.05*Math.min(G.combo-1,20)));
+  const coin=Math.round((e.type==='boss'?60:e.type==='elite'?12:5)*rk);
   const xp=Math.round((e.type==='boss'?60:e.type==='elite'?12:4)*rk);
   save.coins+=coin; G.coinsRun+=coin; G.xpRun+=xp;
   const ups=gainXp(xp); persist();
   const r=enemyRect(e); floatText(r.x,r.y-r.h*1.3,'+'+coin+' 엽전','#e6b450',e.type==='boss'?24:15);
   const pu=$('purseG'); pu.classList.remove('pop'); void pu.offsetWidth; pu.classList.add('pop');
-  if(ups){G.banner={txt:`레벨 업! Lv.${save.lv} · 스탯 포인트 +${SP_PER_LV*ups}`,t:0}; SFX.buy();}
+  if(ups){G.banner={txt:`레벨 업! Lv.${save.lv}`,sub:`스탯 포인트 +${SP_PER_LV*ups}`,t:0}; SFX.buy();}
   renderTopHud();
   puff(r.x,r.cy,r.h*.55,'#b9aec9'); // 연막을 남기고 사라진다
   if(G.st.blast&&!chain){ // 폭염: 주변 적에게 1 피해
@@ -963,7 +963,6 @@ function killEnemy(e,chain){
 function update(dt){
   const st=G.st, A=arena();
   if(G.inv>0) G.inv-=dt; if(G.shake>0) G.shake-=dt; if(G.flash>0) G.flash-=dt;
-  if(G.comboT>0){G.comboT-=dt; if(G.comboT<=0) G.combo=0;}
   G.banner.t+=dt; G.rearT+=dt; if(!G.dead) G.scroll+=H*.05*dt;
   // 체력 재생
   if(!G.dead&&G.hp<st.hp){const before=Math.ceil(G.hp); G.hp=Math.min(st.hp,G.hp+st.regen*dt); if(Math.ceil(G.hp)!==before) renderHearts();}
@@ -1041,6 +1040,18 @@ function update(dt){
   G.texts=G.texts.filter(t=>t.t<.9);
   if(G.dead){G.deathT+=dt; if(G.deathT>1.4&&mode==='game') endGame();}
 }
+// 가운데 안내 문구: 제목 + 부제 두 줄, 화면 폭에 맞게 글자 크기를 줄인다
+function fitFont(txt,size,maxW,face){ctx.font=`${size}px ${face}`;const w=ctx.measureText(txt).width;if(w>maxW){size=Math.floor(size*maxW/w);ctx.font=`${size}px ${face}`;}return size;}
+function drawBanner(b){
+  const a=Math.min(1,b.t*4,(1.8-b.t)*3), maxW=W-48, y=H*.36;
+  ctx.save(); ctx.globalAlpha=a; ctx.textAlign='center'; ctx.textBaseline='middle';
+  const h=b.sub?78:56;
+  ctx.fillStyle='rgba(20,17,27,.62)'; ctx.fillRect(0,y-h/2,W,h);
+  const ty=b.sub?y-12:y;
+  fitFont(b.txt,Math.min(34,W*.085),maxW,'"Black Han Sans",sans-serif'); ctx.fillStyle='#efe6d2'; ctx.fillText(b.txt,W/2,ty);
+  if(b.sub){fitFont(b.sub,16,maxW,'"Gowun Dodum",sans-serif'); ctx.fillStyle='#e6b450'; ctx.fillText(b.sub,W/2,y+20);}
+  ctx.restore();
+}
 function drawShuriken(c,x,y,r,rot){
   c.save(); c.translate(x,y); c.rotate(rot);
   c.fillStyle='#c9ced8'; c.strokeStyle='#1a1620'; c.lineWidth=Math.max(1,r*.12);
@@ -1103,11 +1114,7 @@ function render(dt){
   ctx.restore();
   drawPetals(ctx,dt,T);
   // 연속 + 배너
-  if(G.combo>=2){const pop=1+Math.max(0,.3-(2.5-G.comboT))*1.2;ctx.save();ctx.translate(W/2,A.lineY-A.ph*.62);ctx.scale(pop,pop);ctx.textAlign='center';
-    ctx.font='30px "Black Han Sans",sans-serif';ctx.fillStyle='#e6b450';ctx.fillText(`${G.combo} 연속`,0,0);
-    ctx.fillStyle='rgba(239,230,210,.25)';ctx.fillRect(-50,10,100,4);ctx.fillStyle='#e6b450';ctx.fillRect(-50,10,100*Math.max(0,G.comboT/2.5),4);ctx.restore();}
-  if(G.banner.t<1.8){const a=Math.min(1,G.banner.t*4,(1.8-G.banner.t)*3);ctx.globalAlpha=a;ctx.textAlign='center';ctx.font=`${Math.min(44,W*.09)}px "Black Han Sans",sans-serif`;
-    ctx.fillStyle='rgba(20,17,27,.6)';ctx.fillRect(0,H*.34,W,64);ctx.fillStyle='#efe6d2';ctx.fillText(G.banner.txt,W/2,H*.34+46);ctx.globalAlpha=1;}
+  if(G.banner.t<1.8) drawBanner(G.banner);
   if(G.flash>0){ctx.fillStyle=`rgba(210,58,47,${G.flash*.6})`;ctx.fillRect(0,0,W,H);}
 }
 // 로비: 정면 대기 모습
@@ -1134,7 +1141,7 @@ function endGame(){
   mode='result';
   const g=G.g, st=G.st;
   const rec=G.wave>save.bestRound; if(rec) save.bestRound=G.wave; persist();
-  $('rWave').textContent=G.wave; $('rKills').textContent=G.kills; $('rCombo').textContent=G.maxCombo;
+  $('rWave').textContent=G.wave; $('rKills').textContent=G.kills; $('rBoss').textContent=G.bossKills;
   $('rLv').textContent=save.lv>G.lv0?`${G.lv0} → ${save.lv}`:save.lv;
   $('resStats').hidden=!spLeft(); $('resStats').textContent=`스탯 포인트 찍기 (${spLeft()})`;
   $('rCoins').textContent='+'+G.coinsRun.toLocaleString(); $('rXp').textContent='+'+G.xpRun.toLocaleString(); $('newrec').hidden=!rec;
