@@ -287,11 +287,8 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
       <h2>스탯 찍기</h2>
       <div class="sp-left">남은 포인트 <b class="num" id="spLeft">0</b></div>
       <div class="stat-rows" id="statRows"></div>
-      <p class="note" style="margin:0">레벨이 오를 때마다 포인트 3개를 받아요. 초기화하면 포인트를 전부 돌려받아요.</p>
-      <div class="actions">
-        <button class="btn btn-paper" id="spReset">초기화</button>
-        <button class="btn btn-primary" id="spDone">완료</button>
-      </div>
+      <p class="note" style="margin:0">레벨이 오를 때마다 포인트 3개를 받아요. 한 번 찍은 포인트는 되돌릴 수 없어요.</p>
+      <button class="btn btn-primary" id="spDone">완료</button>
     </div>
   </section>
 
@@ -1116,7 +1113,6 @@ $('resAgain').onclick=()=>{SFX.tap();newGame();};
 $('resLobby').onclick=()=>{SFX.tap();goLobby();};
 $('resStats').onclick=()=>{SFX.tap();goLobby();openStats();};
 $('spDone').onclick=()=>{SFX.tap();$('statsM').hidden=true;renderLobby();};
-$('spReset').onclick=()=>{save.alloc={};persist();SFX.tap();renderStats();renderLobby();};
 $('toGame').onclick=()=>{ac();SFX.tap();newGame();};
 $('toShop').onclick=()=>{ac();SFX.tap();openShop(1,0);};
 $('shopBack').onclick=()=>{SFX.tap();goLobby();};
