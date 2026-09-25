@@ -233,6 +233,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
           <button class="btn btn-paper" id="toShop">장비 상점</button>
           <button class="btn btn-paper" id="toTrain">훈련소</button>
           <button class="btn btn-primary wide" id="toGame">출전하기</button>
+          <button class="btn btn-paper wide" id="toGame1" hidden style="font-size:14px;padding:9px">1라운드부터 다시 시작</button>
         </div>
       </div>
       <div class="hint">캐릭터를 누르면 반응해요 · 전투에선 뒷모습으로 서서 자동으로 쿠나이를 던져요</div>
@@ -415,7 +416,7 @@ function calcStats(eq){
 
 /* ================= SAVE ================= */
 const SKEY='shadow-shuriken-v1';
-const save={coins:300,best:0,bestRound:0,lv:1,xp:0,alloc:{},train:{},g:'f',mute:false,owned:{f:{},m:{}},eq:{f:[0,0,0,0,0,0,0,0],m:[0,0,0,0,0,0,0,0]}};
+const save={coins:300,best:0,bestRound:0,round:1,lv:1,xp:0,alloc:{},train:{},g:'f',mute:false,owned:{f:{},m:{}},eq:{f:[0,0,0,0,0,0,0,0],m:[0,0,0,0,0,0,0,0]}};
 try{const s=JSON.parse(localStorage.getItem(SKEY)||'null');if(s&&typeof s==='object'){Object.assign(save,s);}}catch(e){}
 function persist(){try{localStorage.setItem(SKEY,JSON.stringify(save))}catch(e){}}
 /* ---- 레벨: 적을 쓰러뜨려 경험치를 모으면 오르고, 레벨마다 공격력 +2 ---- */
@@ -671,6 +672,9 @@ function renderLobby(){
   const bo=$('bonusL');
   bo.hidden=!st.active.length;
   bo.innerHTML=st.active.map(a=>`<span class="fxchip" style="--rc:${RARITY[SETS[a.set].r].c}">${SETS[a.set].n} ${a.need}세트 · ${a.txt}</span>`).join('');
+  const rd=save.round||1;
+  $('toGame').textContent=rd>1?`출전하기 · ${rd}라운드부터`:'출전하기';
+  $('toGame1').hidden=rd<=1;
   $('muteL').textContent=save.mute?'✕':'♪';
 }
 const pct=v=>Math.round(v*100);
@@ -848,9 +852,10 @@ function drawFloor(scroll){
   g=ctx.createRadialGradient(W/2,H*.85,10,W/2,H*.85,Math.max(W,H)*.7); g.addColorStop(0,'rgba(239,230,210,.08)'); g.addColorStop(1,'rgba(14,11,20,.35)');
   ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
 }
-function newGame(){
+// start: 시작 라운드 (기본은 저장된 이어하기 라운드)
+function newGame(start=save.round||1){
   const g=save.g, eq=[...save.eq[g]], st=calcStats(eq);
-  G={g,eq,st,hp:st.hp,kills:0,bossKills:0,wave:0,waveLeft:0,waveGap:1.2,spawnT:0,
+  G={g,eq,st,hp:st.hp,kills:0,bossKills:0,wave:start-1,startRound:start,coinFly:[],waveLeft:0,waveGap:1.2,spawnT:0,
      enemies:[],kunais:[],shots:[],fx:[],texts:[],inv:0,throwT:-1,tfps:22,released:false,aim:null,cool:.4,shake:0,
      dead:false,deathT:0,banner:{txt:'',t:9},flash:0,rearT:0,shield:0,scroll:0};
   G.coinsRun=0; G.xpRun=0; G.lv0=save.lv;
@@ -867,7 +872,7 @@ function renderHearts(){
   const sh=$('shieldsG'); sh.innerHTML=''; for(let i=0;i<G.shield;i++){const s=document.createElement('i');s.className='shield';s.title='보호막';sh.appendChild(s);}
 }
 function nextWave(){
-  G.wave++; G.shield=G.st.shield; if(G.hp) renderHearts(); G.waveLeft=4+G.wave*2; G.boss=G.wave%3===0; G.spawnT=.6;
+  G.wave++; save.round=G.wave; persist(); G.shield=G.st.shield; if(G.hp) renderHearts(); G.waveLeft=4+G.wave*2; G.boss=G.wave%3===0; G.spawnT=.6;
   G.banner={txt:`${G.wave}라운드`,sub:G.boss?'두목 출현':'',t:0};
   $('roundG').textContent=G.wave; SFX.wave();
 }
@@ -934,9 +939,9 @@ function playerText(txt,col,size){const A=arena();floatText(A.px,A.py-A.ph*1.05,
 const enemyDmg=base=>Math.round(base*(1+.15*(G.wave-1)));
 function dodgeOrHurt(dmg){hurtPlayer(dmg);}
 function hurtPlayer(dmg){
-  if(G.inv>0||G.dead) return;
-  if(G.shield>0){G.shield--;G.inv=.5;renderHearts();SFX.dodge();playerText('막음!','#c9d3e0',22);return;}
-  G.hp=Math.max(0,G.hp-dmg); G.inv=1; G.shake=.35; G.flash=.35; renderHearts(); SFX.hurt();
+  if(G.dead) return; // 무적 시간 없음: 날아온 수리검마다 데미지
+  if(G.shield>0){G.shield--;G.inv=.3;renderHearts();SFX.dodge();playerText('막음!','#c9d3e0',22);return;}
+  G.hp=Math.max(0,G.hp-dmg); G.inv=.3; G.shake=.35; G.flash=.35; renderHearts(); SFX.hurt();
   playerText('-'+dmg,'#ff6a5a',24);
   if(G.hp<=0){const A=arena();G.dead=true;G.deathT=0;puff(A.px,A.py-A.ph*.45,A.ph*.7,'#b9aec9');SFX.kill();}
 }
@@ -948,8 +953,10 @@ function killEnemy(e,chain){
   const xp=Math.round((e.type==='boss'?60:e.type==='elite'?12:4)*rk);
   save.coins+=coin; G.coinsRun+=coin; G.xpRun+=xp;
   const ups=gainXp(xp); persist();
-  const r=enemyRect(e); floatText(r.x,r.y-r.h*1.3,'+'+coin+' 엽전','#e6b450',e.type==='boss'?24:15);
-  const pu=$('purseG'); pu.classList.remove('pop'); void pu.offsetWidth; pu.classList.add('pop');
+  const r=enemyRect(e);
+  // 엽전은 글자 대신 동전이 지갑(오른쪽 위)으로 날아간다 → 데미지 숫자와 겹치지 않음
+  const nc=e.type==='boss'?8:e.type==='elite'?4:2;
+  for(let i=0;i<nc;i++) G.coinFly.push({x:r.x+rnd(-.3,.3)*r.hw*2,y:r.cy+rnd(-.2,.2)*r.h,t:-i*.05,dur:rnd(.55,.75)});
   if(ups){G.banner={txt:`레벨 업! Lv.${save.lv}`,sub:`스탯 포인트 +${SP_PER_LV*ups}`,t:0}; SFX.buy();}
   renderTopHud();
   puff(r.x,r.cy,r.h*.55,'#b9aec9'); // 연막을 남기고 사라진다
@@ -1037,6 +1044,8 @@ function update(dt){
   for(const f of G.fx){f.t+=dt;f.x+=f.vx*dt;f.y+=f.vy*dt;f.vx*=.92;f.vy*=.92;}
   G.fx=G.fx.filter(f=>f.t<f.life);
   for(const t of G.texts) t.t+=dt;
+  for(const c of G.coinFly){c.t+=dt; if(c.t>=c.dur&&!c.done){c.done=true;const pu=$('purseG');pu.classList.remove('pop');void pu.offsetWidth;pu.classList.add('pop');}}
+  G.coinFly=G.coinFly.filter(c=>!c.done);
   G.texts=G.texts.filter(t=>t.t<.9);
   if(G.dead){G.deathT+=dt; if(G.deathT>1.4&&mode==='game') endGame();}
 }
@@ -1113,7 +1122,15 @@ function render(dt){
   for(const t of G.texts){const p=t.t/.9;ctx.globalAlpha=1-p*p;ctx.fillStyle=t.col;ctx.font=`${t.size}px "Black Han Sans",sans-serif`;ctx.fillText(t.txt,t.x,t.y-p*30);ctx.globalAlpha=1;}
   ctx.restore();
   drawPetals(ctx,dt,T);
-  // 연속 + 배너
+  // 지갑으로 날아가는 엽전
+  if(G.coinFly.length){
+    const pr=$('purseG').getBoundingClientRect(), ar=$('app').getBoundingClientRect(), tx=pr.left-ar.left+18, ty=pr.top-ar.top+pr.height/2;
+    for(const c of G.coinFly){ if(c.t<0) continue; const u=Math.min(1,c.t/c.dur), e=u*u;
+      const x=c.x+(tx-c.x)*e, y=c.y+(ty-c.y)*e-Math.sin(u*Math.PI)*60, rr=7-2*u;
+      ctx.fillStyle='#e6b450'; ctx.beginPath(); ctx.arc(x,y,rr,0,7); ctx.fill();
+      ctx.fillStyle='#6b4712'; ctx.fillRect(x-rr*.3,y-rr*.3,rr*.6,rr*.6);}
+  }
+  // 안내 문구
   if(G.banner.t<1.8) drawBanner(G.banner);
   if(G.flash>0){ctx.fillStyle=`rgba(210,58,47,${G.flash*.6})`;ctx.fillRect(0,0,W,H);}
 }
@@ -1140,7 +1157,9 @@ function renderLobbyScene(dt){
 function endGame(){
   mode='result';
   const g=G.g, st=G.st;
-  const rec=G.wave>save.bestRound; if(rec) save.bestRound=G.wave; persist();
+  const rec=G.wave>save.bestRound; if(rec) save.bestRound=G.wave;
+  save.round=G.wave; persist(); // 다음 출전은 이 라운드부터 이어서
+  $('resAgain').textContent=`${G.wave}라운드부터 이어하기`;
   $('rWave').textContent=G.wave; $('rKills').textContent=G.kills; $('rBoss').textContent=G.bossKills;
   $('rLv').textContent=save.lv>G.lv0?`${G.lv0} → ${save.lv}`:save.lv;
   $('resStats').hidden=!spLeft(); $('resStats').textContent=`스탯 포인트 찍기 (${spLeft()})`;
@@ -1169,6 +1188,7 @@ $('toTrain').onclick=()=>{ac();SFX.tap();openTrain();};
 $('trainDone').onclick=()=>{SFX.tap();$('trainM').hidden=true;renderLobby();};
 $('spDone').onclick=()=>{SFX.tap();$('statsM').hidden=true;renderLobby();};
 $('toGame').onclick=()=>{ac();SFX.tap();newGame();};
+$('toGame1').onclick=()=>{ac();SFX.tap();newGame(1);};
 $('toShop').onclick=()=>{ac();SFX.tap();openShop(1,0);};
 $('shopBack').onclick=()=>{SFX.tap();goLobby();};
 $('pickF').onclick=()=>{save.g='f';persist();SFX.tap();renderLobby();};
