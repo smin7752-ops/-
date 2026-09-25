@@ -150,6 +150,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .round{text-align:center;line-height:1;text-shadow:0 2px 0 rgba(0,0,0,.4)}
 .round small{display:block;font-size:11px;letter-spacing:.24em;color:var(--muted);margin-bottom:4px}
 .round b{font-family:var(--display);font-weight:400;font-size:30px}
+.challenge{display:block;margin:6px auto 0;background:var(--lacquer);color:#fff;font-size:12px;font-weight:700;padding:5px 12px;border-radius:999px;box-shadow:0 2px 0 var(--lacquer-deep);white-space:nowrap}
 .hud-r{display:flex;justify-content:flex-end;align-items:center;gap:8px}
 .purse.pop{animation:pop .3s}
 @keyframes pop{50%{transform:scale(1.12)}}
@@ -233,7 +234,6 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
           <button class="btn btn-paper" id="toShop">장비 상점</button>
           <button class="btn btn-paper" id="toTrain">훈련소</button>
           <button class="btn btn-primary wide" id="toGame">출전하기</button>
-          <button class="btn btn-paper wide" id="toGame1" hidden style="font-size:14px;padding:9px">1라운드부터 다시 시작</button>
         </div>
       </div>
       <div class="hint">캐릭터를 누르면 반응해요 · 전투에선 뒷모습으로 서서 자동으로 쿠나이를 던져요</div>
@@ -274,7 +274,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
         <div class="lv"><span class="lv-badge">Lv.<span class="num" id="lvG">1</span></span><div class="xpbar" aria-label="경험치"><i id="xpG"></i></div></div>
         <div class="hearts" id="hearts"><div class="hpbox" role="meter" aria-label="체력"><i class="lag" id="hpLag"></i><i id="hpFill"></i><span class="num" id="hpText">100 / 100</span></div><span id="shieldsG" style="display:flex;gap:4px"></span></div>
       </div>
-      <div class="round"><small>ROUND</small><b class="num" id="roundG">1</b></div>
+      <div class="round"><small>ROUND</small><b class="num" id="roundG">1</b><button class="challenge" id="challengeG" hidden>도전</button></div>
       <div class="hud-r"><div class="purse" id="purseG"><i class="coin"></i><b class="num" id="coinG">0</b></div><button class="iconbtn" id="pauseBtn" aria-label="일시정지">Ⅱ</button></div>
     </div>
     <div class="keyhint">가장 가까이 온 적에게 자동으로 공격해요</div>
@@ -287,7 +287,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
         <button class="btn btn-paper" id="quitBtn">로비로</button>
         <button class="btn btn-primary" id="resumeBtn">계속</button>
       </div>
-      <p class="note" style="margin:0">로비로 나가도 지금까지 번 엽전은 받아요.</p>
+      <p class="note" style="margin:0">로비로 나가도 번 엽전과 경험치는 그대로예요. 다음 출전은 지금 라운드부터 이어져요.</p>
     </div>
   </section>
 
@@ -314,7 +314,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
   <section id="result" class="screen modal" hidden>
     <div class="sheet">
       <div class="newrec" id="newrec" hidden>신기록</div>
-      <h2 id="resTitle">연막 속으로 퇴각!</h2>
+      <h2 id="resTitle">전투 종료</h2>
       <div class="kv">
         <div><span>도달 라운드</span><b class="num" id="rWave">0</b></div>
         <div><span>쓰러뜨린 적</span><b class="num" id="rKills">0</b></div>
@@ -398,6 +398,10 @@ const SETFX=[
   [[2,'공격력 +15 · 크리티컬 +5%',{atk:15,crit:.05}],[4,'공격 속도 +15% · 크리티컬 데미지 +40%',{aspd:.15,cdmg:.4}],[8,'삼연투: 쿠나이 3개 동시 투척',{multi:3}]]
 ];
 function itemStats(slot,t){return MAIN[slot](t);}
+// 보유 효과: 산 장비는 착용하지 않아도 부위 능력치의 20%가 영구 적용
+const OWN_RATE=.2;
+function ownItem(slot,t){const o=MAIN[slot](t), r={};for(const k in o){if(!o[k])continue; r[k]=k==='atk'?Math.max(1,Math.round(o[k]*OWN_RATE)):o[k]*OWN_RATE;}return r;}
+function ownTotal(g){const r={};for(const key in (save.owned[g]||{})){const [sl,t]=key.split('-').map(Number);const o=ownItem(sl,t);for(const k in o) r[k]=(r[k]||0)+o[k];}return r;}
 function setCounts(eq){const c=Array(SETS.length).fill(0);eq.forEach(v=>c[v]++);return c;}
 function calcStats(eq){
   const s={hp:100,regen:1,atk:10,aspd:0,crit:.05,cdmg:1.5,shield:0,multi:1,pierce:0,poison:0,shadow:0,blast:0};
@@ -405,6 +409,7 @@ function calcStats(eq){
   eq.forEach((t,slot)=>{add(itemStats(slot,t)); if(TRAIT[t]) add(TRAIT[t]);});
   for(const a of ALLOC) s[a.k]+=(save.alloc[a.k]||0)*a.per; // 레벨 스탯 포인트
   for(const t of TRAIN) s[t.k]+=(save.train[t.k]||0)*t.per; // 훈련소
+  add(ownTotal(save.g)); // 보유 효과
   const counts=setCounts(eq), active=[];
   counts.forEach((n,set)=>SETFX[set].forEach(([need,txt,fx])=>{if(n>=need){add(fx);active.push({set,need,txt});}}));
   s.crit=Math.min(1,s.crit);
@@ -416,7 +421,7 @@ function calcStats(eq){
 
 /* ================= SAVE ================= */
 const SKEY='shadow-shuriken-v1';
-const save={coins:300,best:0,bestRound:0,round:1,lv:1,xp:0,alloc:{},train:{},g:'f',mute:false,owned:{f:{},m:{}},eq:{f:[0,0,0,0,0,0,0,0],m:[0,0,0,0,0,0,0,0]}};
+const save={coins:300,best:0,bestRound:0,round:1,loop:false,lv:1,xp:0,alloc:{},train:{},g:'f',mute:false,owned:{f:{},m:{}},eq:{f:[0,0,0,0,0,0,0,0],m:[0,0,0,0,0,0,0,0]}};
 try{const s=JSON.parse(localStorage.getItem(SKEY)||'null');if(s&&typeof s==='object'){Object.assign(save,s);}}catch(e){}
 function persist(){try{localStorage.setItem(SKEY,JSON.stringify(save))}catch(e){}}
 /* ---- 레벨: 적을 쓰러뜨려 경험치를 모으면 오르고, 레벨마다 공격력 +2 ---- */
@@ -670,11 +675,9 @@ function renderLobby(){
   });
   $('statsL').innerHTML=statSummary(st);
   const bo=$('bonusL');
-  bo.hidden=!st.active.length;
-  bo.innerHTML=st.active.map(a=>`<span class="fxchip" style="--rc:${RARITY[SETS[a.set].r].c}">${SETS[a.set].n} ${a.need}세트 · ${a.txt}</span>`).join('');
-  const rd=save.round||1;
-  $('toGame').textContent=rd>1?`출전하기 · ${rd}라운드부터`:'출전하기';
-  $('toGame1').hidden=rd<=1;
+  const own=fmtStats(ownTotal(g)), ownN=Object.keys(save.owned[g]||{}).length;
+  bo.hidden=!st.active.length&&!ownN;
+  bo.innerHTML=(ownN?`<span class="fxchip" style="--rc:var(--gold)">보유 장비 ${ownN}개 · ${own.join(' · ')}</span>`:'')+st.active.map(a=>`<span class="fxchip" style="--rc:${RARITY[SETS[a.set].r].c}">${SETS[a.set].n} ${a.need}세트 · ${a.txt}</span>`).join('');
   $('muteL').textContent=save.mute?'✕':'♪';
 }
 const pct=v=>Math.round(v*100);
@@ -752,6 +755,7 @@ function renderShop(){
   d.innerHTML=`<i class="big ic"></i><div><h4>${itemName(sel,set,g)}</h4><p>${slotName(sel,g)} · ${R.n}</p></div>
     <div class="lines"><div><span class="lbl">부위 능력치</span><b>${main.join(' · ')||'없음 (기본 장비)'}</b></div>
     <div><span class="lbl">세트 특성</span><b>${trait.join(' · ')||'없음'}</b></div>
+    <div><span class="lbl">보유 효과</span><b>${fmtStats(ownItem(sel,set)).join(' · ')||'없음'}<span style="font-weight:400;color:var(--muted)"> · ${set===0?'기본 장비':own?'착용 안 해도 적용 중':'구매하면 착용 안 해도 적용'}</span></b></div>
     ${diff?`<div class="diff"><span class="lbl">장착하면</span><div>${diff}</div></div>`:''}</div>
     <div class="row"></div>`;
   iconStyle(d.querySelector('.ic'),g,sel,set);
@@ -852,41 +856,71 @@ function drawFloor(scroll){
   g=ctx.createRadialGradient(W/2,H*.85,10,W/2,H*.85,Math.max(W,H)*.7); g.addColorStop(0,'rgba(239,230,210,.08)'); g.addColorStop(1,'rgba(14,11,20,.35)');
   ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
 }
-// start: 시작 라운드 (기본은 저장된 이어하기 라운드)
-function newGame(start=save.round||1){
+// 출전: 도전 중인 라운드부터. 실패해 반복 중이었다면 그 이전 라운드를 반복
+function newGame(){
+  const start=save.loop?Math.max(1,(save.round||1)-1):(save.round||1);
   const g=save.g, eq=[...save.eq[g]], st=calcStats(eq);
-  G={g,eq,st,hp:st.hp,kills:0,bossKills:0,wave:start-1,startRound:start,coinFly:[],waveLeft:0,waveGap:1.2,spawnT:0,
+  G={g,eq,st,hp:st.hp,kills:0,bossKills:0,wave:start,loop:!!save.loop,maxRound:start,coinFly:[],waveLeft:0,waveGap:1.2,spawnT:0,
      enemies:[],kunais:[],shots:[],fx:[],texts:[],inv:0,throwT:-1,tfps:22,released:false,aim:null,cool:.4,shake:0,
      dead:false,deathT:0,banner:{txt:'',t:9},flash:0,rearT:0,shield:0,scroll:0};
-  G.coinsRun=0; G.xpRun=0; G.lv0=save.lv;
+  G.coinsRun=0; G.xpRun=0; G.lv0=save.lv; G.best0=save.bestRound;
   mode='game'; show('hud'); renderHearts(); renderTopHud();
-  nextWave();
+  startRound(start);
 }
 function renderTopHud(){
   $('lvG').textContent=save.lv; $('xpG').style.width=Math.min(100,save.xp/xpNeed(save.lv)*100)+'%';
   $('coinG').textContent=save.coins.toLocaleString(); $('roundG').textContent=G.wave||1;
+  const cb=$('challengeG'); cb.hidden=!G.loop; cb.textContent=`${save.round}라운드 도전`;
 }
 function renderHearts(){
   const max=Math.round(G.st.hp), w=Math.max(0,G.hp/max*100)+'%';
   $('hpFill').style.width=w; $('hpLag').style.width=w; $('hpText').textContent=`${Math.ceil(G.hp)} / ${max}`;
   const sh=$('shieldsG'); sh.innerHTML=''; for(let i=0;i<G.shield;i++){const s=document.createElement('i');s.className='shield';s.title='보호막';sh.appendChild(s);}
 }
-function nextWave(){
-  G.wave++; save.round=G.wave; persist(); G.shield=G.st.shield; if(G.hp) renderHearts(); G.waveLeft=4+G.wave*2; G.boss=G.wave%3===0; G.spawnT=.6;
-  G.banner={txt:`${G.wave}라운드`,sub:G.boss?'두목 출현':'',t:0};
-  $('roundG').textContent=G.wave; SFX.wave();
+// 라운드 종류: 5·15·25… 중간 보스, 10·20·30… 보스
+const roundBoss=r=>r%10===0?'boss':r%5===0?'mboss':null;
+function startRound(r){
+  G.wave=r; G.maxRound=Math.max(G.maxRound,r);
+  G.bossType=roundBoss(r); G.waveLeft=G.bossType?5:5+Math.min(r,15); G.spawnT=.6; G.waveGap=1.4;
+  G.shield=G.st.shield; if(G.hp) renderHearts();
+  G.banner={txt:`${r}라운드`,sub:G.loop?'반복 중 · 도전 버튼으로 재도전':G.bossType==='boss'?'보스 출현':G.bossType==='mboss'?'중간 보스 출현':'',t:0};
+  renderTopHud(); SFX.wave();
+}
+// 라운드를 다 정리했을 때
+function roundCleared(){
+  const r=G.wave;
+  if(G.loop){startRound(r);return;} // 반복 중에는 같은 라운드를 계속
+  if(r>save.bestRound) save.bestRound=r;
+  save.round=r+1; persist(); startRound(r+1);
+}
+// 쓰러지면: 게임을 끝내지 않고 이전 라운드로 물러나 반복
+function retreat(){
+  if(!G.loop){save.round=G.wave; G.loop=true;}
+  save.loop=true; persist();
+  G.dead=false; G.deathT=0; G.hp=G.st.hp; G.enemies=[]; G.shots=[]; G.kunais=[]; G.throwT=-1;
+  startRound(Math.max(1,G.wave-1));
+  G.banner={txt:'후퇴!',sub:`${G.wave}라운드 반복 · 도전 버튼으로 재도전`,t:0};
+}
+// 도전 버튼: 실패했던 라운드에 다시 도전
+function challenge(){
+  if(!G||!G.loop||G.dead) return;
+  G.loop=false; save.loop=false; persist();
+  G.enemies=[]; G.shots=[]; G.hp=G.st.hp;
+  startRound(save.round);
 }
 function spawnEnemy(type){
   const w=G.wave, other=G.g==='f'?'m':'f';
   const g=Math.random()<.6?other:G.g;
   let set,hp,travel;
-  // 적 체력: 기본 공격력 10 기준, 라운드가 오를수록 늘어난다
-  if(type==='boss'){set=7+Math.floor(Math.random()*3); hp=Math.round(160*(1+.4*(w-1))); travel=5;}
-  else if(type==='elite'){set=4+Math.floor(Math.random()*3); hp=Math.round(30*(1+.35*(w-1))); travel=Math.max(5,10-w*.35);}
-  else {set=1+Math.floor(Math.random()*3); hp=Math.round(10*(1+.3*(w-1))); travel=Math.max(4,8.5-w*.35);}
-  G.enemies.push({g,eq:Array(8).fill(set),type,hp,maxHp:hp,u:type==='boss'?.5:rnd(.05,.95),p:0,speed:1/travel,
-    stopAt:type==='boss'?.42:1,sway:rnd(0,6),state:'live',t:0,at:Math.random()*8,
-    fireT:type==='grunt'?1e9:rnd(1.2,2.4),warn:0,big:type==='boss'?1.5:type==='elite'?1.12:1});
+  // 적 체력: 기본 공격력 10 기준, 라운드마다 12%씩 단단해진다
+  const hs=Math.pow(1.12,w-1), boss=type==='boss'||type==='mboss';
+  if(type==='boss'){set=7+Math.floor(Math.random()*3); hp=Math.round(200*hs); travel=5;}
+  else if(type==='mboss'){set=4+Math.floor(Math.random()*3); hp=Math.round(80*hs); travel=5;}
+  else if(type==='elite'){set=4+Math.floor(Math.random()*3); hp=Math.round(30*hs); travel=Math.max(5,10-w*.15);}
+  else {set=1+Math.floor(Math.random()*3); hp=Math.round(10*hs); travel=Math.max(4,8.5-w*.15);}
+  G.enemies.push({g,eq:Array(8).fill(set),type,hp,maxHp:hp,u:boss?.5:rnd(.05,.95),p:0,speed:1/travel,
+    stopAt:type==='boss'?.4:type==='mboss'?.46:1,sway:rnd(0,6),state:'live',t:0,at:Math.random()*8,
+    fireT:type==='grunt'?1e9:rnd(1.2,2.4),warn:0,big:type==='boss'?1.55:type==='mboss'?1.32:type==='elite'?1.12:1});
 }
 function puff(x,y,r,col){for(let i=0;i<10;i++){const a=Math.random()*7;G.fx.push({k:'puff',x,y,vx:Math.cos(a)*r*1.2,vy:Math.sin(a)*r*.6-r*.3,r:r*rnd(.25,.45),t:0,life:rnd(.4,.7),col});}}
 function sparks(x,y,col){for(let i=0;i<9;i++){const a=Math.random()*7,v=rnd(80,220);G.fx.push({k:'spark',x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,t:0,life:rnd(.2,.4),col});}}
@@ -936,7 +970,7 @@ function damageEnemy(e,dmg,opt={}){
 }
 function playerText(txt,col,size){const A=arena();floatText(A.px,A.py-A.ph*1.05,txt,col,size);}
 // 적 공격력: 라운드가 오를수록 세진다
-const enemyDmg=base=>Math.round(base*(1+.15*(G.wave-1)));
+const enemyDmg=base=>Math.round(base*Math.pow(1.06,G.wave-1));
 function dodgeOrHurt(dmg){hurtPlayer(dmg);}
 function hurtPlayer(dmg){
   if(G.dead) return; // 무적 시간 없음: 날아온 수리검마다 데미지
@@ -946,16 +980,16 @@ function hurtPlayer(dmg){
   if(G.hp<=0){const A=arena();G.dead=true;G.deathT=0;puff(A.px,A.py-A.ph*.45,A.ph*.7,'#b9aec9');SFX.kill();}
 }
 function killEnemy(e,chain){
-  e.state='die'; e.t=0; e.poisonT=0; G.kills++; if(e.type==='boss') G.bossKills++;
+  e.state='die'; e.t=0; e.poisonT=0; G.kills++; const bossy=e.type==='boss'||e.type==='mboss'; if(bossy) G.bossKills++;
   // 보상: 엽전 + 경험치, 라운드가 높을수록 많이
-  const rk=1+.15*(G.wave-1);
-  const coin=Math.round((e.type==='boss'?60:e.type==='elite'?12:5)*rk);
-  const xp=Math.round((e.type==='boss'?60:e.type==='elite'?12:4)*rk);
+  const rk=Math.pow(1.09,G.wave-1);
+  const coin=Math.round(({boss:80,mboss:30,elite:12,grunt:5})[e.type]*rk);
+  const xp=Math.round(({boss:80,mboss:30,elite:12,grunt:4})[e.type]*rk);
   save.coins+=coin; G.coinsRun+=coin; G.xpRun+=xp;
   const ups=gainXp(xp); persist();
   const r=enemyRect(e);
   // 엽전은 글자 대신 동전이 지갑(오른쪽 위)으로 날아간다 → 데미지 숫자와 겹치지 않음
-  const nc=e.type==='boss'?8:e.type==='elite'?4:2;
+  const nc=({boss:8,mboss:6,elite:4,grunt:2})[e.type];
   for(let i=0;i<nc;i++) G.coinFly.push({x:r.x+rnd(-.3,.3)*r.hw*2,y:r.cy+rnd(-.2,.2)*r.h,t:-i*.05,dur:rnd(.55,.75)});
   if(ups){G.banner={txt:`레벨 업! Lv.${save.lv}`,sub:`스탯 포인트 +${SP_PER_LV*ups}`,t:0}; SFX.buy();}
   renderTopHud();
@@ -964,7 +998,7 @@ function killEnemy(e,chain){
     puff(r.x,r.cy,r.h*.9,'#ff8a3a'); G.shake=Math.max(G.shake,.15);
     for(const o of G.enemies){if(o===e||o.state==='die')continue; const q=enemyRect(o); if(Math.hypot(q.x-r.x,q.cy-r.cy)<r.h*1.3) damageEnemy(o,Math.round(G.st.atk*.6),{fixed:true,chain:true,col:'#ff8a3a'});}
   }
-  if(e.type==='boss'&&G.hp<G.st.hp){const h=Math.round(G.st.hp*.3);G.hp=Math.min(G.st.hp,G.hp+h);renderHearts();playerText('체력 +'+h,'#7fdc8a',20);}
+  if(bossy&&G.hp<G.st.hp){const h=Math.round(G.st.hp*.3);G.hp=Math.min(G.st.hp,G.hp+h);renderHearts();playerText('체력 +'+h,'#7fdc8a',20);}
   SFX.kill();
 }
 function update(dt){
@@ -986,10 +1020,10 @@ function update(dt){
   }
   // 스폰
   if(!G.dead){
-    const alive=G.enemies.filter(e=>e.state!=='die').length, cap=Math.min(2+Math.ceil(G.wave/2),7);
+    const alive=G.enemies.filter(e=>e.state!=='die').length, cap=Math.min(2+Math.ceil(G.wave/3),7);
     if(G.waveLeft>0){G.spawnT-=dt; if(G.spawnT<=0&&alive<cap){G.waveLeft--; G.spawnT=rnd(.5,1.2)*Math.max(.55,1-G.wave*.04);
-      spawnEnemy(G.waveLeft===0&&G.boss?'boss':Math.random()<Math.min(.5,(G.wave-1)*.12)?'elite':'grunt');}}
-    else if(alive===0&&G.enemies.length===0){G.waveGap-=dt; if(G.waveGap<=0){G.waveGap=1.4;nextWave();}}
+      spawnEnemy(G.waveLeft===0&&G.bossType?G.bossType:Math.random()<Math.min(.45,(G.wave-1)*.06)?'elite':'grunt');}}
+    else if(alive===0&&G.enemies.length===0){G.waveGap-=dt; if(G.waveGap<=0) roundCleared();}
   }
   // 적: 내려오기 · 수리검 · 방어선 도착
   for(const e of G.enemies){
@@ -1000,15 +1034,16 @@ function update(dt){
     if(e.state==='live') e.p=Math.min(e.stopAt,e.p+e.speed*dt);
     if(e.p>=1){ // 캐릭터 앞까지 내려와 베고 연막으로 사라짐
       const r=enemyRect(e); e.state='die'; e.t=0; e.struck=true; puff(r.x,r.cy,r.h*.5,'#6b5a7a');
-      G.shake=Math.max(G.shake,.2); dodgeOrHurt(enemyDmg(e.type==='boss'?40:e.type==='elite'?25:18)); continue;
+      G.shake=Math.max(G.shake,.2); dodgeOrHurt(enemyDmg(({boss:40,mboss:30,elite:25,grunt:18})[e.type])); continue;
     }
     if(targetable(e)){
       e.fireT-=dt;
       if(e.fireT<.45&&!e.warn) e.warn=1;
       if(e.fireT<=0){
-        e.warn=0; e.fireT=(e.type==='boss'?1.5:3.2)*rnd(.8,1.25)*Math.max(.6,1-G.wave*.03);
-        const n=e.type==='boss'?(G.wave>=6?3:2):1, r=enemyRect(e);
-        for(let k=0;k<n;k++) G.shots.push({dmg:enemyDmg(e.type==='boss'?15:10),x0:r.x,y0:r.cy,t:-k*.18,dur:Math.max(.55,.95-G.wave*.03),spin:rnd(0,6),done:false});
+        const bossy=e.type==='boss'||e.type==='mboss';
+        e.warn=0; e.fireT=(bossy?1.6:3.2)*rnd(.8,1.25)*Math.max(.6,1-G.wave*.02);
+        const n=e.type==='boss'?3:e.type==='mboss'?2:1, r=enemyRect(e);
+        for(let k=0;k<n;k++) G.shots.push({dmg:enemyDmg(bossy?15:10),x0:r.x,y0:r.cy,t:-k*.18,dur:Math.max(.55,.95-G.wave*.03),spin:rnd(0,6),done:false});
         SFX.enemy();
       }
     }
@@ -1047,7 +1082,7 @@ function update(dt){
   for(const c of G.coinFly){c.t+=dt; if(c.t>=c.dur&&!c.done){c.done=true;const pu=$('purseG');pu.classList.remove('pop');void pu.offsetWidth;pu.classList.add('pop');}}
   G.coinFly=G.coinFly.filter(c=>!c.done);
   G.texts=G.texts.filter(t=>t.t<.9);
-  if(G.dead){G.deathT+=dt; if(G.deathT>1.4&&mode==='game') endGame();}
+  if(G.dead){G.deathT+=dt; if(G.deathT>1.2&&mode==='game') retreat();}
 }
 // 가운데 안내 문구: 제목 + 부제 두 줄, 화면 폭에 맞게 글자 크기를 줄인다
 function fitFont(txt,size,maxW,face){ctx.font=`${size}px ${face}`;const w=ctx.measureText(txt).width;if(w>maxW){size=Math.floor(size*maxW/w);ctx.font=`${size}px ${face}`;}return size;}
@@ -1087,12 +1122,12 @@ function render(dt){
     if(e.state==='die') al=Math.max(0,1-e.t/.3);
     const f=Math.floor(e.at*(e.p>=e.stopAt?8:9)), a=e.p>=e.stopAt?'idle':'walk';
     shadow(ctx,r.x,r.y,r.h*.22*al);
-    if(e.type==='boss') aura(ctx,r.x,r.y,r.h,SETS[e.eq[0]].glow,T);
+    if(e.type==='boss'||e.type==='mboss') aura(ctx,r.x,r.y,r.h,SETS[e.eq[0]].glow,T);
     drawNinja(ctx,e.g,e.eq,a,f,r.x,r.y+dy,r.h,al);
     if(lit>0){ctx.save();ctx.globalCompositeOperation='lighter';drawNinja(ctx,e.g,e.eq,a,f,r.x,r.y+dy,r.h,lit);ctx.restore();}
     if(e.poisonT>0){ctx.fillStyle='rgba(92,240,138,.5)';for(let i=0;i<3;i++){const p=(T*1.5+i/3)%1;ctx.beginPath();ctx.arc(r.x+Math.sin(i*2+T*3)*r.hw*.6,r.y-r.h*(.3+p*.7),3,0,7);ctx.fill();}}
     if(e.warn&&e.state!=='die'){ctx.fillStyle='#ff5a4a';ctx.font=`${Math.max(16,r.h*.28)}px "Black Han Sans",sans-serif`;ctx.textAlign='center';ctx.fillText('!',r.x,r.y-r.h*1.08);}
-    if((e.type!=='grunt'||e.hp<e.maxHp)&&e.state!=='die'){const bw=r.hw*1.6;ctx.fillStyle='rgba(0,0,0,.55)';ctx.fillRect(r.x-bw/2,r.y-r.h*1.02,bw,4);ctx.fillStyle=e.type==='boss'?'#e6b450':'#ff6a5a';ctx.fillRect(r.x-bw/2,r.y-r.h*1.02,bw*Math.max(0,e.hp)/e.maxHp,4);}
+    if((e.type!=='grunt'||e.hp<e.maxHp)&&e.state!=='die'){const bw=r.hw*1.6;ctx.fillStyle='rgba(0,0,0,.55)';ctx.fillRect(r.x-bw/2,r.y-r.h*1.02,bw,4);ctx.fillStyle=e.type==='boss'?'#e6b450':e.type==='mboss'?'#ff9a3a':'#ff6a5a';ctx.fillRect(r.x-bw/2,r.y-r.h*1.02,bw*Math.max(0,e.hp)/e.maxHp,4);}
   }
   // 적 수리검
   const tgt={x:A.px,y:A.py-A.ph*.55};
@@ -1157,14 +1192,12 @@ function renderLobbyScene(dt){
 function endGame(){
   mode='result';
   const g=G.g, st=G.st;
-  const rec=G.wave>save.bestRound; if(rec) save.bestRound=G.wave;
-  save.round=G.wave; persist(); // 다음 출전은 이 라운드부터 이어서
-  $('resAgain').textContent=`${G.wave}라운드부터 이어하기`;
-  $('rWave').textContent=G.wave; $('rKills').textContent=G.kills; $('rBoss').textContent=G.bossKills;
+  const rec=save.bestRound>G.best0; persist();
+  $('rWave').textContent=G.maxRound; $('rKills').textContent=G.kills; $('rBoss').textContent=G.bossKills;
   $('rLv').textContent=save.lv>G.lv0?`${G.lv0} → ${save.lv}`:save.lv;
   $('resStats').hidden=!spLeft(); $('resStats').textContent=`스탯 포인트 찍기 (${spLeft()})`;
   $('rCoins').textContent='+'+G.coinsRun.toLocaleString(); $('rXp').textContent='+'+G.xpRun.toLocaleString(); $('newrec').hidden=!rec;
-  $('resTitle').textContent=G.dead?'연막 속으로 퇴각!':'오늘은 여기까지';
+  $('resTitle').textContent='전투 종료';
   show('result'); SFX.coin();
 }
 
@@ -1181,6 +1214,7 @@ function resume(){if(mode!=='paused')return;mode='game';show('hud');last=perform
 document.addEventListener('visibilitychange',()=>{if(document.hidden) pause();});
 $('pauseBtn').onclick=pause; $('resumeBtn').onclick=resume;
 $('quitBtn').onclick=()=>{G.dead=false;endGame();};
+$('challengeG').onclick=()=>{SFX.tap();challenge();};
 $('resAgain').onclick=()=>{SFX.tap();newGame();};
 $('resLobby').onclick=()=>{SFX.tap();goLobby();};
 $('resStats').onclick=()=>{SFX.tap();goLobby();openStats();};
@@ -1188,7 +1222,6 @@ $('toTrain').onclick=()=>{ac();SFX.tap();openTrain();};
 $('trainDone').onclick=()=>{SFX.tap();$('trainM').hidden=true;renderLobby();};
 $('spDone').onclick=()=>{SFX.tap();$('statsM').hidden=true;renderLobby();};
 $('toGame').onclick=()=>{ac();SFX.tap();newGame();};
-$('toGame1').onclick=()=>{ac();SFX.tap();newGame(1);};
 $('toShop').onclick=()=>{ac();SFX.tap();openShop(1,0);};
 $('shopBack').onclick=()=>{SFX.tap();goLobby();};
 $('pickF').onclick=()=>{save.g='f';persist();SFX.tap();renderLobby();};
