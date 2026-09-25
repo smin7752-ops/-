@@ -152,6 +152,7 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
 .gdet{flex:none;display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px 12px;padding:10px;background:var(--pan-3);border-bottom:2px solid var(--edge)}
 .gbox{position:relative;width:78px;height:78px;border-radius:10px;border:3px solid var(--rc);background:radial-gradient(circle at 50% 40%,#4a3a30,#1a1210);flex:none;display:block}
 .gbox .ic{position:absolute;inset:7px}
+.gbox .gg{position:absolute;top:0;right:5px;font-family:var(--display);font-size:15px;color:var(--gc);text-shadow:0 1px 0 #000,0 0 4px #000}
 .gbox .gl{position:absolute;top:1px;left:5px;font-family:var(--display);font-size:13px;color:var(--rc);text-shadow:0 1px 0 #000}
 .gbox .lv{position:absolute;right:4px;bottom:1px;font-family:var(--display);font-size:12px;color:#fff;text-shadow:0 1px 1px #000}
 .gbox .eq{position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:5px;background:var(--gold);color:#241a08;font-family:var(--display);font-size:12px;display:grid;place-items:center;border:2px solid #7a5838}
@@ -174,8 +175,19 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
 .slottabs{flex:none;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;padding:10px 10px 2px}
 .slottabs button{padding:6px 0;border-radius:6px;background:#3a2d26;border:2px solid var(--edge);font-family:var(--display);font-size:14px;color:#cdb89c;min-width:0;white-space:nowrap}
 .slottabs button.on{background:linear-gradient(180deg,#9a7858,#6a5040);border-color:#c8a070;color:#fff;text-shadow:0 1px 0 rgba(0,0,0,.4)}
-.ggrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-@media (min-width:560px){.ggrid{grid-template-columns:repeat(5,minmax(0,1fr))}}
+.ggrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px 10px}
+.stab{margin-top:12px;background:#3a2d26;border:2px solid var(--edge);border-radius:10px;padding:8px 10px}
+.stab h5{margin:0 0 6px;display:flex;justify-content:space-between;font-size:13px;color:var(--gold)}
+.stab h5 span{color:var(--muted);font-weight:400}
+.stgrid{display:grid;grid-template-columns:auto 1fr 1fr;gap:3px 8px;font-size:11px;align-items:center}
+.stgrid .h{color:var(--muted);font-size:10px}
+.stgrid b{font-family:var(--display);font-weight:400;font-size:14px;text-align:center}
+.stgrid span{color:#9a8a78}
+.stgrid span.on,.uni.on{color:#fff;font-weight:700}
+.stgrid span.on::before{content:"● ";color:var(--green-hi)}
+.uni{margin-top:6px;font-size:11px;color:#9a8a78}
+.uni b{color:var(--gold);font-weight:700}
+.uni small{color:var(--muted)}
 .gcard{display:flex;flex-direction:column;min-width:0}
 .gcard .gbox,.rgrid .gbox{width:100%;height:auto;aspect-ratio:1}
 .gcard.sel .gbox{box-shadow:0 0 0 2px #fff,0 0 14px #ffd77a}
@@ -323,7 +335,12 @@ const SETS=[
   {n:'백은',cloth:[206,210,220],acc:[214,32,48],glow:'#f2f6ff'},
   {n:'전설',cloth:[56,30,14],acc:[244,184,52],glow:'#ffd36a'}
 ];
-const gradeNo=t=>String(t+1).padStart(2,'0');
+// 장비 = 세트(01~10) × 등급(F·D·A·S). t 는 0~39 번호: 세트 = t>>2, 등급 = t&3
+const GR=['F','D','A','S'], GRC=['#c8c0b0','#7fd06a','#c07bff','#ffc94a'], GRMUL=[1,1.5,2.2,3];
+const TIERS=40;
+const setOf=t=>t>>2, grOf=t=>t&3;
+const setNo=t=>String(setOf(t)+1).padStart(2,'0');
+const pEq=(eq=save.eq)=>eq.map(setOf); // 캐릭터 옷 색·쿠나이 모양은 세트 기준
 
 /* ================= 숫자 표기 (만 · 억 · 조 · 경) ================= */
 function fmtKo(n){
@@ -335,38 +352,45 @@ function fmtKo(n){
 const fmtPct=v=>{const p=v*100; return (p>=10000?fmtKo(p):(+p.toFixed(p<10?2:p<100?1:0)).toLocaleString())+'%';};
 
 /* ================= 저장 ================= */
-const SKEY='shadow-shuriken-v2';
+const SKEY='shadow-shuriken-v3';
 const save={gold:0,gems:3000,g:'f',mute:false,lv:1,xp:0,stage:1,kills:0,bestStage:0,autoBoss:true,
   up:{},sp:{},inv:{},eq:[0,0,0,0,0,0,0,0],relic:{},sum:{},free:{day:''},rank:0,pulls:0};
-try{const s=JSON.parse(localStorage.getItem(SKEY)||'null');if(s&&typeof s==='object') Object.assign(save,s);}catch(e){}
+try{
+  let s=JSON.parse(localStorage.getItem(SKEY)||'null');
+  if(!s){ // 이전 버전 기록: 세트 번호를 F등급으로 옮긴다
+    const o=JSON.parse(localStorage.getItem('shadow-shuriken-v2')||'null');
+    if(o){const inv={};for(const k in o.inv||{}){const [sl,t]=k.split('-').map(Number);inv[sl+'-'+t*4]=o.inv[k];} o.inv=inv; o.eq=(o.eq||[]).map(t=>t*4); s=o;}
+  }
+  if(s&&typeof s==='object') Object.assign(save,s);
+}catch(e){}
 for(let s=0;s<8;s++) if(!save.inv[s+'-0']) save.inv[s+'-0']={n:0,lv:1}; // 입문자 장비는 처음부터 보유
 let saveT=0;
 function persist(){try{localStorage.setItem(SKEY,JSON.stringify(save))}catch(e){}}
 function persistSoon(){clearTimeout(saveT);saveT=setTimeout(persist,400);}
 const slotName=s=>{const n=SLOTS[s].n;return typeof n==='string'?n:n[save.g];};
-const itemName=(s,t)=>`${SETS[t].n} ${slotName(s)}`;
+const itemName=(s,t)=>`${SETS[setOf(t)].n} ${GR[grOf(t)]}급 ${slotName(s)}`;
 
 /* ================= 장비 효과 ================= */
 const inv=(s,t)=>save.inv[s+'-'+t];
 const owned=(s,t)=>{const it=inv(s,t);return !!(it&&it.lv>0);};
 const ITEM_MAX=100;
 const lvMul=lv=>1+.12*(lv-1);
-const gMul=t=>Math.pow(2,t);
+const gMul=t=>Math.pow(2,t/4); // 세트마다 2배, 등급마다 약 19%
 // 장착 효과: 부위마다 다른 능력치
-function equipFx(s,t,lv){const m=lvMul(lv);
+function equipFx(s,tier,lv){const m=lvMul(lv), t=tier/4;
   switch(s){
     case 0:return {crit:(.01+.01*t)*(1+.01*(lv-1))};        // 두건: 크리티컬
     case 1:return {cdmg:.2*(t+1)*m};                          // 목도리: 크리티컬 데미지
-    case 2:return {hpP:.25*gMul(t)*m};                        // 상의: 최대 HP
+    case 2:return {hpP:.25*gMul(tier)*m};                        // 상의: 최대 HP
     case 3:return {aspd:(.03+.02*t)*(1+.01*(lv-1))};          // 장갑: 공격 속도
-    case 4:return {regP:.25*gMul(t)*m};                       // 하의: HP 회복량
+    case 4:return {regP:.25*gMul(tier)*m};                       // 하의: HP 회복량
     case 5:return {gold:.1*(t+1)*m};                          // 신발: 골드 획득량
     case 6:return {xp:.1*(t+1)*m};                            // 허리띠: 경험치 획득량
-    case 7:return {atkP:.3*gMul(t)*m,aspd:.01*(t+1)};         // 쿠나이: 공격력 + 공격 속도
+    case 7:return {atkP:.3*gMul(tier)*m,aspd:.01*(t+1)};         // 쿠나이: 공격력 + 공격 속도
   }}
 // 보유 효과: 가지고만 있어도 공격력
 const ownFx=(s,t,lv)=>({atkP:.05*gMul(t)*lvMul(lv)});
-const enhCost=(t,lv)=>Math.round(60*Math.pow(1.9,t)*Math.pow(lv,1.35));
+const enhCost=(t,lv)=>Math.round(60*Math.pow(1.9,t/4)*Math.pow(lv,1.35));
 const FXN={atkP:'공격력',hpP:'최대 HP',regP:'HP 회복량',aspd:'공격 속도',crit:'크리티컬',cdmg:'크리티컬 데미지',gold:'골드 획득량',xp:'경험치 획득량'};
 
 // 세트 효과: 같은 등급 2·4부위 / 고유 능력(8): 모든 부위가 k등급 이상이면 1~k 고유 능력을 전부 이어받음
@@ -439,13 +463,13 @@ const RANKS=[
   {n:'암부',fx:{atkP:30,hpP:3,aspd:.2},req:[['stage',80],['lv',65],['grade',7],['upatk',300],['relic',120]]},
   {n:'카게',fx:{atkP:100,gold:3,xp:3,extra:1},req:[['stage',120],['lv',90],['grade',9],['pulls',1500],['relic',300]]}
 ];
-const maxGrade=()=>{let m=0;for(const k in save.inv){if(save.inv[k].lv>0) m=Math.max(m,+k.split('-')[1]);}return m;};
+const maxGrade=()=>{let m=0;for(const k in save.inv){if(save.inv[k].lv>0) m=Math.max(m,setOf(+k.split('-')[1]));}return m;};
 function reqInfo([type,v]){
   switch(type){
     case 'stage':return {t:`스테이지 ${v} 클리어`,cur:save.bestStage,need:v};
     case 'lv':return {t:`레벨 ${v} 달성`,cur:save.lv,need:v};
     case 'upatk':return {t:`기본 공격력 강화 LV.${v}`,cur:upLv('atk'),need:v};
-    case 'grade':return {t:`${SETS[v].n} 등급 장비 보유`,cur:maxGrade()+1,need:v+1};
+    case 'grade':return {t:`${SETS[v].n} 세트 장비 보유`,cur:maxGrade()+1,need:v+1};
     case 'relic':return {t:`유물 레벨 합계 ${v}`,cur:relicSum(),need:v};
     case 'pulls':return {t:`소환 ${v}회`,cur:save.pulls,need:v};
   }}
@@ -453,6 +477,8 @@ const rankReady=()=>{const r=RANKS[save.rank+1]; return !!r&&r.req.every(q=>{con
 const fxText=o=>Object.keys(o).map(k=>k==='extra'?`쿠나이 +${o[k]}개`:`${FXN[k]} +${fmtPct(o[k])}`);
 
 /* ================= 최종 능력치 ================= */
+const scaleFx=(fx,m)=>{const o={};for(const k in fx) o[k]=fx[k]*m;return o;};
+const fxLine=fx=>Object.keys(fx).map(k=>`${FXN[k]} +${fmtPct(fx[k])}`).join(' · ');
 function calc(eq=save.eq){
   const s={atkF:10,atkP:0,hpF:100,hpP:0,regF:1,regP:0,aspd:0,crit:.05,cdmg:1.5,gold:0,xp:0,shield:0,multi:1,extra:0,pierce:0,poison:0,shadow:0,blast:0};
   const add=o=>{for(const k in o){if(k==='multi') s.multi=Math.max(s.multi,o[k]); else s[k]=(s[k]||0)+o[k];}};
@@ -468,9 +494,12 @@ function calc(eq=save.eq){
   // 유물
   for(const r of RELICS) s[r.fx]+=rel(r.k).lv*r.per;
   // 세트 효과
-  const counts=Array(10).fill(0); eq.forEach(t=>counts[t]++); const active=[];
-  counts.forEach((n,t)=>SETFX[t].forEach(([need,txt,fx])=>{if(need<8&&n>=need){add(fx);active.push({t,need,txt});}}));
-  const minT=Math.min(...eq);
+  // 세트 효과: 같은 세트 2·4부위. 그 부위들 중 가장 낮은 등급(F·D·A·S)만큼 효과가 커진다
+  const active=[];
+  for(let k=1;k<10;k++) for(const [need,,fx] of SETFX[k]){ if(need>=8) continue;
+    let best=-1; for(let g=3;g>=0;g--){ if(eq.filter(t=>setOf(t)===k&&grOf(t)>=g).length>=need){best=g;break;} }
+    if(best>=0){const f=scaleFx(fx,GRMUL[best]); add(f); active.push({t:k,g:best,need,txt:fxLine(f)});} }
+  const minT=Math.min(...eq.map(setOf));
   for(let k=1;k<=minT;k++){const u=SETFX[k][2]; add(u[2]); active.push({t:k,need:8,txt:u[1]});}
   // 승급
   for(let i=1;i<=save.rank;i++) add(RANKS[i].fx);
@@ -572,10 +601,10 @@ function drawKunaiIcon(c,g,t,x,y,size,ang){
   c.drawImage(img,7*112,t*112,112,112,-size/2,-size/2,size,size);
   c.restore();
 }
-function iconEl(s,t){return `<i class="ic" style="--atlas:url(${ASSET}${save.g}_items.webp);background-position:${s/7*100}% ${t/9*100}%"></i>`;}
+function iconEl(s,t){return `<i class="ic" style="--atlas:url(${ASSET}${save.g}_items.webp);background-position:${s/7*100}% ${setOf(t)/9*100}%"></i>`;}
 function gbox(s,t,opt={}){
   const it=inv(s,t), own=!!(it&&it.lv>0);
-  return `<span class="gbox${own||opt.show?'':' lock'}" style="--rc:${RC[t]}">${iconEl(s,t)}<span class="gl">${gradeNo(t)}</span>${own&&!opt.nolv?`<span class="lv">LV.${it.lv}</span>`:''}${!own&&!opt.show?'<span class="no">미보유</span>':''}${opt.eq?'<span class="eq">E</span>':''}</span>`;
+  return `<span class="gbox${own||opt.show?'':' lock'}" style="--rc:${RC[setOf(t)]};--gc:${GRC[grOf(t)]}">${iconEl(s,t)}<span class="gl">${setNo(t)}</span><span class="gg">${GR[grOf(t)]}</span>${own&&!opt.nolv?`<span class="lv">LV.${it.lv}</span>`:''}${!own&&!opt.show?'<span class="no">미보유</span>':''}${opt.eq?'<span class="eq">E</span>':''}</span>`;
 }
 
 /* ================= 소리 ================= */
@@ -856,7 +885,7 @@ function update(dt){
       if(e.state==='die'||k.hit.has(e)) continue;
       const r=enemyRect(e);
       if(Math.abs(k.x-r.x)<r.hw&&k.y<r.y&&k.y>r.y-r.h*.95){
-        k.hit.add(e); sparks(k.x,k.y,SETS[save.eq[7]].glow); SFX.hit();
+        k.hit.add(e); sparks(k.x,k.y,SETS[setOf(save.eq[7])].glow); SFX.hit();
         damageEnemy(e,G.st.atk,{ghost:k.ghost});
         if(!G.st.pierce){k.dead=true;break;}
         k.target=autoTargets(3,null).find(o=>!k.hit.has(o))||null;
@@ -915,18 +944,18 @@ function render(dt){
   }
   const tgt={x:A.px,y:A.py-A.ph*.55};
   for(const s of G.shots){if(s.t<0) continue; const u=s.t/s.dur; drawShuriken(s.x0+(tgt.x-s.x0)*u,s.y0+(tgt.y-s.y0)*u,A.eh*.1*(1+u*.6),s.t*18+s.spin);}
-  const kc=SETS[save.eq[7]].glow;
+  const kc=SETS[setOf(save.eq[7])].glow;
   for(const k of G.kunais){
     if(k.trail.length>1){ctx.strokeStyle=kc+'88';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(k.trail[0][0],k.trail[0][1]);for(const p of k.trail)ctx.lineTo(p[0],p[1]);ctx.stroke();}
-    ctx.save(); if(k.ghost) ctx.globalAlpha=.6; drawKunaiIcon(ctx,save.g,save.eq[7],k.x,k.y,A.ph*.3,Math.atan2(k.vy,k.vx)); ctx.restore();
+    ctx.save(); if(k.ghost) ctx.globalAlpha=.6; drawKunaiIcon(ctx,save.g,setOf(save.eq[7]),k.x,k.y,A.ph*.3,Math.atan2(k.vy,k.vx)); ctx.restore();
   }
   // 플레이어 (뒷모습)
   shadow(A.px,A.py,A.ph*.25);
   if(G.st.minT>0) aura(ctx,A.px,A.py,A.ph,SETS[G.st.minT].glow,T);
   const blink=G.inv>0&&!G.dead&&Math.floor(G.inv*20)%2===0;
-  if(G.dead) drawNinja(ctx,save.g,save.eq,'rear',0,A.px,A.py,A.ph,Math.max(0,1-G.deathT/.4));
-  else if(G.throwT>=0) drawNinja(ctx,save.g,save.eq,'throw',Math.floor(G.throwT*G.tfps),A.px,A.py,A.ph,blink?.4:1);
-  else drawNinja(ctx,save.g,save.eq,'rear',Math.floor(G.rearT*8),A.px,A.py,A.ph,blink?.4:1);
+  if(G.dead) drawNinja(ctx,save.g,pEq(),'rear',0,A.px,A.py,A.ph,Math.max(0,1-G.deathT/.4));
+  else if(G.throwT>=0) drawNinja(ctx,save.g,pEq(),'throw',Math.floor(G.throwT*G.tfps),A.px,A.py,A.ph,blink?.4:1);
+  else drawNinja(ctx,save.g,pEq(),'rear',Math.floor(G.rearT*8),A.px,A.py,A.ph,blink?.4:1);
   // 머리 위 체력바
   if(!G.dead){const bw=Math.max(64,A.ph*.55), bx=A.px-bw/2, by=A.py-A.ph*1.08;
     ctx.fillStyle='rgba(0,0,0,.65)'; ctx.fillRect(bx-1,by-1,bw+2,9); ctx.fillStyle='#3a1a14'; ctx.fillRect(bx,by,bw,7);
@@ -957,7 +986,7 @@ function updateTop(){
   $('goldG').textContent=fmtKo(save.gold); $('gemG').textContent=fmtKo(save.gems);
   $('stageG').textContent=save.stage;
   $('phGold').textContent=fmtKo(save.gold); $('phGem').textContent=fmtKo(save.gems);
-  $('phTitle').innerHTML=panel==='gear'?`보유 장비 <span class="num">${Object.values(save.inv).filter(x=>x.lv>0).length}</span> / 80`:panel==='grow'?`LV.${save.lv} · 전투력 <span class="num">${fmtKo(st.cp)}</span>`:panel==='rank'?`현재 계급 · ${RANKS[save.rank].n}`:panel==='summon'?`총 소환 <span class="num">${save.pulls.toLocaleString()}</span>회`:'';
+  $('phTitle').innerHTML=panel==='gear'?`보유 장비 <span class="num">${Object.values(save.inv).filter(x=>x.lv>0).length}</span> / ${8*TIERS}`:panel==='grow'?`LV.${save.lv} · 전투력 <span class="num">${fmtKo(st.cp)}</span>`:panel==='rank'?`현재 계급 · ${RANKS[save.rank].n}`:panel==='summon'?`총 소환 <span class="num">${save.pulls.toLocaleString()}</span>회`:'';
   const bar=$('stbar');
   if(G&&G.boss){bar.classList.add('boss'); updateBossBar();}
   bar.hidden=!(G&&G.boss);
@@ -972,14 +1001,14 @@ function updateBossBar(){
 }
 function updateDots(){
   const sp=spLeft(); $('dotGrow').hidden=!sp; $('dotGrow').textContent=sp>99?'99+':sp;
-  let comb=false; for(const k in save.inv){if(save.inv[k].n>=5&&+k.split('-')[1]<9){comb=true;break;}} $('dotGear').hidden=!comb; $('dotGear').textContent='!';
+  let comb=false; for(const k in save.inv){if(save.inv[k].n>=5&&+k.split('-')[1]<TIERS-1){comb=true;break;}} $('dotGear').hidden=!comb; $('dotGear').textContent='!';
   $('dotRank').hidden=!rankReady(); $('dotRank').textContent='!';
   const fr=freeLeft(); $('dotSum').hidden=!fr; $('dotSum').textContent=fr;
 }
 function drawAvatar(){
   const c=$('av'), x=c.getContext('2d'); x.clearRect(0,0,120,120);
   const g=x.createRadialGradient(60,50,5,60,60,70); g.addColorStop(0,'#6a5040'); g.addColorStop(1,'#2a201c'); x.fillStyle=g; x.fillRect(0,0,120,120);
-  if(base[save.g].idle) drawNinja(x,save.g,save.eq,'idle',0,60,262,250);
+  if(base[save.g].idle) drawNinja(x,save.g,pEq(),'idle',0,60,262,250);
   $('genTxt').textContent=save.g==='f'?'여닌자':'남닌자';
 }
 
@@ -1068,29 +1097,40 @@ function renderGear(){
         <div class="fxs"><h5>장착효과</h5>${rows(cur,nxt)}</div>
         <div class="fxs"><h5>보유효과</h5>${rows(oc,on)}</div></div>
       <div class="gbtns">
-        <button class="obtn brown" id="gComb">합성하기<span class="cost">5개 → ${t<9?SETS[t+1].n:'최고 등급'}</span></button>
+        <button class="obtn brown" id="gComb">합성하기<span class="cost">5개 → ${t<TIERS-1?`${SETS[setOf(t+1)].n} ${GR[grOf(t+1)]}`:'최고 등급'}</span></button>
         <button class="obtn brown" id="gEq">${isEq?'장착중':'장착하기'}</button>
         <button class="obtn" id="gEnh"></button>
       </div>
     </div>
     <div class="slottabs">${SLOTS.map((_,i)=>`<button data-sl="${i}" class="${i===s?'on':''}">${slotName(i)}</button>`).join('')}</div>
-    <div class="pscroll"><div class="ggrid">${SETS.map((S,k)=>`<button class="gcard${k===t?' sel':''}" data-t="${k}">${gbox(s,k,{eq:save.eq[s]===k})}<div class="cbar${cnt(k)>=5?' full':''}"><i style="width:${Math.min(100,cnt(k)/5*100)}%"></i><span class="num">${cnt(k)}/5</span></div><div class="gname">${S.n}</div></button>`).join('')}</div>
-      <p class="note" style="margin-top:10px">같은 장비 5개를 모으면 다음 등급 1개로 합성돼요. 장비는 소환에서 얻어요.</p></div>
+    <div class="pscroll"><div class="ggrid">${Array.from({length:TIERS},(_,k)=>`<button class="gcard${k===t?' sel':''}" data-t="${k}">${gbox(s,k,{eq:save.eq[s]===k})}<div class="cbar${cnt(k)>=5?' full':''}"><i style="width:${Math.min(100,cnt(k)/5*100)}%"></i><span class="num">${cnt(k)}/5</span></div><div class="gname">${SETS[setOf(k)].n} ${GR[grOf(k)]}</div></button>`).join('')}</div>
+      ${setTable(setOf(t))}
+      <p class="note" style="margin-top:10px">같은 장비 5개를 모으면 한 등급 위(F→D→A→S)로 합성되고, S등급 5개는 다음 세트 F등급이 돼요. 장비는 소환에서 얻어요.</p></div>
     <div class="pfoot"><button class="obtn green big" id="gAllComb">일괄합성</button><button class="obtn big" id="gAuto">자동 장착</button></div>`;
   const pb=$('pbody');
   pb.querySelectorAll('[data-sl]').forEach(b=>b.onclick=()=>{SFX.tap();view.slot=+b.dataset.sl;view.sel=save.eq[view.slot];renderGear();});
   pb.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{SFX.tap();view.sel=+b.dataset.t;renderGear();});
-  $('gComb').disabled=!(n>=5&&t<9);
+  $('gComb').disabled=!(n>=5&&t<TIERS-1);
   $('gComb').onclick=()=>{if(combine(s,t)){SFX.buy();toast(`${itemName(s,t+1)} 획득!`);afterGear();}};
   $('gEq').disabled=!own||isEq;
   $('gEq').onclick=()=>{save.eq[s]=t;SFX.equip();toast(`${itemName(s,t)} 장착`);afterGear();};
   $('gEnh').onclick=()=>{const c=enhCost(t,lv); if(!own||lv>=ITEM_MAX||save.gold<c) return; save.gold-=c; it.lv++; SFX.up(); afterGear();};
-  $('gAllComb').onclick=()=>{let c=0; for(let sl=0;sl<8;sl++) for(let k=0;k<9;k++) while(combine(sl,k)) c++; if(c){SFX.buy();toast(`합성 ${c}회 완료`);afterGear();} else toast('합성할 장비가 없어요');};
-  $('gAuto').onclick=()=>{let ch=0; for(let sl=0;sl<8;sl++){let best=0; for(let k=0;k<10;k++) if(owned(sl,k)) best=k; if(save.eq[sl]!==best){save.eq[sl]=best;ch++;}} if(ch){SFX.equip();toast(`${ch}부위 자동 장착`);view.sel=save.eq[view.slot];afterGear();} else toast('이미 가장 좋은 장비를 입고 있어요');};
+  $('gAllComb').onclick=()=>{let c=0; for(let sl=0;sl<8;sl++) for(let k=0;k<TIERS-1;k++) while(combine(sl,k)) c++; if(c){SFX.buy();toast(`합성 ${c}회 완료`);afterGear();} else toast('합성할 장비가 없어요');};
+  $('gAuto').onclick=()=>{let ch=0; for(let sl=0;sl<8;sl++){let best=0; for(let k=0;k<TIERS;k++) if(owned(sl,k)) best=k; if(save.eq[sl]!==best){save.eq[sl]=best;ch++;}} if(ch){SFX.equip();toast(`${ch}부위 자동 장착`);view.sel=save.eq[view.slot];afterGear();} else toast('이미 가장 좋은 장비를 입고 있어요');};
   refreshGearBtns();
 }
+// 세트 효과 표: 등급별 2·4세트 효과 + 고유 능력
+function setTable(k){
+  if(!k) return '<div class="stab"><h5>입문자 세트는 세트 효과가 없어요</h5></div>';
+  const eq=save.eq, st=calc(), on=(g,need)=>st.active.some(a=>a.t===k&&a.g===g&&a.need===need), uni=st.minT>=k;
+  const worn=eq.filter(t=>setOf(t)===k).length;
+  return `<div class="stab"><h5>${SETS[k].n} 세트 효과 <span class="num">착용 ${worn}/8</span></h5>
+    <div class="stgrid"><span class="h">등급</span><span class="h">2세트</span><span class="h">4세트</span>
+    ${[0,1,2,3].map(g=>`<b style="color:${GRC[g]}">${GR[g]}</b>${SETFX[k].filter(x=>x[0]<8).map(([need,,fx])=>`<span class="${on(g,need)?'on':''}">${fxLine(scaleFx(fx,GRMUL[g]))}</span>`).join('')}`).join('')}</div>
+    <div class="uni${uni?' on':''}"><b>고유</b> ${SETFX[k][2][1]} <small>· 8부위 모두 ${SETS[k].n} 세트 이상</small></div></div>`;
+}
 function combine(s,t){
-  const it=inv(s,t); if(!it||it.n<5||t>=9) return false;
+  const it=inv(s,t); if(!it||it.n<5||t>=TIERS-1) return false;
   it.n-=5; const key=s+'-'+(t+1), nx=save.inv[key]||(save.inv[key]={n:0,lv:0});
   if(nx.lv>0) nx.n++; else nx.lv=1;
   return true;
@@ -1135,12 +1175,14 @@ function freeCheck(){if(save.free.day!==today()){save.free={day:today()};for(con
 const freeLeft=()=>{freeCheck();return BANNERS.reduce((a,b)=>a+(save.free[b.k]||0),0);};
 function gradeRange(lv){return [Math.max(0,Math.floor((lv-1)/3)),Math.min(9,lv+1)];}
 function rollGrade(lv){const [lo,hi]=gradeRange(lv); let tot=0; const w=[]; for(let t=lo;t<=hi;t++){const v=Math.pow(.45,t-lo);w.push([t,v]);tot+=v;}
-  let r=Math.random()*tot; for(const [t,v] of w){if((r-=v)<=0) return t;} return lo;}
+  let r=Math.random()*tot, set=lo; for(const [t,v] of w){if((r-=v)<=0){set=t;break;}}
+  const x=Math.random(), g=x<.62?0:x<.87?1:x<.97?2:3; // 등급: F 62% · D 25% · A 10% · S 3%
+  return set*4+g;}
 function renderSummon(){
   freeCheck();
   tabs([['sum','소환']],'sum',()=>{});
   $('pbody').innerHTML=`<div class="pscroll">${BANNERS.map(b=>{const S=sumOf(b.k), [lo,hi]=gradeRange(S.lv), mx=S.lv>=SUM_MAX;
-    const art=b.relic?`<div class="itile t-relic" style="width:84px;height:84px;font-size:46px;border-radius:18px">${svgI('burst')}</div>`:iconEl(b.art[0],b.art[1]);
+    const art=b.relic?`<div class="itile t-relic" style="width:84px;height:84px;font-size:46px;border-radius:18px">${svgI('burst')}</div>`:iconEl(b.art[0],b.art[1]*4);
     return `<div class="banner" style="--c1:${b.c1};--c2:${b.c2}" data-b="${b.k}"><div class="art">${art}</div>
       <h4>${b.n}</h4>
       <div class="slv"><span>소환 레벨 LV.${S.lv}</span><span>${b.relic?'유물 조각 4종':`${SETS[lo].n} ~ ${SETS[hi].n}`}</span></div>
@@ -1168,7 +1210,7 @@ function summon(b,count,free){
   }
   save.pulls+=count; persist(); SFX.buy(); refreshStats(); updateDots(); if(panel==='summon') renderSummon();
   $('sumBody').innerHTML=`<h2>${b.n} 결과</h2><div class="rgrid">${res.map(r=>r.relic?`<div><div class="itile t-${r.relic.ic}" style="width:100%;height:auto;aspect-ratio:1">${svgI(r.relic.ic)}</div><div class="gname">${r.relic.n.replace(' 증가','')}</div></div>`
-    :`<div style="position:relative">${gbox(r.s,r.t,{show:true,nolv:true})}${r.isNew?'<span class="new">NEW</span>':''}<div class="gname">${itemName(r.s,r.t)}</div></div>`).join('')}</div>
+    :`<div style="position:relative">${gbox(r.s,r.t,{show:true,nolv:true})}${r.isNew?'<span class="new">NEW</span>':''}<div class="gname">${SETS[setOf(r.t)].n} ${GR[grOf(r.t)]}</div></div>`).join('')}</div>
     <div class="gbtns" style="grid-template-columns:1fr 1fr"><button class="obtn brown big" id="sumOk">확인</button><button class="obtn big" id="sumAgain" ${save.gems<COST10?'disabled':''}>10회 더<span class="cost"><i class="gem"></i>${COST10}</span></button></div>`;
   $('sumM').hidden=false;
   $('sumOk').onclick=()=>{SFX.tap();$('sumM').hidden=true;};
@@ -1197,7 +1239,7 @@ function drawRankChar(){
   const g=x.createRadialGradient(110,200,10,110,200,110); g.addColorStop(0,'rgba(255,200,120,.35)'); g.addColorStop(1,'rgba(255,200,120,0)'); x.fillStyle=g; x.fillRect(0,0,220,260);
   x.fillStyle='#6a4a30'; x.beginPath(); x.ellipse(110,238,70,14,0,0,7); x.fill(); x.fillStyle='#c89a5a'; x.beginPath(); x.ellipse(110,234,64,11,0,0,7); x.fill();
   if(save.rank>0) aura(x,110,234,210,SETS[Math.min(9,save.rank*2)].glow,T);
-  drawNinja(x,save.g,save.eq,'idle',Math.floor(T*8),110,234,210);
+  drawNinja(x,save.g,pEq(),'idle',Math.floor(T*8),110,234,210);
 }
 
 /* ---- 능력치 창 ---- */
@@ -1205,7 +1247,7 @@ function openInfo(){
   const st=calc();
   const rows=[['공격력',fmtKo(st.atk)],['공격 속도',`초당 ${st.aps.toFixed(2)}회`],['크리티컬',fmtPct(st.crit)],['크리티컬 데미지',fmtPct(st.cdmg)],['최대 HP',fmtKo(st.hp)],['HP 회복량',`${fmtKo(st.regen)}/초`],['동시 투척',`${st.shots}개`],['골드 획득량','+'+fmtPct(st.gold)],['경험치 획득량','+'+fmtPct(st.xp)],['전투력',fmtKo(st.cp)]];
   $('infoBody').innerHTML=`<h2>능력치</h2><div><h5>전체 능력치</h5><div class="kv">${rows.map(([k,v])=>`<span>${k}</span><b class="num">${v}</b>`).join('')}</div></div>
-    <div><h5>세트 효과 · 고유 능력</h5><div class="chips">${st.active.length?st.active.map(a=>`<span style="--rc:${RC[a.t]}">${SETS[a.t].n} ${a.need<8?a.need+'세트':'고유'} · ${a.txt}</span>`).join(''):'<span>같은 등급을 2부위 이상 입으면 켜져요</span>'}</div>
+    <div><h5>세트 효과 · 고유 능력</h5><div class="chips">${st.active.length?st.active.map(a=>`<span style="--rc:${RC[a.t]}">${SETS[a.t].n} ${a.need<8?`${GR[a.g]}급 ${a.need}세트`:'고유'} · ${a.txt}</span>`).join(''):'<span>같은 세트를 2부위 이상 입으면 켜져요</span>'}</div>
     <p class="note" style="margin-top:6px">고유 능력: 8부위 모두 ○등급 이상이면 그 등급까지의 고유 능력이 모두 켜져요.</p></div>
     <button class="obtn big" id="infoOk">닫기</button>`;
   $('infoM').hidden=false; $('infoOk').onclick=()=>{SFX.tap();$('infoM').hidden=true;};
