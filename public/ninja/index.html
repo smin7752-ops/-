@@ -615,7 +615,7 @@ const mkCanvas=(w,h)=>{const c=document.createElement('canvas');c.width=w;c.heig
 
 /* ================= 스프라이트 · 옷 색 바꾸기 ================= */
 const base={f:{},m:{}}, atlas={};
-function loadImg(src){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>rej(new Error(src));i.src=src;});}
+function loadImg(src){return new Promise((res,rej)=>{const i=new Image(); if(/^https?:/.test(location.href)&&!src.startsWith('data:')) i.crossOrigin='anonymous'; i.onload=()=>res(i);i.onerror=()=>rej(new Error(src));i.src=src;});}
 function analyze(g,a,img){
   const m=META[g][a], w=img.width, h=img.height;
   const c=mkCanvas(w,h), x=c.getContext('2d',{willReadFrequently:true}); x.drawImage(img,0,0);
@@ -1396,7 +1396,7 @@ function showPick(){
   $('pickGo').onclick=()=>{if(!pickSel) return; ac(); save.g=pickSel; save.picked=true; persist(); SFX.buy();
     $('pickM').hidden=true; startGame();};
 }
-function startGame(){ $('ui').hidden=false; initBattle(); layout(); drawAvatar(); updateTop(); updateDots(); }
+function startGame(){ $('ui').hidden=false; initBattle(); layout(); drawAvatar(); updateTop(); updateDots(); openPanel('lobby'); } // 시작은 로비부터
 
 /* ================= 루프 ================= */
 let last=performance.now();

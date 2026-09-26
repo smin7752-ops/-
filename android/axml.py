@@ -53,7 +53,7 @@ def build(root):
     return struct.pack('<HHI',0x0003,8,8+len(xml))+xml
 A=lambda n,t,v:('android',n,t,v)
 P=lambda n,t,v:('',n,t,v)
-manifest=('manifest',[P('package',T_STR,'com.shadowshuriken.game'),A('versionCode',T_DEC,2),A('versionName',T_STR,'1.1')],[
+manifest=('manifest',[P('package',T_STR,'com.shadowshuriken.game'),A('versionCode',T_DEC,3),A('versionName',T_STR,'1.2')],[
   ('uses-sdk',[A('minSdkVersion',T_DEC,24),A('targetSdkVersion',T_DEC,34)],[]),
   ('uses-permission',[A('name',T_STR,'android.permission.INTERNET')],[]),
   ('application',[A('label',T_STR,'그림자 수리검'),A('icon',T_REF,0x7f010000),A('theme',T_REF,0x01030007),A('hardwareAccelerated',T_BOOL,0xffffffff)],[
