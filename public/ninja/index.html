@@ -69,8 +69,8 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
 /* 전투력 칼 */
 .cpi{display:inline-block;width:20px;height:20px;background:var(--ui-sword) center/contain no-repeat;flex:none}
 /* 재화 칸 (동그라미 안에 아이콘) */
-.cur .pill{width:136px;height:37px;min-width:0;background:var(--ui-cur) center/100% 100% no-repeat;border:0;border-radius:0;padding:0 18px 0 0;position:relative;justify-content:flex-end;text-shadow:0 1px 2px #000}
-.cur .pill .coin,.cur .pill .gem{position:absolute;left:16.4%;top:50%;transform:translate(-50%,-50%);width:22px;height:22px}
+.cur .pill{width:112px;height:31px;font-size:13px;padding:0 14px 0 0;min-width:0;background:var(--ui-cur) center/100% 100% no-repeat;border:0;border-radius:0;padding:0 18px 0 0;position:relative;justify-content:flex-end;text-shadow:0 1px 2px #000;padding-right:14px}
+.cur .pill .coin,.cur .pill .gem{position:absolute;left:16.4%;top:50%;transform:translate(-50%,-50%);width:19px;height:19px}
 /* ---------- 스테이지 ---------- */
 .stagebox{position:absolute;top:88px;left:50%;transform:translateX(-50%);width:min(270px,70%);display:flex;flex-direction:column;align-items:center;gap:6px}
 .stname{display:flex;align-items:center;justify-content:center;gap:6px;width:176px;height:42px;box-sizing:border-box;background:var(--ui-stage) center/100% 100% no-repeat;border:0;padding:0 17%;text-shadow:0 1px 2px #000;font-family:var(--display);font-size:15px;color:#fff;white-space:nowrap}
@@ -877,15 +877,15 @@ const sScale=s=>Math.pow(1.12,s-1), dScale=s=>Math.pow(1.085,s-1), gScale=s=>Mat
 function spawnEnemy(type){
   const s=save.stage, other=save.g==='f'?'m':'f', g=Math.random()<.6?other:save.g, hs=sScale(s);
   let set,hp,travel;
-  if(type==='boss'){set=7+Math.floor(Math.random()*3); hp=1000*hs; travel=5;}
-  else if(type==='mboss'){set=4+Math.floor(Math.random()*3); hp=400*hs; travel=5;}
+  if(type==='boss'){set=7+Math.floor(Math.random()*3); hp=1000*hs; travel=4;}
+  else if(type==='mboss'){set=4+Math.floor(Math.random()*3); hp=400*hs; travel=4;}
   else if(type==='elite'){set=Math.min(9,2+Math.floor(s/15)+Math.floor(Math.random()*3)); hp=45*hs; travel=Math.max(5,10-s*.05);}
   else {set=Math.min(9,Math.floor(s/12)+Math.floor(Math.random()*3)); hp=14*hs; travel=Math.max(4,8.5-s*.05);}
   const bossy=type==='boss'||type==='mboss', pool=monPool(s);
   const kind=type==='boss'?5:type==='mboss'?4:type==='elite'?pool[Math.floor(Math.random()*pool.length)]:pool[Math.floor(Math.random()*pool.length)];
   const ranged=bossy||kind===1;
   G.enemies.push({g,eq:Array(8).fill(set),type,kind,ranged,atk:-1,fired:false,rest:0,meleeT:0,hitFx:0,hp:Math.round(hp),maxHp:Math.round(hp),u:bossy?.5:rnd(.05,.95),p:0,speed:1/travel,
-    stopAt:type==='boss'?.58:type==='mboss'?.6:kind===1?rnd(.5,.7):1,sway:rnd(0,6),state:'live',t:0,at:Math.random()*8,
+    stopAt:bossy?.72:kind===1?rnd(.5,.7):1,sway:rnd(0,6),state:'live',t:0,at:Math.random()*8,
     fireT:ranged?rnd(1.2,2.4):1e9,warn:0,big:type==='boss'?1.55:type==='mboss'?1.32:type==='elite'?1.12:1});
 }
 function puff(x,y,r,col){for(let i=0;i<10;i++){const a=Math.random()*7;G.fx.push({k:'puff',x,y,vx:Math.cos(a)*r*1.2,vy:Math.sin(a)*r*.6-r*.3,r:r*rnd(.25,.45),t:0,life:rnd(.4,.7),col});}}
@@ -897,7 +897,7 @@ function enemyRect(e){
   const y=-A.eh*.15+(A.lineY+A.eh*.15)*e.p;
   return {x,y,h,hw:h*.3,cy:y-h*.55};
 }
-const targetable=e=>e.state!=='die'&&enemyRect(e).y>Math.min(L.hudB,L.view*.45);
+const targetable=e=>e.state!=='die'&&!((e.type==='boss'||e.type==='mboss')&&e.p<e.stopAt)&&enemyRect(e).y>Math.min(L.hudB,L.view*.45);
 function autoTargets(n,first){
   const list=G.enemies.filter(targetable).sort((a,b)=>b.p-a.p);
   if(first&&list.includes(first)){list.splice(list.indexOf(first),1);list.unshift(first);}
@@ -978,7 +978,7 @@ function startBoss(){
   const type=save.stage%10===0?'boss':'mboss';
   G.bossBlock=false; G.bossDelay=0; G.enemies=[]; G.shots=[]; G.kunais=[];
   G.boss={type}; G.timeMax=type==='boss'?45:30; G.timeLeft=G.timeMax;
-  spawnEnemy(type); G.banner={txt:type==='boss'?'보스 등장':'중간 보스 등장',sub:`${G.timeMax}초 안에 쓰러뜨리세요`,t:0};
+  spawnEnemy(type); G.banner={txt:type==='boss'?'보스 등장':'중간 보스 등장',sub:'보스가 다가오고 있어요',t:0};
   SFX.wave(); updateTop();
 }
 function bossCleared(){
@@ -1083,7 +1083,11 @@ function update(dt){
   for(const c of G.coinFly){c.t+=dt; if(c.t>=c.dur&&!c.done){c.done=true;pop('goldPill');}}
   G.coinFly=G.coinFly.filter(c=>!c.done);
   // 보스 제한 시간
-  if(G.boss&&!G.dead){G.timeLeft-=dt; if(G.timeLeft<=0) bossFailed('시간 초과!'); else updateBossBar();}
+  if(G.boss&&!G.dead){
+    const bb=G.enemies.find(e=>e.type===G.boss.type);
+    if(!G.boss.on&&bb&&bb.p>=bb.stopAt){G.boss.on=true; G.banner={txt:'전투 시작!',sub:`${G.timeMax}초 안에 쓰러뜨리세요`,t:0}; SFX.wave(); updateTop();}
+    if(G.boss.on){G.timeLeft-=dt; if(G.timeLeft<=0) bossFailed('시간 초과!'); else updateBossBar();}
+  }
   if(G.dead){G.deathT+=dt; if(G.deathT>1.1) revive();}
 }
 function fitFont(txt,size,maxW,face){ctx.font=`${size}px ${face}`;const w=ctx.measureText(txt).width;if(w>maxW){size=Math.floor(size*maxW/w);ctx.font=`${size}px ${face}`;}}
@@ -1194,8 +1198,8 @@ function updateTop(){
   $('phGold').textContent=fmtKo(save.gold); $('phGem').textContent=fmtKo(save.gems);
   $('phTitle').innerHTML=panel==='gear'?`보유 장비 <span class="num">${Object.values(save.inv).filter(x=>x.lv>0).length}</span> / ${8*TIERS}`:panel==='grow'?`LV.${save.lv} · ${RANKS[save.rank].n} · 전투력 <span class="num">${fmtKo(st.cp)}</span>`:panel==='content'?'컨텐츠 · 준비 중':panel==='summon'?`총 소환 <span class="num">${save.pulls.toLocaleString()}</span>회`:panel==='lobby'?`최고 스테이지 <span class="num">${save.bestStage}</span>`:'';
   const bar=$('stbar');
-  if(G&&G.boss){bar.classList.add('boss'); updateBossBar();}
-  bar.hidden=!(G&&G.boss); if(!(G&&G.boss)) $('bhpBar').hidden=true;
+  if(G&&G.boss&&G.boss.on){bar.classList.add('boss'); updateBossBar();}
+  bar.hidden=!(G&&G.boss&&G.boss.on); if(bar.hidden) $('bhpBar').hidden=true;
   $('bossBtn').hidden=!(G&&!G.boss&&G.bossBlock&&isBossStage(save.stage));
   if(panel==='grow') refreshGrow();
   if(panel==='gear') refreshGearBtns();
