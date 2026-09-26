@@ -6,7 +6,7 @@ files=[('AndroidManifest.xml','AndroidManifest.xml',True),('resources.arsc','res
        ('app_index.html','assets/index.html',True)]
 # 그림을 페이지 안에 data: 주소로 넣는다 → WebView 가 file:// 그림의 픽셀 읽기를 막는 문제를 피한다
 import base64, json
-amap={os.path.basename(f):'data:image/webp;base64,'+base64.b64encode(open(f,'rb').read()).decode() for f in sorted(glob.glob(f'{G}/assets/*.webp'))}
+amap={os.path.basename(f):'data:image/webp;base64,'+base64.b64encode(open(f,'rb').read()).decode() for f in sorted(glob.glob(f'{G}/assets/[fm]_*.webp')+glob.glob(f'{G}/assets/i[fm]01.webp'))}  # 기본 그림만 넣고, 세트 모션은 인터넷에서 받는다
 html=open(f'{G}/index.html',encoding='utf-8').read().replace('<body>','<body>\n<script>window.ASSET_MAP='+json.dumps(amap)+';</script>',1)
 open('app_index.html','w',encoding='utf-8').write(html)
 with zipfile.ZipFile('unsigned.apk','w') as z:

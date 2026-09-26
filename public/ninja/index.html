@@ -262,6 +262,11 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
 .info h5{margin:0 0 6px;font-size:13px;color:var(--gold)}
 .info .kv{display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:13px}
 .info .kv b{text-align:right;font-family:var(--display);font-weight:400}
+.off .rw{display:flex;align-items:center;justify-content:space-between;background:rgba(0,0,0,.25);border-radius:10px;padding:10px 14px;font-size:15px}
+.off .rw b{font-family:var(--display);font-weight:400;font-size:20px;color:#ffe6b0}
+.off .rw span{display:flex;align-items:center;gap:8px}
+.off .xpi{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:#5b9bff;color:#fff;font-size:8px;font-weight:800}
+.off .sub{margin:0;text-align:center;font-size:13px;color:#d8c6a8}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chips span{font-size:12px;padding:3px 10px;border-radius:999px;background:#3a2d26;border-left:4px solid var(--rc,var(--gold))}
 .note{font-size:12px;color:var(--muted);line-height:1.5;margin:0}
@@ -361,6 +366,7 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
     <button class="obtn big" id="pickGo" disabled>닌자를 골라 주세요</button>
   </section>
   <section class="modal" id="infoM" hidden><div class="sheet info" id="infoBody"></div></section>
+  <section class="modal" id="offM" hidden><div class="sheet info off" id="offBody"></div></section>
   <section class="modal" id="sumM" hidden><div class="sheet" id="sumBody"></div></section>
   <div class="toast" id="toast" style="opacity:0"></div>
 </div>
@@ -374,18 +380,36 @@ const ANIMS=['idle','walk','throw','rear'];
 const SPRITE_H=200;
 // 그림 주소. 안드로이드 앱에서는 그림을 페이지 안에 넣어(ASSET_MAP) 읽는다 (file:// 그림은 픽셀을 못 읽어서)
 // 세트별 실제 옷 뒷모습 던지기 동작(8프레임)과 쿠나이 비행 동작. 키: p[성별][세트0~9], k[세트0~9]
-const MOTION={"p":{"f":{"0":{"w":179,"h":210,"n":8,"ax":83.9,"ay":207.8},"1":{"w":183,"h":211,"n":8,"ax":91.7,"ay":209.3},"2":{"w":165,"h":205,"n":8,"ax":86.1,"ay":201.5},"3":{"w":171,"h":204,"n":8,"ax":80.0,"ay":201.5},"4":{"w":190,"h":207,"n":8,"ax":109.5,"ay":205.1},"5":{"w":182,"h":204,"n":8,"ax":102.3,"ay":201.5},"6":{"w":199,"h":204,"n":8,"ax":84.4,"ay":202.4},"7":{"w":186,"h":206,"n":8,"ax":109.9,"ay":203.6},"8":{"w":194,"h":209,"n":8,"ax":100.1,"ay":206.6},"9":{"w":165,"h":205,"n":8,"ax":81.6,"ay":202.4}},"m":{"0":{"w":203,"h":227,"n":8,"ax":85.7,"ay":222.0},"1":{"w":185,"h":205,"n":8,"ax":84.7,"ay":202.2},"2":{"w":186,"h":207,"n":8,"ax":91.2,"ay":204.4},"3":{"w":189,"h":205,"n":8,"ax":102.8,"ay":201.6},"4":{"w":191,"h":209,"n":8,"ax":96.4,"ay":203.2},"5":{"w":183,"h":218,"n":8,"ax":78.5,"ay":213.9},"6":{"w":184,"h":204,"n":8,"ax":95.3,"ay":201.5},"7":{"w":226,"h":211,"n":8,"ax":133.9,"ay":206.0},"8":{"w":184,"h":213,"n":8,"ax":91.1,"ay":211.3},"9":{"w":202,"h":207,"n":8,"ax":97.5,"ay":205.2}}},"k":{"0":{"w":153,"h":77,"n":8,"ax":1.2,"ay":38.3},"1":{"w":153,"h":79,"n":8,"ax":1.2,"ay":39.3},"2":{"w":153,"h":86,"n":8,"ax":1.2,"ay":42.8},"3":{"w":153,"h":82,"n":8,"ax":1.1,"ay":41.0},"4":{"w":153,"h":90,"n":8,"ax":1.2,"ay":45.0},"5":{"w":153,"h":84,"n":8,"ax":1.2,"ay":41.7},"6":{"w":153,"h":92,"n":8,"ax":1.1,"ay":45.7},"7":{"w":153,"h":85,"n":8,"ax":1.1,"ay":42.1},"8":{"w":153,"h":80,"n":8,"ax":1.2,"ay":39.7},"9":{"w":153,"h":102,"n":8,"ax":1.1,"ay":50.7}}};
-const motion={p:{f:{},m:{}},k:{}};
-const hasP=(g,set)=>!!motion.p[g][set], hasK=set=>!!motion.k[set];
-// 뒷모습 캐릭터: 상의 세트의 실제 옷 그림 (없으면 기존 색 바꾸기 그림)
-function drawRealBack(c,g,set,frame,x,y,hgt,alpha=1){
-  const m=MOTION.p[g][set], img=motion.p[g][set], sc=hgt/200, f=((frame%m.n)+m.n)%m.n;
-  c.save(); c.globalAlpha=alpha; c.drawImage(img,f*m.w,0,m.w,m.h,x-m.ax*sc,y-m.ay*sc,m.w*sc,m.h*sc); c.restore();
+const MOTION={"p":{"f":{"0":{"w":179,"h":210,"n":8,"ax":83.9,"ay":207.8},"1":{"w":183,"h":211,"n":8,"ax":91.7,"ay":209.3},"2":{"w":165,"h":205,"n":8,"ax":86.1,"ay":201.5},"3":{"w":171,"h":204,"n":8,"ax":80.0,"ay":201.5},"4":{"w":190,"h":207,"n":8,"ax":109.5,"ay":205.1},"5":{"w":182,"h":204,"n":8,"ax":102.3,"ay":201.5},"6":{"w":199,"h":204,"n":8,"ax":84.4,"ay":202.4},"7":{"w":186,"h":206,"n":8,"ax":109.9,"ay":203.6},"8":{"w":194,"h":209,"n":8,"ax":100.1,"ay":206.6},"9":{"w":165,"h":205,"n":8,"ax":81.6,"ay":202.4}},"m":{"0":{"w":203,"h":227,"n":8,"ax":85.7,"ay":222.0},"1":{"w":185,"h":205,"n":8,"ax":84.7,"ay":202.2},"2":{"w":186,"h":207,"n":8,"ax":91.2,"ay":204.4},"3":{"w":189,"h":205,"n":8,"ax":102.8,"ay":201.6},"4":{"w":191,"h":209,"n":8,"ax":96.4,"ay":203.2},"5":{"w":183,"h":218,"n":8,"ax":78.5,"ay":213.9},"6":{"w":184,"h":204,"n":8,"ax":95.3,"ay":201.5},"7":{"w":226,"h":211,"n":8,"ax":133.9,"ay":206.0},"8":{"w":184,"h":213,"n":8,"ax":91.1,"ay":211.3},"9":{"w":202,"h":207,"n":8,"ax":97.5,"ay":205.2}}},"k":{"0":{"w":153,"h":77,"n":8,"ax":1.2,"ay":38.3},"1":{"w":153,"h":79,"n":8,"ax":1.2,"ay":39.3},"2":{"w":153,"h":86,"n":8,"ax":1.2,"ay":42.8},"3":{"w":153,"h":82,"n":8,"ax":1.1,"ay":41.0},"4":{"w":153,"h":90,"n":8,"ax":1.2,"ay":45.0},"5":{"w":153,"h":84,"n":8,"ax":1.2,"ay":41.7},"6":{"w":153,"h":92,"n":8,"ax":1.1,"ay":45.7},"7":{"w":153,"h":85,"n":8,"ax":1.1,"ay":42.1},"8":{"w":153,"h":80,"n":8,"ax":1.2,"ay":39.7},"9":{"w":153,"h":102,"n":8,"ax":1.1,"ay":50.7}},"w":{"f":{"0":{"w":179,"h":210,"n":8,"ax":82.7,"ay":208.2},"1":{"w":173,"h":208,"n":8,"ax":90.5,"ay":205.8},"2":{"w":143,"h":204,"n":8,"ax":51.3,"ay":202.4},"3":{"w":145,"h":212,"n":8,"ax":65.8,"ay":210.1},"4":{"w":152,"h":205,"n":8,"ax":53.5,"ay":202.4},"6":{"w":149,"h":207,"n":8,"ax":57.0,"ay":204.9},"7":{"w":167,"h":209,"n":8,"ax":48.4,"ay":207.5},"8":{"w":148,"h":206,"n":8,"ax":64.6,"ay":203.3},"9":{"w":143,"h":203,"n":8,"ax":49.1,"ay":201.4}},"m":{"0":{"w":176,"h":212,"n":8,"ax":89.0,"ay":209.8},"1":{"w":174,"h":206,"n":8,"ax":89.9,"ay":203.8},"2":{"w":176,"h":207,"n":8,"ax":91.5,"ay":204.8},"3":{"w":157,"h":209,"n":8,"ax":47.4,"ay":207.3},"4":{"w":153,"h":205,"n":8,"ax":67.5,"ay":203.3},"5":{"w":159,"h":211,"n":8,"ax":79.7,"ay":208.9},"6":{"w":152,"h":211,"n":8,"ax":49.3,"ay":205.6},"7":{"w":162,"h":210,"n":8,"ax":66.0,"ay":207.5},"9":{"w":187,"h":214,"n":8,"ax":89.8,"ay":212.1}}},"i":{"f":{"0":{"w":169,"h":206,"n":8,"ax":80.8,"ay":203.8},"1":{"w":164,"h":207,"n":8,"ax":76.9,"ay":205.2},"2":{"w":172,"h":208,"n":8,"ax":86.3,"ay":206.2},"3":{"w":157,"h":212,"n":8,"ax":71.3,"ay":209.9},"4":{"w":174,"h":212,"n":8,"ax":76.7,"ay":210.3},"5":{"w":163,"h":210,"n":8,"ax":66.6,"ay":207.7},"6":{"w":165,"h":210,"n":8,"ax":67.6,"ay":207.7},"7":{"w":172,"h":216,"n":8,"ax":60.2,"ay":214.0},"8":{"w":171,"h":208,"n":8,"ax":77.5,"ay":205.9},"9":{"w":154,"h":206,"n":8,"ax":64.5,"ay":203.9}},"m":{"0":{"w":163,"h":219,"n":8,"ax":68.7,"ay":216.4},"1":{"w":160,"h":219,"n":8,"ax":64.9,"ay":217.2},"2":{"w":167,"h":216,"n":8,"ax":67.0,"ay":213.8},"3":{"w":159,"h":207,"n":8,"ax":64.6,"ay":204.7},"4":{"w":165,"h":209,"n":8,"ax":68.3,"ay":206.8},"5":{"w":175,"h":212,"n":8,"ax":78.6,"ay":209.7},"6":{"w":167,"h":210,"n":8,"ax":65.4,"ay":207.5},"7":{"w":188,"h":205,"n":8,"ax":65.6,"ay":202.1},"8":{"w":161,"h":211,"n":8,"ax":70.2,"ay":209.1},"9":{"w":170,"h":206,"n":8,"ax":70.2,"ay":203.6}}},"h":{"f":{"0":{"w":194,"h":205,"n":8,"ax":82.2,"ay":203.0},"1":{"w":190,"h":209,"n":8,"ax":78.5,"ay":207.4},"2":{"w":192,"h":206,"n":8,"ax":88.3,"ay":204.0},"3":{"w":185,"h":207,"n":8,"ax":72.6,"ay":205.1},"4":{"w":202,"h":208,"n":8,"ax":85.8,"ay":206.4},"5":{"w":191,"h":214,"n":8,"ax":71.7,"ay":212.1},"6":{"w":206,"h":207,"n":8,"ax":79.0,"ay":205.1},"7":{"w":203,"h":222,"n":8,"ax":78.3,"ay":219.8},"8":{"w":195,"h":203,"n":8,"ax":81.9,"ay":201.5},"9":{"w":186,"h":209,"n":8,"ax":90.3,"ay":206.5}},"m":{"0":{"w":215,"h":212,"n":8,"ax":100.0,"ay":210.2},"1":{"w":205,"h":205,"n":8,"ax":92.4,"ay":202.9},"2":{"w":204,"h":206,"n":8,"ax":96.1,"ay":203.6},"3":{"w":188,"h":217,"n":8,"ax":87.2,"ay":213.1},"4":{"w":205,"h":214,"n":8,"ax":94.0,"ay":211.8},"5":{"w":201,"h":207,"n":8,"ax":90.9,"ay":205.1},"6":{"w":209,"h":211,"n":8,"ax":90.9,"ay":207.5},"7":{"w":211,"h":220,"n":8,"ax":85.8,"ay":216.7},"8":{"w":210,"h":214,"n":8,"ax":92.2,"ay":212.2},"9":{"w":198,"h":211,"n":8,"ax":93.5,"ay":209.3}}},"d":{"f":{"0":{"w":230,"h":229,"n":8,"ax":116.2,"ay":227.3},"1":{"w":224,"h":230,"n":8,"ax":102.1,"ay":227.9},"2":{"w":227,"h":229,"n":8,"ax":114.6,"ay":226.7},"3":{"w":206,"h":239,"n":8,"ax":93.9,"ay":237.3},"4":{"w":209,"h":224,"n":8,"ax":93.6,"ay":222.1},"5":{"w":215,"h":226,"n":8,"ax":93.8,"ay":224.4},"6":{"w":219,"h":228,"n":8,"ax":98.8,"ay":225.5},"7":{"w":213,"h":231,"n":8,"ax":95.9,"ay":229.1},"8":{"w":221,"h":243,"n":8,"ax":92.7,"ay":241.2},"9":{"w":212,"h":222,"n":8,"ax":107.5,"ay":219.8}},"m":{"0":{"w":228,"h":204,"n":8,"ax":110.0,"ay":201.7},"1":{"w":247,"h":246,"n":8,"ax":99.1,"ay":243.9},"2":{"w":233,"h":242,"n":8,"ax":100.6,"ay":239.9},"3":{"w":208,"h":204,"n":8,"ax":95.1,"ay":201.6},"4":{"w":203,"h":204,"n":8,"ax":92.5,"ay":201.6},"5":{"w":215,"h":204,"n":8,"ax":101.1,"ay":201.6},"6":{"w":223,"h":204,"n":8,"ax":97.9,"ay":201.7},"7":{"w":202,"h":204,"n":8,"ax":83.0,"ay":201.6},"8":{"w":212,"h":238,"n":8,"ax":88.6,"ay":235.3},"9":{"w":231,"h":241,"n":8,"ax":114.9,"ay":239.2}}},"r":{"f":{"0":{"w":142,"h":204,"n":8,"ax":79.8,"ay":201.4},"1":{"w":148,"h":204,"n":8,"ax":87.4,"ay":202.4},"2":{"w":136,"h":205,"n":8,"ax":78.2,"ay":202.4},"3":{"w":143,"h":207,"n":8,"ax":85.2,"ay":204.8},"4":{"w":167,"h":211,"n":8,"ax":98.3,"ay":209.3},"5":{"w":151,"h":203,"n":8,"ax":91.7,"ay":201.5},"6":{"w":156,"h":219,"n":8,"ax":96.8,"ay":216.6},"7":{"w":154,"h":211,"n":8,"ax":98.0,"ay":209.2},"8":{"w":156,"h":218,"n":8,"ax":94.8,"ay":216.0},"9":{"w":170,"h":204,"n":8,"ax":96.2,"ay":201.9}},"m":{"0":{"w":155,"h":218,"n":8,"ax":89.1,"ay":215.4},"1":{"w":180,"h":211,"n":8,"ax":97.7,"ay":208.7},"2":{"w":175,"h":210,"n":8,"ax":101.1,"ay":207.5},"3":{"w":149,"h":208,"n":8,"ax":85.6,"ay":205.9},"4":{"w":170,"h":210,"n":8,"ax":103.2,"ay":207.9},"5":{"w":162,"h":211,"n":8,"ax":69.5,"ay":208.7},"6":{"w":163,"h":208,"n":8,"ax":98.5,"ay":205.9},"7":{"w":183,"h":225,"n":8,"ax":74.3,"ay":222.9},"8":{"w":173,"h":209,"n":8,"ax":78.3,"ay":206.9},"9":{"w":179,"h":208,"n":8,"ax":72.7,"ay":205.5}}}};
+// 실제 그림은 필요할 때만 불러온다 (전부 합치면 커서 시작이 느려짐). 못 불러왔으면 예전 색 바꾸기 그림으로 그린다
+// 동작 코드: p 던지기(뒤) · r 대기(뒤) · i 대기(앞) · w 걷기(앞) · h 피격(앞) · d 사망(앞) · k 쿠나이
+const REAL={};
+const hasM=(c,g,set)=>c==='k'?!!(MOTION.k&&MOTION.k[set]):!!(MOTION[c]&&MOTION[c][g]&&MOTION[c][g][set]);
+const mMeta=(c,g,set)=>c==='k'?MOTION.k[set]:MOTION[c][g][set];
+function realImg(c,g,set){
+  if(!hasM(c,g,set)) return null;
+  const key=c+(c==='k'?'':g)+set, v=REAL[key];
+  if(v instanceof HTMLImageElement) return v;
+  if(!v){REAL[key]='loading'; const file=`${c}${c==='k'?'':g}${String(+set+1).padStart(2,'0')}.webp`;
+    loadImg(aurl(file)).then(img=>{REAL[key]=img; if(c==='i') drawAvatar();}).catch(()=>{REAL[key]='fail';});}
+  return null;
 }
+const preloadReal=(c,g,set)=>new Promise(res=>{realImg(c,g,set); const t=setInterval(()=>{const v=REAL[c+(c==='k'?'':g)+set]; if(!hasM(c,g,set)||v instanceof HTMLImageElement||v==='fail'){clearInterval(t);res();}},50); setTimeout(()=>{clearInterval(t);res();},6000);});
+// 사람 그림 한 장: (x,y)=발 위치, hgt=서 있는 키. 그렸으면 true
+function drawReal(c,cx,g,set,frame,x,y,hgt,alpha=1,clamp=false){
+  const img=realImg(c,g,set); if(!img) return false;
+  const m=mMeta(c,g,set), sc=hgt/200, f=clamp?Math.max(0,Math.min(m.n-1,frame)):((frame%m.n)+m.n)%m.n;
+  cx.save(); cx.globalAlpha=alpha; cx.drawImage(img,f*m.w,0,m.w,m.h,x-m.ax*sc,y-m.ay*sc,m.w*sc,m.h*sc); cx.restore();
+  return true;
+}
+const hasP=(g,set)=>!!realImg('p',g,set);
+function drawRealBack(c,g,set,frame,x,y,hgt,alpha=1){drawReal('p',c,g,set,frame,x,y,hgt,alpha);}
 // 날아가는 쿠나이: 오른쪽을 향한 그림을 진행 방향으로 돌리고, 리본이 펄럭이게 프레임을 넘긴다
 function drawRealKunai(c,set,x,y,len,ang,t){
-  const m=MOTION.k[set], img=motion.k[set], f=Math.floor(t*14)%m.n, sc=len/m.w;
+  const img=realImg('k','',set); if(!img) return false;
+  const m=MOTION.k[set], f=Math.floor(t*14)%m.n, sc=len/m.w;
   c.save(); c.translate(x,y); c.rotate(ang); c.drawImage(img,f*m.w,0,m.w,m.h,-m.w*sc*.75,-m.ay*sc,m.w*sc,m.h*sc); c.restore();
+  return true;
 }
 const aurl=n=>(window.ASSET_MAP&&window.ASSET_MAP[n])||'assets/'+n;
 
@@ -782,6 +806,7 @@ function drawShuriken(x,y,r,rot){
 
 /* ================= 전투 (방치형 자동 전투) ================= */
 // 스테이지 = 적 한 무리. 다 잡으면 다음 스테이지 (보스 스테이지는 마지막에 보스)
+const DIE_T=.7; // 쓰러지는 모션 시간(초)
 const waveSize=s=>Math.min(14,6+Math.floor(s/4));
 const isBossStage=s=>s%5===0;           // 5·15·25… 중간 보스, 10·20·30… 보스
 let G=null, T=0;
@@ -963,7 +988,7 @@ function update(dt){
       }
     }
   }
-  G.enemies=G.enemies.filter(e=>!(e.state==='die'&&e.t>.4));
+  G.enemies=G.enemies.filter(e=>!(e.state==='die'&&e.t>(hasM('d',e.g,e.eq[0])&&REAL['d'+e.g+e.eq[0]] instanceof HTMLImageElement?DIE_T:.4)));
   // 쿠나이: 목표를 따라가 맞힌다
   for(const k of G.kunais){
     k.t+=dt;
@@ -1022,12 +1047,19 @@ function render(dt){
   for(const e of [...G.enemies].sort((a,b)=>a.p-b.p)){
     const r=enemyRect(e); let al=1,dy=0,lit=0;
     if(e.state==='flinch'){const k=1-e.t/.3; dy=-r.h*.06*k; lit=.7*k;}
-    if(e.state==='die') al=Math.max(0,1-e.t/.3);
+    const es=e.eq[0], hasD=hasM('d',e.g,es)&&!!realImg('d',e.g,es);
+    if(e.state==='die') al=hasD?Math.max(0,Math.min(1,(DIE_T-e.t)/.15)):Math.max(0,1-e.t/.3);
     const moving=e.p<e.stopAt, a=moving?'walk':'idle', f=Math.floor(e.at*(moving?9:8));
     shadow(r.x,r.y,r.h*.22,al);
-    if(e.type==='boss'||e.type==='mboss') aura(ctx,r.x,r.y,r.h,SETS[e.eq[0]].glow,T);
-    drawNinja(ctx,e.g,e.eq,a,f,r.x,r.y+dy,r.h,al);
-    if(lit>0){ctx.save();ctx.globalCompositeOperation='lighter';drawNinja(ctx,e.g,e.eq,a,f,r.x,r.y+dy,r.h,lit);ctx.restore();}
+    if(e.type==='boss'||e.type==='mboss') aura(ctx,r.x,r.y,r.h,SETS[es].glow,T);
+    // 실제 그림: 걷기 / 대기 / 피격 / 사망 (없으면 예전 그림)
+    let done=false;
+    if(e.state==='die'&&hasD) done=drawReal('d',ctx,e.g,es,Math.floor(e.t/DIE_T*8),r.x,r.y,r.h,al,true);
+    else if(e.state==='flinch') done=drawReal('h',ctx,e.g,es,Math.floor(e.t/.3*8),r.x,r.y,r.h,al,true);
+    else if(moving&&hasM('w',e.g,es)) done=drawReal('w',ctx,e.g,es,f,r.x,r.y,r.h,al);
+    if(!done&&e.state!=='die') done=drawReal('i',ctx,e.g,es,Math.floor(e.at*8),r.x,r.y+(moving?-Math.abs(Math.sin(e.at*9))*r.h*.03:0),r.h,al);
+    if(!done){ drawNinja(ctx,e.g,e.eq,a,f,r.x,r.y+dy,r.h,al);
+      if(lit>0){ctx.save();ctx.globalCompositeOperation='lighter';drawNinja(ctx,e.g,e.eq,a,f,r.x,r.y+dy,r.h,lit);ctx.restore();} }
     if(e.poisonT>0){ctx.fillStyle='rgba(92,240,138,.5)';for(let i=0;i<3;i++){const p=(T*1.5+i/3)%1;ctx.beginPath();ctx.arc(r.x+Math.sin(i*2+T*3)*r.hw*.6,r.y-r.h*(.3+p*.7),3,0,7);ctx.fill();}}
     if(e.warn&&e.state!=='die'){ctx.fillStyle='#ff5a4a';ctx.font=`${Math.max(16,r.h*.26)}px "Black Han Sans",sans-serif`;ctx.textAlign='center';ctx.fillText('!',r.x,r.y-r.h*1.08);}
     if(e.state!=='die'&&(e.type!=='grunt'||e.hp<e.maxHp)){const bw=r.hw*(e.type==='grunt'?1.6:2.2),bh=e.type==='grunt'?4:6;ctx.fillStyle='rgba(0,0,0,.6)';ctx.fillRect(r.x-bw/2,r.y-r.h*1.02,bw,bh);ctx.fillStyle=e.type==='boss'?'#ffc94a':e.type==='mboss'?'#ff9a3a':'#ff5a4a';ctx.fillRect(r.x-bw/2,r.y-r.h*1.02,bw*Math.max(0,e.hp)/e.maxHp,bh);}
@@ -1037,7 +1069,7 @@ function render(dt){
   const kc=SETS[setOf(save.eq[7])].glow;
   for(const k of G.kunais){
     if(k.trail.length>1){ctx.strokeStyle=kc+'88';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(k.trail[0][0],k.trail[0][1]);for(const p of k.trail)ctx.lineTo(p[0],p[1]);ctx.stroke();}
-    ctx.save(); if(k.ghost) ctx.globalAlpha=.6; if(hasK(setOf(save.eq[7]))) drawRealKunai(ctx,setOf(save.eq[7]),k.x,k.y,A.ph*.5,Math.atan2(k.vy,k.vx),k.t); else drawKunaiIcon(ctx,save.g,setOf(save.eq[7]),k.x,k.y,A.ph*.3,Math.atan2(k.vy,k.vx)); ctx.restore();
+    ctx.save(); if(k.ghost) ctx.globalAlpha=.6; if(!drawRealKunai(ctx,setOf(save.eq[7]),k.x,k.y,A.ph*.5,Math.atan2(k.vy,k.vx),k.t)) drawKunaiIcon(ctx,save.g,setOf(save.eq[7]),k.x,k.y,A.ph*.3,Math.atan2(k.vy,k.vx)); ctx.restore();
   }
   // 플레이어 (뒷모습)
   shadow(A.px,A.py,A.ph*.25);
@@ -1046,9 +1078,9 @@ function render(dt){
   const bset=setOf(save.eq[2]);
   if(hasP(save.g,bset)){ // 실제 옷 그림: 0번 = 서 있기, 0~7번 = 던지기
     const bob=Math.sin(G.rearT*3)*A.ph*.006;
-    if(G.dead) drawRealBack(ctx,save.g,bset,0,A.px,A.py,A.ph,Math.max(0,1-G.deathT/.4));
+    if(G.dead){ if(!drawReal('r',ctx,save.g,bset,0,A.px,A.py,A.ph,Math.max(0,1-G.deathT/.4))) drawRealBack(ctx,save.g,bset,0,A.px,A.py,A.ph,Math.max(0,1-G.deathT/.4)); }
     else if(G.throwT>=0) drawRealBack(ctx,save.g,bset,Math.min(7,Math.floor(G.throwT*G.tfps)),A.px,A.py,A.ph,blink?.4:1);
-    else drawRealBack(ctx,save.g,bset,0,A.px,A.py+bob,A.ph,blink?.4:1);
+    else if(!drawReal('r',ctx,save.g,bset,Math.floor(G.rearT*8),A.px,A.py,A.ph,blink?.4:1)) drawRealBack(ctx,save.g,bset,0,A.px,A.py+bob,A.ph,blink?.4:1);
   }
   else if(G.dead) drawNinja(ctx,save.g,pEq(),'rear',0,A.px,A.py,A.ph,Math.max(0,1-G.deathT/.4));
   else if(G.throwT>=0) drawNinja(ctx,save.g,pEq(),'throw',Math.floor(G.throwT*G.tfps),A.px,A.py,A.ph,blink?.4:1);
@@ -1105,7 +1137,7 @@ function updateDots(){
 function drawAvatar(){
   const c=$('av'), x=c.getContext('2d'); x.clearRect(0,0,120,120);
   const g=x.createRadialGradient(60,50,5,60,60,70); g.addColorStop(0,'#6a5040'); g.addColorStop(1,'#2a201c'); x.fillStyle=g; x.fillRect(0,0,120,120);
-  if(base[save.g].idle) drawNinja(x,save.g,pEq(),'idle',0,63,176,168); // 머리 윗부분까지 원 안에 들어오게
+  if(!drawReal('i',x,save.g,setOf(save.eq[2]),0,63,176,168)&&base[save.g].idle) drawNinja(x,save.g,pEq(),'idle',0,63,176,168); // 머리 윗부분까지 원 안에 들어오게
 }
 
 /* ================= 패널 ================= */
@@ -1333,7 +1365,7 @@ function drawRankChar(){
   const g=x.createRadialGradient(110,200,10,110,200,110); g.addColorStop(0,'rgba(255,200,120,.35)'); g.addColorStop(1,'rgba(255,200,120,0)'); x.fillStyle=g; x.fillRect(0,0,220,260);
   x.fillStyle='#6a4a30'; x.beginPath(); x.ellipse(110,238,70,14,0,0,7); x.fill(); x.fillStyle='#c89a5a'; x.beginPath(); x.ellipse(110,234,64,11,0,0,7); x.fill();
   if(save.rank>0) aura(x,110,234,210,SETS[Math.min(9,save.rank*2)].glow,T);
-  drawNinja(x,save.g,pEq(),'idle',Math.floor(T*8),110,234,210);
+  if(!drawReal('i',x,save.g,setOf(save.eq[2]),Math.floor(T*8),110,234,210)) drawNinja(x,save.g,pEq(),'idle',Math.floor(T*8),110,234,210);
 }
 
 /* ---- 컨텐츠: 자리만 먼저 (구상 후 하나씩 채울 예정) ---- */
@@ -1377,7 +1409,7 @@ function drawLobbyChar(){
   x.fillStyle='#5a3e2a'; x.beginPath(); x.ellipse(180,282,96,16,0,0,7); x.fill(); x.fillStyle='#c89a5a'; x.beginPath(); x.ellipse(180,278,88,13,0,0,7); x.fill();
   const st=G?G.st:calc(); if(st.minT>0) aura(x,180,276,240,SETS[st.minT].glow,T);
   const hop=T-lbTap<.45?Math.sin(Math.PI*(T-lbTap)/.45)*26:0;
-  drawNinja(x,save.g,pEq(),'idle',Math.floor(T*8),180,276-hop,240);
+  if(!drawReal('i',x,save.g,setOf(save.eq[2]),Math.floor(T*8),180,276-hop,240)) drawNinja(x,save.g,pEq(),'idle',Math.floor(T*8),180,276-hop,240);
 }
 
 /* ---- 능력치 창 ---- */
@@ -1390,6 +1422,29 @@ function openInfo(){
     <button class="obtn big" id="infoOk">닫기</button>`;
   $('infoM').hidden=false; $('infoOk').onclick=()=>{SFX.tap();$('infoM').hidden=true;};
 }
+
+/* ---- 오프라인 보상: 꺼져 있던 시간만큼, 지금 스테이지 기준으로 엽전·경험치 ---- */
+const OFF_MIN=60, OFF_MAX=12*3600, OFF_KPM=10; // 1분 이상부터, 최대 12시간, 1분에 졸개 10마리 잡은 셈
+function offlineCalc(sec){
+  const st=calc(), s=save.stage, m=Math.min(OFF_MAX,sec)/60;
+  return {gold:Math.round(3*gScale(s)*(1+st.gold)*OFF_KPM*m), xp:Math.round(2*xScale(s)*(1+st.xp)*OFF_KPM*m)};
+}
+function offlineCheck(){
+  const now=Date.now(), last=save.seen||0; save.seen=now; persist();
+  if(!last||!save.picked||!$('offM').hidden) return;
+  const sec=Math.floor((now-last)/1000); if(sec<OFF_MIN) return;
+  const t=Math.min(OFF_MAX,sec), h=Math.floor(t/3600), mi=Math.floor(t%3600/60), r=offlineCalc(t);
+  $('offBody').innerHTML=`<h2>오프라인 보상</h2>
+    <p class="sub">스테이지 ${save.stage}에서 <b>${h?h+'시간 ':''}${mi}분</b> 동안 모은 보상이에요${sec>OFF_MAX?'<br>(최대 12시간까지 쌓여요)':''}</p>
+    <div class="rw"><span><i class="coin"></i>엽전</span><b class="num">+${fmtKo(r.gold)}</b></div>
+    <div class="rw"><span><i class="xpi">EXP</i>경험치</span><b class="num">+${fmtKo(r.xp)}</b></div>
+    <button class="obtn big green" id="offOk">받기</button>`;
+  $('offM').hidden=false;
+  $('offOk').onclick=()=>{ac();SFX.buy(); $('offM').hidden=true; save.gold+=r.gold; gainXp(r.xp); save.seen=Date.now(); persist(); updateTop(); updateDots(); toast(`엽전 +${fmtKo(r.gold)} · 경험치 +${fmtKo(r.xp)}`);};
+}
+setInterval(()=>{if(!document.hidden&&save.picked){save.seen=Date.now();persistSoon();}},15000);
+document.addEventListener('visibilitychange',()=>{if(!save.picked) return; if(document.hidden){save.seen=Date.now();persist();} else offlineCheck();});
+addEventListener('pagehide',()=>{if(save.picked){save.seen=Date.now();persist();}});
 
 /* ================= 입력 ================= */
 document.querySelectorAll('#nav [data-p]').forEach(b=>b.onclick=()=>{ac();SFX.tap();openPanel(b.dataset.p);});
@@ -1407,7 +1462,7 @@ function drawPick(){
     x.clearRect(0,0,170,212);
     x.fillStyle='rgba(0,0,0,.35)'; x.beginPath(); x.ellipse(85,200,48,9,0,0,7); x.fill();
     const hop=pickSel===g?Math.abs(Math.sin(T*3))*6:0;
-    drawNinja(x,g,[0,0,0,0,0,0,0,0],'idle',Math.floor(T*8),85,200-hop,180);});
+    if(!drawReal('i',x,g,0,Math.floor(T*8),85,200-hop,180)) drawNinja(x,g,[0,0,0,0,0,0,0,0],'idle',Math.floor(T*8),85,200-hop,180);});
 }
 function showPick(){
   $('pickM').hidden=false;
@@ -1417,7 +1472,7 @@ function showPick(){
   $('pickGo').onclick=()=>{if(!pickSel) return; ac(); save.g=pickSel; save.picked=true; persist(); SFX.buy();
     $('pickM').hidden=true; startGame();};
 }
-function startGame(){ $('ui').hidden=false; initBattle(); layout(); drawAvatar(); updateTop(); updateDots(); openPanel('lobby'); } // 시작은 로비부터
+function startGame(){ $('ui').hidden=false; initBattle(); layout(); drawAvatar(); updateTop(); updateDots(); openPanel('lobby'); offlineCheck(); } // 시작은 로비부터
 
 /* ================= 루프 ================= */
 let last=performance.now();
@@ -1435,9 +1490,10 @@ setMid(); resize(); requestAnimationFrame(frame);
     for(const g of ['f','m']){
       for(const a of ANIMS) jobs.push(loadImg(aurl(`${g}_${a}.webp`)).then(img=>{base[g][a]=analyze(g,a,img);}));
       jobs.push(loadImg(aurl(`${g}_items.webp`)).then(img=>{atlas[g]=img;}));
-      for(const k in MOTION.p[g]||{}) jobs.push(loadImg(aurl(`p${g}${String(+k+1).padStart(2,'0')}.webp`)).then(img=>{motion.p[g][k]=img;}).catch(()=>{}));
     }
-    for(const k in MOTION.k) jobs.push(loadImg(aurl(`k${String(+k+1).padStart(2,'0')}.webp`)).then(img=>{motion.k[k]=img;}).catch(()=>{}));
+    // 무거운 세트 그림은 지금 입은 것만 먼저 받고, 나머지는 필요할 때 받는다
+    if(save.picked){const st=setOf(save.eq[2]); for(const c of ['i','r','p']) jobs.push(preloadReal(c,save.g,st)); jobs.push(preloadReal('k','',setOf(save.eq[7])));}
+    else for(const g of ['f','m']) jobs.push(preloadReal('i',g,0));
     await Promise.all(jobs);
     $('loading').hidden=true;
     if(save.picked) startGame(); else showPick();
