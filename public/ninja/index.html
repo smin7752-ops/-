@@ -345,7 +345,7 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
       <button data-p="grow"><svg class="i" viewBox="0 0 24 24"><path d="M3 20h18v2H3zm2-3l5-5 3 3 6-7 2 1.7V4h-6l2.2 1.9-4.3 5-3-3L3.6 15.6z"/></svg>성장<span class="dot" id="dotGrow" hidden></span></button>
       <button data-p="gear"><svg class="i" viewBox="0 0 24 24"><path d="M12 2l8 3v6c0 5-3.4 9.4-8 11-4.6-1.6-8-6-8-11V5zm0 3.2L7 7v4c0 3.4 2 6.5 5 7.9z"/></svg>장비<span class="dot" id="dotGear" hidden></span></button>
       <button class="mid" id="navMid"></button>
-      <button data-p="rank"><svg class="i" viewBox="0 0 24 24"><path d="M12 2l3 6 6.5.9-4.7 4.6 1.1 6.5L12 16.9 6.1 20l1.1-6.5L2.5 8.9 9 8z"/></svg>승급<span class="dot" id="dotRank" hidden></span></button>
+      <button data-p="content"><svg class="i" viewBox="0 0 24 24"><path d="M4 21V9a8 8 0 0 1 16 0v12h-5v-6a3 3 0 0 0-6 0v6z"/></svg>컨텐츠</button>
       <button data-p="summon"><svg class="i" viewBox="0 0 24 24"><path d="M3 8h18v4H3zm2 5h14v9H5zm6-5h2v14h-2zm1 0S9.5 3 7.2 4.6 9 8 12 8zm0 0s2.5-5 4.8-3.4S15 8 12 8z"/></svg>소환<span class="dot" id="dotSum" hidden></span></button>
     </nav>
   </div>
@@ -1045,7 +1045,7 @@ function updateTop(){
   $('goldG').textContent=fmtKo(save.gold); $('gemG').textContent=fmtKo(save.gems);
   $('stageG').textContent=save.stage;
   $('phGold').textContent=fmtKo(save.gold); $('phGem').textContent=fmtKo(save.gems);
-  $('phTitle').innerHTML=panel==='gear'?`보유 장비 <span class="num">${Object.values(save.inv).filter(x=>x.lv>0).length}</span> / ${8*TIERS}`:panel==='grow'?`LV.${save.lv} · 전투력 <span class="num">${fmtKo(st.cp)}</span>`:panel==='rank'?`현재 계급 · ${RANKS[save.rank].n}`:panel==='summon'?`총 소환 <span class="num">${save.pulls.toLocaleString()}</span>회`:panel==='lobby'?`최고 스테이지 <span class="num">${save.bestStage}</span>`:'';
+  $('phTitle').innerHTML=panel==='gear'?`보유 장비 <span class="num">${Object.values(save.inv).filter(x=>x.lv>0).length}</span> / ${8*TIERS}`:panel==='grow'?`LV.${save.lv} · ${RANKS[save.rank].n} · 전투력 <span class="num">${fmtKo(st.cp)}</span>`:panel==='content'?'컨텐츠 · 준비 중':panel==='summon'?`총 소환 <span class="num">${save.pulls.toLocaleString()}</span>회`:panel==='lobby'?`최고 스테이지 <span class="num">${save.bestStage}</span>`:'';
   const bar=$('stbar');
   if(G&&G.boss){bar.classList.add('boss'); updateBossBar();}
   bar.hidden=!(G&&G.boss);
@@ -1061,7 +1061,7 @@ function updateBossBar(){
 function updateDots(){
   const sp=spLeft(); $('dotGrow').hidden=!sp; $('dotGrow').textContent=sp>99?'99+':sp;
   let comb=false; for(const k in save.inv){if(save.inv[k].n>=MERGE&&+k.split('-')[1]<TIERS-1){comb=true;break;}} $('dotGear').hidden=!comb; $('dotGear').textContent='!';
-  $('dotRank').hidden=!rankReady(); $('dotRank').textContent='!';
+  if(!sp&&rankReady()){$('dotGrow').hidden=false;$('dotGrow').textContent='!';}
   const fr=freeLeft(); $('dotSum').hidden=!fr; $('dotSum').textContent=fr;
 }
 function drawAvatar(){
@@ -1084,7 +1084,7 @@ function openPanel(p){
   if(panel){if(panel==='gear'){view.sel=save.eq[view.slot];} renderPanel();}
   requestAnimationFrame(layout);
 }
-function renderPanel(){({lobby:renderLobby,grow:renderGrow,gear:renderGear,rank:renderRank,summon:renderSummon})[panel](); updateTop();}
+function renderPanel(){({content:renderContent,lobby:renderLobby,grow:renderGrow,gear:renderGear,rank:renderRank,summon:renderSummon})[panel](); updateTop();}
 function tabs(list,cur,fn){
   $('ptabs').innerHTML=list.map(([k,n,dot])=>`<button data-k="${k}" class="${k===cur?'on':''}">${n}${dot?'<span class="dot" style="right:6px;top:-4px">!</span>':''}</button>`).join('');
   $('ptabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{SFX.tap();fn(b.dataset.k);});
@@ -1096,7 +1096,8 @@ function bindMult(fn){$('pbody').querySelectorAll('[data-m]').forEach(b=>b.oncli
 
 /* ---- 성장: 골드 강화 / 스텟 ---- */
 function renderGrow(){
-  tabs([['gold','골드'],['stat','스텟',spLeft()>0]],view.grow,k=>{view.grow=k;renderGrow();});
+  tabs([['gold','골드'],['stat','스텟',spLeft()>0],['rank','승급',rankReady()]],view.grow,k=>{view.grow=k;renderGrow();});
+  if(view.grow==='rank') return renderRank();
   const body=$('pbody');
   if(view.grow==='gold'){
     body.innerHTML=multSeg(view.mult,'MAX (5,000)')+`<div class="pscroll">${UPG.map(u=>`
@@ -1116,7 +1117,7 @@ function renderGrow(){
     body.querySelectorAll('[data-s]').forEach(row=>row.querySelector('button').onclick=()=>{
       const p=SP.find(x=>x.k===row.dataset.s), lv=save.sp[p.k]||0, cap=view.spMult==='max'?1e9:view.spMult;
       const n=Math.min(cap,spLeft(),p.max-lv); if(n<=0) return;
-      save.sp[p.k]=lv+n; SFX.up(); refreshStats(); persistSoon(); updateDots(); tabs([['gold','골드'],['stat','스텟',spLeft()>0]],view.grow,k=>{view.grow=k;renderGrow();});});
+      save.sp[p.k]=lv+n; SFX.up(); refreshStats(); persistSoon(); updateDots(); tabs([['gold','골드'],['stat','스텟',spLeft()>0],['rank','승급',rankReady()]],view.grow,k=>{view.grow=k;renderGrow();});});
   }
   refreshGrow();
 }
@@ -1276,7 +1277,6 @@ function summon(b,count,free){
 
 /* ---- 승급 ---- */
 function renderRank(){
-  tabs([['rank','닌자 승급']],'rank',()=>{});
   const cur=RANKS[save.rank], nx=RANKS[save.rank+1];
   const total={}; for(let i=1;i<=save.rank;i++) for(const k in RANKS[i].fx) total[k]=(total[k]||0)+RANKS[i].fx[k];
   let html=`<div class="pscroll"><div class="rk"><canvas id="rkcv" width="220" height="260"></canvas><div><small>현재 계급</small><h3>${cur.n}</h3><div class="rkfx">${Object.keys(total).length?fxText(total).map(t=>`<span>${t}</span>`).join(''):'<span>승급하면 강력한 효과가 붙어요</span>'}</div></div></div>`;
@@ -1289,7 +1289,7 @@ function renderRank(){
   }else html+=`<div class="rkhead">최고 계급에 도달했어요</div>`;
   $('pbody').innerHTML=html+'</div>';
   const go=$('rkGo'); if(go) go.onclick=()=>{if(!rankReady()) return; save.rank++; save.gems+=500; persist(); SFX.buy(); refreshStats(); updateDots();
-    G.banner={txt:`${RANKS[save.rank].n} 승급!`,sub:'보석 +500',t:0}; renderRank();};
+    G.banner={txt:`${RANKS[save.rank].n} 승급!`,sub:'보석 +500',t:0}; renderGrow();};
 }
 function drawRankChar(){
   const c=$('rkcv'); if(!c) return; const x=c.getContext('2d'); x.clearRect(0,0,220,260);
@@ -1297,6 +1297,21 @@ function drawRankChar(){
   x.fillStyle='#6a4a30'; x.beginPath(); x.ellipse(110,238,70,14,0,0,7); x.fill(); x.fillStyle='#c89a5a'; x.beginPath(); x.ellipse(110,234,64,11,0,0,7); x.fill();
   if(save.rank>0) aura(x,110,234,210,SETS[Math.min(9,save.rank*2)].glow,T);
   drawNinja(x,save.g,pEq(),'idle',Math.floor(T*8),110,234,210);
+}
+
+/* ---- 컨텐츠: 자리만 먼저 (구상 후 하나씩 채울 예정) ---- */
+const CONTENTS=[
+  {n:'장비 던전',d:'장비 소환권을 얻는 단계별 던전',ic:'burst',c:'t-crit'},
+  {n:'골드 던전',d:'제한 시간 동안 골드를 쓸어 담는 던전',ic:'coin',c:'t-coin'},
+  {n:'보스 러시',d:'보스를 연달아 쓰러뜨리는 도전',ic:'sword',c:'t-sword'},
+  {n:'수련의 탑',d:'층마다 강해지는 적을 넘는 탑',ic:'bolt',c:'t-bolt'}
+];
+function renderContent(){
+  tabs([['content','컨텐츠']],'content',()=>{});
+  $('pbody').innerHTML=`<div class="pscroll">${CONTENTS.map(x=>`<div class="urow ct-row"><div class="itile ${x.c}">${svgI(x.ic)}</div>
+    <div class="uinfo"><b>${x.n}</b><span class="uval" style="font-family:var(--body);font-size:12px;white-space:normal">${x.d}</span></div>
+    <div class="uright"><button class="obtn" disabled>준비 중</button></div></div>`).join('')}
+    <p class="note">컨텐츠 탭은 자리만 먼저 만들어 두었어요. 어떤 컨텐츠를 넣을지 정해지면 하나씩 채워 넣을게요.</p></div>`;
 }
 
 /* ---- 로비: 정면 대기 모습 · 닌자 선택 · 능력치 · 설정 ---- */
@@ -1372,7 +1387,7 @@ let last=performance.now();
 function frame(now){
   requestAnimationFrame(frame);
   const dt=Math.min(.05,(now-last)/1000); last=now; T+=dt;
-  try{ if(G&&$('pickM').hidden) update(dt); render(dt); if(panel==='rank') drawRankChar(); if(panel==='lobby') drawLobbyChar(); drawPick(); }catch(err){console.error(err);}
+  try{ if(G&&$('pickM').hidden) update(dt); render(dt); if(panel==='grow'&&view.grow==='rank') drawRankChar(); if(panel==='lobby') drawLobbyChar(); drawPick(); }catch(err){console.error(err);}
 }
 
 /* ================= 시작 ================= */
