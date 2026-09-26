@@ -1146,7 +1146,6 @@ function render(dt){
     else drawShuriken(sx,sy,A.eh*.1*(1+u*.6),s.t*18+s.spin);}
   const kc=SETS[setOf(save.eq[7])].glow;
   for(const k of G.kunais){
-    if(k.trail.length>1){ctx.strokeStyle=kc+'88';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(k.trail[0][0],k.trail[0][1]);for(const p of k.trail)ctx.lineTo(p[0],p[1]);ctx.stroke();}
     ctx.save(); if(k.ghost) ctx.globalAlpha=.6; if(!drawRealKunai(ctx,setOf(save.eq[7]),k.x,k.y,A.ph*.5,Math.atan2(k.vy,k.vx),k.t)) drawKunaiIcon(ctx,save.g,setOf(save.eq[7]),k.x,k.y,A.ph*.3,Math.atan2(k.vy,k.vx)); ctx.restore();
   }
   // 플레이어 (뒷모습)
