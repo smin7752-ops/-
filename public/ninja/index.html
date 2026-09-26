@@ -182,6 +182,17 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
 .lb-cp b{font-family:var(--display);font-weight:400;font-size:15px;color:#ffe6b0}
 .lb-row{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:10px;align-items:stretch}
 .lb-snd{font-size:13px;padding:6px 12px}
+.lb-who{display:flex;align-items:center;gap:6px;background:#3a2d26;border:2px solid var(--edge);border-radius:8px;padding:6px 12px;font-family:var(--display);font-size:15px}
+.lb-who small{font-family:var(--body);font-size:11px;color:var(--muted)}
+.pick{position:absolute;inset:0;z-index:8;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:20px 16px;background:radial-gradient(circle at 50% 40%,#3a2230,#14111b 70%);box-sizing:border-box}
+.pick h1{margin:0;font-family:var(--display);font-weight:400;font-size:30px;color:#ffe6b0;text-shadow:0 3px 0 #000}
+.pick p{margin:0;font-size:13px;color:var(--muted);text-align:center}
+.pcards{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%;max-width:420px}
+.pcard2{display:flex;flex-direction:column;align-items:center;gap:6px;background:linear-gradient(180deg,#3a2d26,#241a16);border:3px solid var(--edge);border-radius:16px;padding:10px 6px 12px}
+.pcard2 canvas{width:100%;max-width:170px;aspect-ratio:4/5;display:block}
+.pcard2 b{font-family:var(--display);font-weight:400;font-size:20px;color:#fff}
+.pcard2[aria-pressed="true"]{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold),0 0 24px rgba(242,193,78,.45)}
+.pick .obtn{width:100%;max-width:420px}
 .lb-kv{display:grid;grid-template-columns:1fr auto 1fr auto;gap:4px 10px;font-size:12px}
 .lb-kv b{text-align:right;font-family:var(--display);font-weight:400;font-size:13px}
 .stab{margin-top:12px;background:#3a2d26;border:2px solid var(--edge);border-radius:10px;padding:8px 10px}
@@ -339,6 +350,15 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
     </nav>
   </div>
 
+  <section class="pick" id="pickM" hidden>
+    <h1>닌자 선택</h1>
+    <p>함께할 닌자를 골라 주세요.<br>한 번 고르면 바꿀 수 없어요.</p>
+    <div class="pcards">
+      <button class="pcard2" data-pick="f" aria-pressed="false"><canvas width="170" height="212"></canvas><b>여닌자</b></button>
+      <button class="pcard2" data-pick="m" aria-pressed="false"><canvas width="170" height="212"></canvas><b>남닌자</b></button>
+    </div>
+    <button class="obtn big" id="pickGo" disabled>닌자를 골라 주세요</button>
+  </section>
   <section class="modal" id="infoM" hidden><div class="sheet info" id="infoBody"></div></section>
   <section class="modal" id="sumM" hidden><div class="sheet" id="sumBody"></div></section>
   <div class="toast" id="toast" style="opacity:0"></div>
@@ -387,7 +407,7 @@ const fmtPct=v=>{const p=v*100; return (p>=10000?fmtKo(p):(+p.toFixed(p<10?2:p<1
 
 /* ================= 저장 ================= */
 const SKEY='shadow-shuriken-v3';
-const save={gold:0,gems:3000,g:'f',mute:false,lv:1,xp:0,stage:1,kills:0,bestStage:0,autoBoss:true,
+const save={picked:false,gold:0,gems:3000,g:'f',mute:false,lv:1,xp:0,stage:1,kills:0,bestStage:0,autoBoss:true,
   up:{},sp:{},inv:{},eq:[0,0,0,0,0,0,0,0],relic:{},sum:{},free:{day:''},rank:0,pulls:0};
 try{
   let s=JSON.parse(localStorage.getItem(SKEY)||'null');
@@ -395,7 +415,7 @@ try{
     const o=JSON.parse(localStorage.getItem('shadow-shuriken-v2')||'null');
     if(o){const inv={};for(const k in o.inv||{}){const [sl,t]=k.split('-').map(Number);inv[sl+'-'+t*4]=o.inv[k];} o.inv=inv; o.eq=(o.eq||[]).map(t=>t*4); s=o;}
   }
-  if(s&&typeof s==='object') Object.assign(save,s);
+  if(s&&typeof s==='object'){Object.assign(save,s); if(s.picked===undefined&&((s.lv||1)>1||(s.stage||1)>1)) save.picked=true;} // 이미 진행한 기록은 선택한 것으로
 }catch(e){}
 for(let s=0;s<8;s++) if(!save.inv[s+'-0']) save.inv[s+'-0']={n:0,lv:1}; // 입문자 장비는 처음부터 보유
 let saveT=0;
@@ -601,7 +621,11 @@ function analyze(g,a,img){
       zone[i]=z; kind[i]=k; wt[i]=v; lum[i]=.3*r+.59*gg+.11*b;
     }
   }
-  return {w,h,px,zone,kind,wt,lum,src:c};
+  // 발 중앙: 첫 프레임 맨 아래 7% 줄의 불투명 픽셀 평균 x (포니테일·목도리 때문에 기준점이 한쪽으로 쏠리는 것 보정)
+  let sx=0,cnt=0; const y0=Math.max(0,Math.round(m.ay-SPRITE_H*.07));
+  for(let y=y0;y<=Math.min(h-1,m.ay);y++) for(let X=0;X<m.w;X++){const p=(y*w+X)*4; if(px[p+3]>100){sx+=X;cnt++;}}
+  const fdx=cnt?sx/cnt-m.ax:0;
+  return {w,h,px,zone,kind,wt,lum,src:c,fdx};
 }
 const sheetCache=new Map();
 function sheet(g,eq,a){
@@ -626,7 +650,8 @@ function sheet(g,eq,a){
 function drawNinja(c,g,eq,a,frame,x,y,hgt,alpha=1){
   const m=META[g][a], sc=hgt/SPRITE_H, f=((frame%m.n)+m.n)%m.n, s=sheet(g,eq,a);
   c.save(); c.globalAlpha=alpha;
-  c.drawImage(s,f*m.w,0,m.w,m.h,x-m.ax*sc,y-m.ay*sc,m.w*sc,m.h*sc);
+  const fdx=base[g][a]?base[g][a].fdx:0;
+  c.drawImage(s,f*m.w,0,m.w,m.h,x-(m.ax+fdx)*sc,y-m.ay*sc,m.w*sc,m.h*sc);
   c.restore();
 }
 function drawKunaiIcon(c,g,t,x,y,size,ang){
@@ -1284,13 +1309,12 @@ function renderLobby(){
       <div class="lb-name"><b>그림자 닌자</b><span class="rtag">${RANKS[save.rank].n}</span></div>
       <div class="lb-cp">${svgI('sword')} 전투력 <b class="num">${fmtKo(st.cp)}</b></div></div>
     <div class="lb-row">
-      <div class="seg lb-gen" style="grid-template-columns:1fr 1fr;padding:0"><button data-g="f" class="${save.g==='f'?'on':''}">여닌자</button><button data-g="m" class="${save.g==='m'?'on':''}">남닌자</button></div>
+      <div class="lb-who">${save.g==='f'?'여닌자':'남닌자'} <small>· 처음 고른 닌자로 진행해요</small></div>
       <button class="obtn brown lb-snd" id="lbSnd">${save.mute?'소리 켜기':'소리 끄기'}</button>
     </div>
     <div class="stab"><h5>능력치</h5><div class="lb-kv">${rows.map(([k,v])=>`<span>${k}</span><b class="num">${v}</b>`).join('')}</div></div>
     <div class="stab"><h5>세트 효과 · 고유 능력</h5><div class="chips">${st.active.length?st.active.map(a=>`<span style="--rc:${RC[a.t]}">${SETS[a.t].n} ${a.need<8?`${GR[a.g]}급 ${a.need}세트`:'고유'} · ${a.txt}</span>`).join(''):'<span>같은 세트를 2부위 이상 입으면 켜져요</span>'}</div></div>
   </div>`;
-  $('pbody').querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>{if(save.g===b.dataset.g) return; save.g=b.dataset.g; persist(); SFX.equip(); drawAvatar(); renderLobby();});
   $('lbSnd').onclick=()=>{save.mute=!save.mute; persist(); if(!save.mute){ac();SFX.tap();} renderLobby();};
 }
 let lbTap=-9;
@@ -1323,12 +1347,32 @@ $('infoM').onclick=e=>{if(e.target.id==='infoM') $('infoM').hidden=true;};
 addEventListener('resize',resize);
 addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('sumM').hidden) $('sumM').hidden=true; else if(!$('infoM').hidden) $('infoM').hidden=true; else if(panel) openPanel(panel);}});
 
+/* ================= 처음 시작: 닌자 선택 (한 번만) ================= */
+let pickSel=null;
+function drawPick(){
+  if($('pickM').hidden) return;
+  document.querySelectorAll('.pcard2').forEach(b=>{const c=b.querySelector('canvas'), x=c.getContext('2d'), g=b.dataset.pick;
+    x.clearRect(0,0,170,212);
+    x.fillStyle='rgba(0,0,0,.35)'; x.beginPath(); x.ellipse(85,200,48,9,0,0,7); x.fill();
+    const hop=pickSel===g?Math.abs(Math.sin(T*3))*6:0;
+    drawNinja(x,g,[0,0,0,0,0,0,0,0],'idle',Math.floor(T*8),85,200-hop,180);});
+}
+function showPick(){
+  $('pickM').hidden=false;
+  document.querySelectorAll('.pcard2').forEach(b=>b.onclick=()=>{pickSel=b.dataset.pick; SFX.tap();
+    document.querySelectorAll('.pcard2').forEach(x=>x.setAttribute('aria-pressed',x===b));
+    $('pickGo').disabled=false; $('pickGo').textContent=`${pickSel==='f'?'여닌자':'남닌자'}로 시작하기`;});
+  $('pickGo').onclick=()=>{if(!pickSel) return; ac(); save.g=pickSel; save.picked=true; persist(); SFX.buy();
+    $('pickM').hidden=true; startGame();};
+}
+function startGame(){ $('ui').hidden=false; initBattle(); layout(); drawAvatar(); updateTop(); updateDots(); }
+
 /* ================= 루프 ================= */
 let last=performance.now();
 function frame(now){
   requestAnimationFrame(frame);
   const dt=Math.min(.05,(now-last)/1000); last=now; T+=dt;
-  try{ if(G) update(dt); render(dt); if(panel==='rank') drawRankChar(); if(panel==='lobby') drawLobbyChar(); }catch(err){console.error(err);}
+  try{ if(G&&$('pickM').hidden) update(dt); render(dt); if(panel==='rank') drawRankChar(); if(panel==='lobby') drawLobbyChar(); drawPick(); }catch(err){console.error(err);}
 }
 
 /* ================= 시작 ================= */
@@ -1341,8 +1385,8 @@ setMid(); resize(); requestAnimationFrame(frame);
       jobs.push(loadImg(`${ASSET}${g}_items.webp`).then(img=>{atlas[g]=img;}));
     }
     await Promise.all(jobs);
-    $('loading').hidden=true; $('ui').hidden=false;
-    initBattle(); layout(); drawAvatar(); updateTop(); updateDots();
+    $('loading').hidden=true;
+    if(save.picked) startGame(); else showPick();
   }catch(err){$('loading').textContent='그림을 불러오지 못했어요. 새로고침해 주세요.';console.error(err);}
 })();
 })();
