@@ -408,6 +408,28 @@ function drawIdle(cx,g,set,x,y,hgt,t=T){
   cx.save(); cx.translate(x,y); cx.scale(1-b*.012,1+b*.022); drawReal('i',cx,g,set,f,0,0,hgt); cx.restore();
   return true;
 }
+/* ---- 몬스터: 0 떠돌이 산적 · 1 하급 닌자(원거리) · 2 너구리 요괴 · 3 외눈 요괴 · 4 산적 부두목(중간 보스) · 5 산적 두목(보스) ---- */
+const MON={"0":{"ref":220,"d":{"w":230,"h":200,"n":8,"ax":130.6,"ay":197.5},"a":{"w":230,"h":219,"n":8,"ax":98.4,"ay":216.8},"q":{"w":199,"h":223,"n":8,"ax":109.5,"ay":219.5},"w":{"w":209,"h":231,"n":8,"ax":104.8,"ay":228.6},"h":{"w":202,"h":205,"n":8,"ax":106.8,"ay":202.9}},"1":{"ref":220,"d":{"w":243,"h":204,"n":8,"ax":137.5,"ay":200.6},"q":{"w":202,"h":233,"n":8,"ax":98.3,"ay":227.8},"w":{"w":224,"h":228,"n":8,"ax":118.4,"ay":225.6},"a":{"w":207,"h":236,"n":8,"ax":99.2,"ay":233.3},"h":{"w":220,"h":231,"n":8,"ax":90.7,"ay":228.3}},"2":{"ref":220,"d":{"w":275,"h":198,"n":8,"ax":153.9,"ay":194.9},"a":{"w":268,"h":260,"n":8,"ax":140.8,"ay":255.7},"q":{"w":263,"h":210,"n":8,"ax":134.0,"ay":206.8},"w":{"w":234,"h":234,"n":8,"ax":103.5,"ay":230.7},"h":{"w":266,"h":239,"n":8,"ax":133.3,"ay":236.3}},"3":{"ref":220,"d":{"w":267,"h":242,"n":8,"ax":153.5,"ay":239.1},"a":{"w":269,"h":212,"n":8,"ax":136.5,"ay":204.0},"q":{"w":221,"h":210,"n":8,"ax":129.8,"ay":204.6},"w":{"w":207,"h":236,"n":8,"ax":84.3,"ay":232.3},"h":{"w":232,"h":230,"n":8,"ax":114.2,"ay":207.7}},"4":{"ref":280,"d":{"w":301,"h":261,"n":8,"ax":162.3,"ay":257.4},"a":{"w":301,"h":281,"n":8,"ax":172.1,"ay":277.9},"q":{"w":292,"h":248,"n":8,"ax":145.5,"ay":245.7},"w":{"w":293,"h":287,"n":8,"ax":140.1,"ay":283.4},"h":{"w":292,"h":227,"n":8,"ax":139.0,"ay":223.7}},"5":{"ref":320,"d":{"w":331,"h":288,"n":8,"ax":190.1,"ay":284.4},"a":{"w":317,"h":328,"n":8,"ax":151.3,"ay":323.8},"q":{"w":325,"h":304,"n":8,"ax":166.8,"ay":300.3},"w":{"w":331,"h":326,"n":8,"ax":176.3,"ay":322.3},"h":{"w":331,"h":314,"n":8,"ax":183.3,"ay":310.2}},"k":{"w":72,"h":117,"n":8}};
+const MON_N=['떠돌이 산적','하급 닌자','너구리 요괴','외눈 요괴','산적 부두목','산적 두목'];
+const MON_SZ=[1,1,.92,.96,1,1.04];   // 종류별 키 보정
+const ATK_T=.6;                      // 공격 동작 시간(초), 절반에서 타격
+function monImg(k,c){
+  const key='X'+k+c, v=REAL[key]; if(v instanceof HTMLImageElement) return v;
+  if(!v){REAL[key]='loading'; loadImg(aurl(k==='k'?'xk.webp':`x${k+1}${c}.webp`)).then(img=>{REAL[key]=img;}).catch(()=>{REAL[key]='fail';});}
+  return null;
+}
+const monReady=k=>['w','a','q','h','d'].every(c=>REAL['X'+k+c] instanceof HTMLImageElement);
+const preloadMon=k=>Promise.all(['w','a','q','h','d'].map(c=>new Promise(res=>{monImg(k,c); const t=setInterval(()=>{const v=REAL['X'+k+c]; if(v instanceof HTMLImageElement||v==='fail'){clearInterval(t);res();}},50); setTimeout(()=>{clearInterval(t);res();},8000);})));
+function drawMon(cx,k,c,frame,x,y,hgt,alpha=1,clamp=false){
+  const img=monImg(k,c); if(!img) return false;
+  const m=MON[k][c], sc=hgt/MON[k].ref*MON_SZ[k], f=clamp?Math.max(0,Math.min(m.n-1,frame)):((frame%m.n)+m.n)%m.n;
+  cx.save(); cx.globalAlpha=alpha; cx.drawImage(img,f*m.w,0,m.w,m.h,x-m.ax*sc,y-m.ay*sc,m.w*sc,m.h*sc); cx.restore();
+  return true;
+}
+// 지금 스테이지에 나올 몬스터
+const monPool=s=>[0,1].concat(s>=3?[2]:[],s>=6?[3]:[]);
+function prefetchMon(){const s=save.stage; for(const k of monPool(s)) for(const c of 'waqhd') monImg(k,c); monImg('k','k');
+  if(isBossStage(s)||isBossStage(s+1)) for(const c of 'waqhd') monImg(s%10===0||(s+1)%10===0?5:4,c);}
 const hasP=(g,set)=>!!realImg('p',g,set);
 function drawRealBack(c,g,set,frame,x,y,hgt,alpha=1){drawReal('p',c,g,set,frame,x,y,hgt,alpha);}
 // 날아가는 쿠나이: 오른쪽을 향한 그림을 진행 방향으로 돌리고, 리본이 펄럭이게 프레임을 넘긴다
@@ -823,7 +845,7 @@ function initBattle(){
      shake:0,flash:0,rearT:0,scroll:0,boss:null,timeLeft:0,timeMax:0,spawnT:.8,dead:false,deathT:0,
      shield:st.shield,bossBlock:false,goldAcc:0,goldT:0,bossDelay:0,
      banner:{txt:`스테이지 ${save.stage}`,sub:isBossStage(save.stage)?'적을 모두 잡으면 보스 등장':'',t:0}};
-  G.waveLeft=waveSize(save.stage);
+  G.waveLeft=waveSize(save.stage); prefetchMon();
 }
 function refreshStats(){const r=G.hp/G.st.hp; G.st=calc(); G.hp=Math.min(G.st.hp,Math.max(1,r*G.st.hp)); updateTop(); drawAvatar();}
 function arena(){
@@ -838,10 +860,12 @@ function spawnEnemy(type){
   else if(type==='mboss'){set=4+Math.floor(Math.random()*3); hp=400*hs; travel=5;}
   else if(type==='elite'){set=Math.min(9,2+Math.floor(s/15)+Math.floor(Math.random()*3)); hp=45*hs; travel=Math.max(5,10-s*.05);}
   else {set=Math.min(9,Math.floor(s/12)+Math.floor(Math.random()*3)); hp=14*hs; travel=Math.max(4,8.5-s*.05);}
-  const bossy=type==='boss'||type==='mboss';
-  G.enemies.push({g,eq:Array(8).fill(set),type,hp:Math.round(hp),maxHp:Math.round(hp),u:bossy?.5:rnd(.05,.95),p:0,speed:1/travel,
-    stopAt:type==='boss'?.36:type==='mboss'?.42:1,sway:rnd(0,6),state:'live',t:0,at:Math.random()*8,
-    fireT:type==='grunt'?1e9:rnd(1.2,2.4),warn:0,big:type==='boss'?1.55:type==='mboss'?1.32:type==='elite'?1.12:1});
+  const bossy=type==='boss'||type==='mboss', pool=monPool(s);
+  const kind=type==='boss'?5:type==='mboss'?4:type==='elite'?pool[Math.floor(Math.random()*pool.length)]:pool[Math.floor(Math.random()*pool.length)];
+  const ranged=bossy||kind===1;
+  G.enemies.push({g,eq:Array(8).fill(set),type,kind,ranged,atk:-1,fired:false,rest:0,meleeT:0,hitFx:0,hp:Math.round(hp),maxHp:Math.round(hp),u:bossy?.5:rnd(.05,.95),p:0,speed:1/travel,
+    stopAt:type==='boss'?.46:type==='mboss'?.5:kind===1?rnd(.5,.7):1,sway:rnd(0,6),state:'live',t:0,at:Math.random()*8,
+    fireT:ranged?rnd(1.2,2.4):1e9,warn:0,big:type==='boss'?1.55:type==='mboss'?1.32:type==='elite'?1.12:1});
 }
 function puff(x,y,r,col){for(let i=0;i<10;i++){const a=Math.random()*7;G.fx.push({k:'puff',x,y,vx:Math.cos(a)*r*1.2,vy:Math.sin(a)*r*.6-r*.3,r:r*rnd(.25,.45),t:0,life:rnd(.4,.7),col});}}
 function sparks(x,y,col){for(let i=0;i<8;i++){const a=Math.random()*7,v=rnd(80,220);G.fx.push({k:'spark',x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,t:0,life:rnd(.2,.4),col});}}
@@ -878,9 +902,19 @@ function damageEnemy(e,dmg,opt={}){
   else floatText(r.x+jx,r.y-r.h*1.05,fmtKo(dmg),opt.col||'#efe6d2',opt.fixed?14:16);
   if(crit&&G.st.shadow&&!opt.ghost){const t=autoTargets(2,null).filter(o=>o!==e);fireKunai(t.length?t:[e],1,true);}
   if(e.hp<=0) killEnemy(e,opt.chain);
-  else {e.state='flinch';e.t=0; if(G.st.poison&&!opt.poison) e.poisonT=1;}
+  else {if(e.atk>=0) e.hitFx=.15; else {e.state='flinch';e.t=0;} if(G.st.poison&&!opt.poison) e.poisonT=1;}
 }
 function playerText(txt,col,size){const A=arena();floatText(A.px,A.py-A.ph*1.15,txt,col,size);}
+function enemyStrike(e){
+  const r=enemyRect(e), A=arena();
+  if(!e.ranged){ // 근접 공격
+    hurtPlayer(({grunt:6,elite:10})[e.type]*dScale(save.stage)); sparks(A.px,A.py-A.ph*.5,'#ff8a6a'); SFX.enemy(); return;
+  }
+  const bossy=e.type==='boss'||e.type==='mboss';
+  const n=e.type==='boss'?3:e.type==='mboss'?2:1, dmg=(e.type==='boss'?14:e.type==='mboss'?11:7)*dScale(save.stage);
+  for(let k=0;k<n;k++) G.shots.push({dmg,x0:r.x,y0:r.cy,t:-k*.18,dur:.9,spin:rnd(0,6),kind:bossy?'slash':'kunai'});
+  SFX.enemy();
+}
 function hurtPlayer(dmg){
   if(G.dead) return;
   if(G.shield>0){G.shield--;G.inv=.3;SFX.up();playerText('막음!','#c9d3e0',20);return;}
@@ -902,7 +936,7 @@ function killEnemy(e,chain){
   save.gold+=gold; G.goldAcc+=gold; gainXp(xp);
   const nc=({boss:8,mboss:6,elite:3,grunt:2})[e.type];
   for(let i=0;i<nc;i++) G.coinFly.push({x:r.x+rnd(-.3,.3)*r.hw*2,y:r.cy+rnd(-.2,.2)*r.h,t:-i*.05,dur:rnd(.55,.75)});
-  puff(r.x,r.cy,r.h*.55,'#b9aec9');
+  if(!monImg(e.kind,'d')) puff(r.x,r.cy,r.h*.55,'#b9aec9'); // 몬스터 그림은 사망 동작에 먼지가 있다
   if(G.st.blast&&!chain){
     puff(r.x,r.cy,r.h*.9,'#ff8a3a'); G.shake=Math.max(G.shake,.12);
     for(const o of G.enemies){if(o===e||o.state==='die')continue; const q=enemyRect(o); if(Math.hypot(q.x-r.x,q.cy-r.cy)<r.h*1.3) damageEnemy(o,G.st.atk*.6,{fixed:true,chain:true,col:'#ff8a3a'});}
@@ -916,7 +950,7 @@ function nextStage(){
   save.bestStage=Math.max(save.bestStage,save.stage);
   save.stage++; G.waveLeft=waveSize(save.stage); G.shield=G.st.shield;
   G.banner={txt:`스테이지 ${save.stage}`,sub:isBossStage(save.stage)?(save.stage%10===0?'보스 스테이지':'중간 보스 스테이지'):'',t:0};
-  SFX.wave(); persist(); updateTop(); updateDots();
+  SFX.wave(); persist(); updateTop(); updateDots(); prefetchMon();
 }
 function startBoss(){
   if(G.boss||G.dead||!isBossStage(save.stage)) return;
@@ -980,22 +1014,23 @@ function update(dt){
     if(e.poisonT>0){e.poisonT-=dt; if(e.poisonT<=0) damageEnemy(e,G.st.atk*.5,{fixed:true,poison:true,col:'#5cf08a'});}
     if(e.state==='flinch'&&e.t>.3){e.state='live';e.t=0;}
     if(e.state==='die'||G.dead) continue;
-    if(e.state==='live') e.p=Math.min(e.stopAt,e.p+e.speed*dt);
-    if(e.p>=1){const r=enemyRect(e); e.state='die'; e.t=0; puff(r.x,r.cy,r.h*.5,'#6b5a7a'); G.shake=Math.max(G.shake,.2);
-      hurtPlayer(({grunt:9,elite:15})[e.type]*dScale(save.stage)); continue;}
-    if(targetable(e)){
+    if(e.hitFx>0) e.hitFx-=dt;
+    // 공격 동작: 절반쯤에서 타격, 끝나면 잠깐 숨 고르기
+    if(e.atk>=0){ e.atk+=dt; if(!e.fired&&e.atk>=ATK_T*.5){e.fired=true; enemyStrike(e);} if(e.atk>=ATK_T){e.atk=-1; e.rest=.55;} continue; }
+    if(e.rest>0) e.rest-=dt;
+    if(e.state==='live'&&e.rest<=0) e.p=Math.min(e.stopAt,e.p+e.speed*dt);
+    // 근접: 선에 닿으면 계속 베어서 공격
+    if(!e.ranged&&e.p>=e.stopAt&&e.rest<=0){ e.meleeT-=dt; if(e.meleeT<=0){e.meleeT=1.1; e.state='live'; e.atk=0; e.fired=false;} continue; }
+    if(e.ranged&&targetable(e)){
       e.fireT-=dt;
       if(e.fireT<.45&&!e.warn) e.warn=1;
-      if(e.fireT<=0){
+      if(e.fireT<=0&&e.rest<=0){
         const bossy=e.type==='boss'||e.type==='mboss';
-        e.warn=0; e.fireT=(bossy?1.6:3.2)*rnd(.8,1.25);
-        const n=e.type==='boss'?3:e.type==='mboss'?2:1, r=enemyRect(e), dmg=(e.type==='boss'?14:e.type==='mboss'?11:7)*dScale(save.stage);
-        for(let k=0;k<n;k++) G.shots.push({dmg,x0:r.x,y0:r.cy,t:-k*.18,dur:.9,spin:rnd(0,6)});
-        SFX.enemy();
+        e.warn=0; e.fireT=(bossy?1.6:3.2)*rnd(.8,1.25); e.state='live'; e.atk=0; e.fired=false;
       }
     }
   }
-  G.enemies=G.enemies.filter(e=>!(e.state==='die'&&e.t>(hasM('d',e.g,e.eq[0])&&REAL['d'+e.g+e.eq[0]] instanceof HTMLImageElement?DIE_T:.4)));
+  G.enemies=G.enemies.filter(e=>!(e.state==='die'&&e.t>(REAL['X'+e.kind+'d'] instanceof HTMLImageElement||(hasM('d',e.g,e.eq[0])&&REAL['d'+e.g+e.eq[0]] instanceof HTMLImageElement)?DIE_T:.4)));
   // 쿠나이: 목표를 따라가 맞힌다
   for(const k of G.kunais){
     k.t+=dt;
@@ -1058,11 +1093,22 @@ function render(dt){
     if(e.state==='die') al=hasD?Math.max(0,Math.min(1,(DIE_T-e.t)/.15)):Math.max(0,1-e.t/.3);
     const moving=e.p<e.stopAt, a=moving?'walk':'idle', f=Math.floor(e.at*(moving?9:8));
     shadow(r.x,r.y,r.h*.22,al);
-    if(e.type==='boss'||e.type==='mboss') aura(ctx,r.x,r.y,r.h,SETS[es].glow,T);
-    // 실제 그림: 대기(걸을 때도) / 피격 / 사망 (없으면 예전 그림)
+    if(e.type==='boss'||e.type==='mboss') aura(ctx,r.x,r.y,r.h,e.type==='boss'?'#ff5a3a':'#ff9a3a',T);
     let done=false;
-    if(e.state==='die'&&hasD) done=drawReal('d',ctx,e.g,es,Math.floor(e.t/DIE_T*8),r.x,r.y,r.h,al,true);
-    else if(e.state==='flinch') done=drawReal('h',ctx,e.g,es,Math.floor(e.t/.3*8),r.x,r.y,r.h,al,true);
+    // 몬스터 그림: 걷기 / 공격 / 공격 후 대기 / 피격 / 사망
+    if(monImg(e.kind,'w')){
+      const k=e.kind, mal=e.state==='die'?Math.max(0,Math.min(1,(DIE_T-e.t)/.15)):1;
+      if(e.state==='die') done=drawMon(ctx,k,'d',Math.floor(e.t/DIE_T*8),r.x,r.y,r.h,mal,true);
+      else if(e.atk>=0) done=drawMon(ctx,k,'a',Math.floor(e.atk/ATK_T*8),r.x,r.y,r.h,1,true);
+      else if(e.state==='flinch') done=drawMon(ctx,k,'h',Math.floor(e.t/.3*8),r.x,r.y,r.h,1,true);
+      else if(e.rest>0||e.p>=e.stopAt) done=drawMon(ctx,k,'q',Math.floor(e.at*8),r.x,r.y,r.h);
+      else done=drawMon(ctx,k,'w',Math.floor(e.at*9),r.x,r.y,r.h);
+      if(done&&e.hitFx>0&&e.atk>=0){ctx.save();ctx.globalCompositeOperation='lighter';drawMon(ctx,k,'a',Math.floor(e.atk/ATK_T*8),r.x,r.y,r.h,e.hitFx*3,true);ctx.restore();}
+      if(done&&e.state==='die') done=true;
+    }
+    // 예전 닌자 그림 (몬스터 그림을 아직 못 받았을 때)
+    if(!done&&e.state==='die'&&hasD) done=drawReal('d',ctx,e.g,es,Math.floor(e.t/DIE_T*8),r.x,r.y,r.h,al,true);
+    else if(!done&&e.state==='flinch') done=drawReal('h',ctx,e.g,es,Math.floor(e.t/.3*8),r.x,r.y,r.h,al,true);
     if(!done&&e.state!=='die') done=drawReal('i',ctx,e.g,es,Math.floor(e.at*8),r.x,r.y+(moving?-Math.abs(Math.sin(e.at*9))*r.h*.03:0),r.h,al);
     if(!done){ drawNinja(ctx,e.g,e.eq,a,f,r.x,r.y+dy,r.h,al);
       if(lit>0){ctx.save();ctx.globalCompositeOperation='lighter';drawNinja(ctx,e.g,e.eq,a,f,r.x,r.y+dy,r.h,lit);ctx.restore();} }
@@ -1071,7 +1117,12 @@ function render(dt){
     if(e.state!=='die'&&(e.type!=='grunt'||e.hp<e.maxHp)){const bw=r.hw*(e.type==='grunt'?1.6:2.2),bh=e.type==='grunt'?4:6;ctx.fillStyle='rgba(0,0,0,.6)';ctx.fillRect(r.x-bw/2,r.y-r.h*1.02,bw,bh);ctx.fillStyle=e.type==='boss'?'#ffc94a':e.type==='mboss'?'#ff9a3a':'#ff5a4a';ctx.fillRect(r.x-bw/2,r.y-r.h*1.02,bw*Math.max(0,e.hp)/e.maxHp,bh);}
   }
   const tgt={x:A.px,y:A.py-A.ph*.55};
-  for(const s of G.shots){if(s.t<0) continue; const u=s.t/s.dur; drawShuriken(s.x0+(tgt.x-s.x0)*u,s.y0+(tgt.y-s.y0)*u,A.eh*.1*(1+u*.6),s.t*18+s.spin);}
+  for(const s of G.shots){if(s.t<0) continue; const u=s.t/s.dur, sx=s.x0+(tgt.x-s.x0)*u, sy=s.y0+(tgt.y-s.y0)*u, ang=Math.atan2(tgt.y-s.y0,tgt.x-s.x0);
+    const ki=s.kind==='kunai'&&monImg('k','k');
+    if(ki){const m=MON.k, hh=A.eh*.42*(1+u*.5), sc=hh/m.h, f=Math.floor(s.t*16)%m.n; ctx.save(); ctx.translate(sx,sy); ctx.rotate(ang-Math.PI/2); ctx.drawImage(ki,f*m.w,0,m.w,m.h,-m.w*sc/2,-m.h*sc/2,m.w*sc,m.h*sc); ctx.restore();}
+    else if(s.kind==='slash'){const rr=A.eh*.28*(1+u*.7); ctx.save(); ctx.translate(sx,sy); ctx.rotate(ang+Math.PI/2); ctx.shadowColor='#ff6a3a'; ctx.shadowBlur=14;
+      ctx.fillStyle='rgba(255,236,210,.92)'; ctx.beginPath(); ctx.arc(0,rr*.25,rr,Math.PI*1.12,Math.PI*1.88); ctx.arc(0,rr*.55,rr*.9,Math.PI*1.84,Math.PI*1.16,true); ctx.fill(); ctx.restore();}
+    else drawShuriken(sx,sy,A.eh*.1*(1+u*.6),s.t*18+s.spin);}
   const kc=SETS[setOf(save.eq[7])].glow;
   for(const k of G.kunais){
     if(k.trail.length>1){ctx.strokeStyle=kc+'88';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(k.trail[0][0],k.trail[0][1]);for(const p of k.trail)ctx.lineTo(p[0],p[1]);ctx.stroke();}
@@ -1498,6 +1549,7 @@ setMid(); resize(); requestAnimationFrame(frame);
       jobs.push(loadImg(aurl(`${g}_items.webp`)).then(img=>{atlas[g]=img;}));
     }
     // 무거운 세트 그림은 지금 입은 것만 먼저 받고, 나머지는 필요할 때 받는다
+    for(const k of monPool(save.stage).slice(0,2)) jobs.push(preloadMon(k));
     if(save.picked){const st=setOf(save.eq[2]); for(const c of ['i','r','p']) jobs.push(preloadReal(c,save.g,st)); jobs.push(preloadReal('k','',setOf(save.eq[7])));}
     else for(const g of ['f','m']) jobs.push(preloadReal('i',g,0));
     await Promise.all(jobs);
