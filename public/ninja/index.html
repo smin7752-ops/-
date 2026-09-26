@@ -512,6 +512,9 @@ try{
   if(s&&typeof s==='object'){Object.assign(save,s); if(s.picked===undefined&&((s.lv||1)>1||(s.stage||1)>1)) save.picked=true;} // 이미 진행한 기록은 선택한 것으로
 }catch(e){}
 for(let s=0;s<8;s++) if(!save.inv[s+'-0']) save.inv[s+'-0']={n:0,lv:1}; // 입문자 장비는 처음부터 보유
+// 🧪 테스트용: 모든 장비(8부위 × 10세트 × 4등급) 지급. 정식 배포 때 false 로
+const TEST_ALL_GEAR=true;
+if(TEST_ALL_GEAR) for(let s=0;s<8;s++) for(let t=0;t<TIERS;t++){const k=s+'-'+t; if(!save.inv[k]||!save.inv[k].lv) save.inv[k]={n:(save.inv[k]&&save.inv[k].n)||0,lv:1};}
 let saveT=0;
 function persist(){try{localStorage.setItem(SKEY,JSON.stringify(save))}catch(e){}}
 function persistSoon(){clearTimeout(saveT);saveT=setTimeout(persist,400);}
