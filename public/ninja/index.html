@@ -373,6 +373,20 @@ const META={"f":{"idle":{"w":142,"h":211,"n":8,"ax":71,"ay":205},"walk":{"w":136
 const ANIMS=['idle','walk','throw','rear'];
 const SPRITE_H=200;
 // 그림 주소. 안드로이드 앱에서는 그림을 페이지 안에 넣어(ASSET_MAP) 읽는다 (file:// 그림은 픽셀을 못 읽어서)
+// 세트별 실제 옷 뒷모습 던지기 동작(8프레임)과 쿠나이 비행 동작. 키: p[성별][세트0~9], k[세트0~9]
+const MOTION={"p":{"f":{"0":{"w":179,"h":210,"n":8,"ax":83.9,"ay":207.8},"1":{"w":183,"h":211,"n":8,"ax":91.7,"ay":209.3},"2":{"w":165,"h":205,"n":8,"ax":86.1,"ay":201.5},"3":{"w":171,"h":204,"n":8,"ax":80.0,"ay":201.5},"4":{"w":190,"h":207,"n":8,"ax":109.5,"ay":205.1},"5":{"w":182,"h":204,"n":8,"ax":102.3,"ay":201.5},"6":{"w":199,"h":204,"n":8,"ax":84.4,"ay":202.4},"7":{"w":186,"h":206,"n":8,"ax":109.9,"ay":203.6},"8":{"w":202,"h":207,"n":8,"ax":97.5,"ay":205.2},"9":{"w":165,"h":205,"n":8,"ax":81.6,"ay":202.4}},"m":{"8":{"w":184,"h":213,"n":8,"ax":91.1,"ay":211.3}}},"k":{"0":{"w":153,"h":77,"n":8,"ax":1.2,"ay":38.3},"1":{"w":153,"h":79,"n":8,"ax":1.2,"ay":39.3},"3":{"w":153,"h":82,"n":8,"ax":1.1,"ay":41.0},"4":{"w":153,"h":90,"n":8,"ax":1.2,"ay":45.0},"5":{"w":153,"h":84,"n":8,"ax":1.2,"ay":41.7},"8":{"w":153,"h":102,"n":8,"ax":1.1,"ay":50.7}}};
+const motion={p:{f:{},m:{}},k:{}};
+const hasP=(g,set)=>!!motion.p[g][set], hasK=set=>!!motion.k[set];
+// 뒷모습 캐릭터: 상의 세트의 실제 옷 그림 (없으면 기존 색 바꾸기 그림)
+function drawRealBack(c,g,set,frame,x,y,hgt,alpha=1){
+  const m=MOTION.p[g][set], img=motion.p[g][set], sc=hgt/200, f=((frame%m.n)+m.n)%m.n;
+  c.save(); c.globalAlpha=alpha; c.drawImage(img,f*m.w,0,m.w,m.h,x-m.ax*sc,y-m.ay*sc,m.w*sc,m.h*sc); c.restore();
+}
+// 날아가는 쿠나이: 오른쪽을 향한 그림을 진행 방향으로 돌리고, 리본이 펄럭이게 프레임을 넘긴다
+function drawRealKunai(c,set,x,y,len,ang,t){
+  const m=MOTION.k[set], img=motion.k[set], f=Math.floor(t*14)%m.n, sc=len/m.w;
+  c.save(); c.translate(x,y); c.rotate(ang); c.drawImage(img,f*m.w,0,m.w,m.h,-m.w*sc*.75,-m.ay*sc,m.w*sc,m.h*sc); c.restore();
+}
 const aurl=n=>(window.ASSET_MAP&&window.ASSET_MAP[n])||'assets/'+n;
 
 /* ================= 장비 기본 데이터 ================= */
@@ -909,7 +923,7 @@ function update(dt){
   if(G.bossDelay>0){G.bossDelay-=dt; if(G.bossDelay<=0) startBoss();}
   // 자동 공격
   if(!G.dead){
-    const m=META[save.g].throw, interval=1/st.aps;
+    const m=hasP(save.g,setOf(save.eq[2]))?MOTION.p[save.g][setOf(save.eq[2])]:META[save.g].throw, interval=1/st.aps;
     if(G.throwT<0){G.cool-=dt; if(G.cool<=0){const t=autoTargets(1,null); if(t.length){G.throwT=0;G.released=false;G.aim=t[0];G.tfps=Math.max(22,m.n/(interval*.8));}}}
     else{
       G.throwT+=dt; const f=Math.floor(G.throwT*G.tfps);
@@ -1023,13 +1037,20 @@ function render(dt){
   const kc=SETS[setOf(save.eq[7])].glow;
   for(const k of G.kunais){
     if(k.trail.length>1){ctx.strokeStyle=kc+'88';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(k.trail[0][0],k.trail[0][1]);for(const p of k.trail)ctx.lineTo(p[0],p[1]);ctx.stroke();}
-    ctx.save(); if(k.ghost) ctx.globalAlpha=.6; drawKunaiIcon(ctx,save.g,setOf(save.eq[7]),k.x,k.y,A.ph*.3,Math.atan2(k.vy,k.vx)); ctx.restore();
+    ctx.save(); if(k.ghost) ctx.globalAlpha=.6; if(hasK(setOf(save.eq[7]))) drawRealKunai(ctx,setOf(save.eq[7]),k.x,k.y,A.ph*.5,Math.atan2(k.vy,k.vx),k.t); else drawKunaiIcon(ctx,save.g,setOf(save.eq[7]),k.x,k.y,A.ph*.3,Math.atan2(k.vy,k.vx)); ctx.restore();
   }
   // 플레이어 (뒷모습)
   shadow(A.px,A.py,A.ph*.25);
   if(G.st.minT>0) aura(ctx,A.px,A.py,A.ph,SETS[G.st.minT].glow,T);
   const blink=G.inv>0&&!G.dead&&Math.floor(G.inv*20)%2===0;
-  if(G.dead) drawNinja(ctx,save.g,pEq(),'rear',0,A.px,A.py,A.ph,Math.max(0,1-G.deathT/.4));
+  const bset=setOf(save.eq[2]);
+  if(hasP(save.g,bset)){ // 실제 옷 그림: 0번 = 서 있기, 0~7번 = 던지기
+    const bob=Math.sin(G.rearT*3)*A.ph*.006;
+    if(G.dead) drawRealBack(ctx,save.g,bset,0,A.px,A.py,A.ph,Math.max(0,1-G.deathT/.4));
+    else if(G.throwT>=0) drawRealBack(ctx,save.g,bset,Math.min(7,Math.floor(G.throwT*G.tfps)),A.px,A.py,A.ph,blink?.4:1);
+    else drawRealBack(ctx,save.g,bset,0,A.px,A.py+bob,A.ph,blink?.4:1);
+  }
+  else if(G.dead) drawNinja(ctx,save.g,pEq(),'rear',0,A.px,A.py,A.ph,Math.max(0,1-G.deathT/.4));
   else if(G.throwT>=0) drawNinja(ctx,save.g,pEq(),'throw',Math.floor(G.throwT*G.tfps),A.px,A.py,A.ph,blink?.4:1);
   else drawNinja(ctx,save.g,pEq(),'rear',Math.floor(G.rearT*8),A.px,A.py,A.ph,blink?.4:1);
   // 머리 위 체력바
@@ -1414,7 +1435,9 @@ setMid(); resize(); requestAnimationFrame(frame);
     for(const g of ['f','m']){
       for(const a of ANIMS) jobs.push(loadImg(aurl(`${g}_${a}.webp`)).then(img=>{base[g][a]=analyze(g,a,img);}));
       jobs.push(loadImg(aurl(`${g}_items.webp`)).then(img=>{atlas[g]=img;}));
+      for(const k in MOTION.p[g]||{}) jobs.push(loadImg(aurl(`p${g}${String(+k+1).padStart(2,'0')}.webp`)).then(img=>{motion.p[g][k]=img;}).catch(()=>{}));
     }
+    for(const k in MOTION.k) jobs.push(loadImg(aurl(`k${String(+k+1).padStart(2,'0')}.webp`)).then(img=>{motion.k[k]=img;}).catch(()=>{}));
     await Promise.all(jobs);
     $('loading').hidden=true;
     if(save.picked) startGame(); else showPick();
