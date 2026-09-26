@@ -939,7 +939,7 @@ function enemyStrike(e){
   }
   const bossy=e.type==='boss'||e.type==='mboss';
   const n=e.type==='boss'?3:e.type==='mboss'?2:1, dmg=(e.type==='boss'?14:e.type==='mboss'?11:7)*dScale(save.stage);
-  for(let k=0;k<n;k++) G.shots.push({dmg,x0:r.x,y0:r.cy,t:-k*.18,dur:.9,spin:rnd(0,6),kind:bossy?'slash':'kunai'});
+  for(let k=0;k<n;k++) G.shots.push({dmg,x0:r.x,y0:bossy?r.y+r.h*.18:r.cy,t:-k*.18,dur:bossy?.8:.9,spin:rnd(0,6),kind:bossy?'slash':'kunai'}); // 참격은 몸 앞(발 아래쪽)에서 시작
   SFX.enemy();
 }
 function hurtPlayer(dmg){
