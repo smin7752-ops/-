@@ -485,9 +485,18 @@ const UPG=[
 const upLv=k=>save.up[k]||0;
 const upCost=(u,lv)=>Math.round(u.base*Math.pow(u.gr,lv));
 // 배수 구매: 가진 골드로 살 수 있는 만큼(최대 배수까지)
-function upBatch(u,mult){const lv=upLv(u.k), cap=mult==='max'?5000:mult; let n=0,cost=0;
-  while(n<cap&&lv+n<u.max){const c=upCost(u,lv+n); if(cost+c>save.gold){if(!n) return {n:0,cost:c}; break;} cost+=c; n++;}
-  return {n,cost};}
+// x1·x10·x100: 그 횟수 전체 비용이 있어야만 강화 (ok=false 면 버튼 꺼짐)
+// MAX: 가진 골드로 할 수 있는 만큼 (최대 5,000회)
+function upBatch(u,mult){const lv=upLv(u.k);
+  if(mult==='max'){let n=0,cost=0;
+    while(n<5000&&lv+n<u.max){const c=upCost(u,lv+n); if(cost+c>save.gold) break; cost+=c; n++;}
+    return n?{n,cost,ok:true}:{n:1,cost:upCost(u,lv),ok:false};}
+  const n=Math.min(mult,u.max-lv); let cost=0; for(let i=0;i<n;i++) cost+=upCost(u,lv+i);
+  return {n,cost,ok:n>0&&cost<=save.gold};}
+// 스텟 포인트도 같은 규칙
+function spBatch(p,mult){const lv=save.sp[p.k]||0, room=p.max-lv, left=spLeft();
+  if(mult==='max'){const n=Math.min(left,room); return n?{n,ok:true}:{n:1,ok:false};}
+  const n=Math.min(mult,room); return {n,ok:n>0&&left>=n};}
 const SP_PER_LV=5;
 const SP=[
   {k:'atk',n:'공격력 증가',ic:'sword',fx:'atkP',per:.05,max:1e6},
@@ -1106,7 +1115,7 @@ function renderGrow(){
         <div class="uright"><span class="umax">MAX LV.${u.max.toLocaleString()}</span><button class="obtn"></button></div></div>`).join('')}</div>`;
     bindMult(m=>{view.mult=m;renderGrow();});
     body.querySelectorAll('[data-u]').forEach(row=>row.querySelector('button').onclick=()=>{
-      const u=UPG.find(x=>x.k===row.dataset.u), b=upBatch(u,view.mult); if(!b.n) return;
+      const u=UPG.find(x=>x.k===row.dataset.u), b=upBatch(u,view.mult); if(!b.ok) return;
       save.gold-=b.cost; save.up[u.k]=upLv(u.k)+b.n; SFX.up(); refreshStats(); persistSoon(); updateDots();});
   }else{
     body.innerHTML=multSeg(view.spMult,'MAX')+`<div class="pscroll"><div class="spcard"><div><small>현재 레벨 LV.${save.lv}</small><br><b class="num">스텟 포인트 <em id="spL">0</em> / <span id="spT">0</span></b></div><small style="text-align:right">레벨이 오를 때마다<br>스텟 포인트 ${SP_PER_LV}개</small></div>${SP.map(p=>`
@@ -1115,29 +1124,28 @@ function renderGrow(){
         <div class="uright"><span class="umax">MAX LV.${p.max.toLocaleString()}</span><button class="obtn"></button></div></div>`).join('')}</div>`;
     bindMult(m=>{view.spMult=m;renderGrow();});
     body.querySelectorAll('[data-s]').forEach(row=>row.querySelector('button').onclick=()=>{
-      const p=SP.find(x=>x.k===row.dataset.s), lv=save.sp[p.k]||0, cap=view.spMult==='max'?1e9:view.spMult;
-      const n=Math.min(cap,spLeft(),p.max-lv); if(n<=0) return;
-      save.sp[p.k]=lv+n; SFX.up(); refreshStats(); persistSoon(); updateDots(); tabs([['gold','골드'],['stat','스텟',spLeft()>0],['rank','승급',rankReady()]],view.grow,k=>{view.grow=k;renderGrow();});});
+      const p=SP.find(x=>x.k===row.dataset.s), lv=save.sp[p.k]||0, b=spBatch(p,view.spMult); if(!b.ok) return;
+      save.sp[p.k]=lv+b.n; SFX.up(); refreshStats(); persistSoon(); updateDots(); tabs([['gold','골드'],['stat','스텟',spLeft()>0],['rank','승급',rankReady()]],view.grow,k=>{view.grow=k;renderGrow();});});
   }
   refreshGrow();
 }
 function refreshGrow(){
   const body=$('pbody');
   body.querySelectorAll('[data-u]').forEach(row=>{
-    const u=UPG.find(x=>x.k===row.dataset.u), lv=upLv(u.k), b=upBatch(u,view.mult), btn=row.querySelector('button'), maxed=lv>=u.max, n=Math.max(1,b.n);
+    const u=UPG.find(x=>x.k===row.dataset.u), lv=upLv(u.k), b=upBatch(u,view.mult), btn=row.querySelector('button'), maxed=lv>=u.max, n=b.n;
     row.querySelector('.ulv').textContent=`LV.${lv.toLocaleString()}`;
     row.querySelector('.uval').innerHTML=maxed?`${u.show(u.val(lv))}<span class="ar">›</span><em>MAX</em>`:`${u.show(u.val(lv))}<span class="ar">›</span><em>${u.show(u.val(Math.min(u.max,lv+n)))}</em>`;
     if(maxed){btn.className='obtn green';btn.innerHTML='최대레벨';btn.disabled=true;}
-    else{btn.className='obtn';btn.disabled=b.n===0;btn.innerHTML=`강화하기${b.n>1?` x${b.n}`:''}<span class="cost"><i class="coin"></i>${fmtKo(b.cost)}</span>`;}
+    else{btn.className='obtn';btn.disabled=!b.ok;btn.innerHTML=`강화하기${b.n>1?` x${b.n.toLocaleString()}`:''}<span class="cost"><i class="coin"></i>${fmtKo(b.cost)}</span>`;}
   });
   const sl=$('spL'); if(sl){sl.textContent=spLeft().toLocaleString(); $('spT').textContent=(SP_PER_LV*(save.lv-1)).toLocaleString();}
   body.querySelectorAll('[data-s]').forEach(row=>{
     const p=SP.find(x=>x.k===row.dataset.s), lv=save.sp[p.k]||0, btn=row.querySelector('button'), maxed=lv>=p.max;
-    const n=Math.max(1,Math.min(view.spMult==='max'?1e9:view.spMult,spLeft()||1,p.max-lv));
+    const b=spBatch(p,view.spMult), n=b.n;
     row.querySelector('.ulv').textContent=`LV.${lv.toLocaleString()}`;
     row.querySelector('.uval').innerHTML=`${fmtPct(lv*p.per)}<span class="ar">›</span><em>${maxed?'MAX':fmtPct((lv+n)*p.per)}</em>`;
     if(maxed){btn.className='obtn green';btn.innerHTML='최대레벨';btn.disabled=true;}
-    else{btn.className='obtn';btn.disabled=!spLeft();btn.innerHTML=`강화하기<span class="cost">포인트 ${n.toLocaleString()}</span>`;}
+    else{btn.className='obtn';btn.disabled=!b.ok;btn.innerHTML=`강화하기${n>1?` x${n.toLocaleString()}`:''}<span class="cost">포인트 ${n.toLocaleString()}</span>`;}
   });
 }
 
