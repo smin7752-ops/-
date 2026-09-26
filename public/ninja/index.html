@@ -73,7 +73,6 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
 @keyframes glow{50%{filter:brightness(1.25)}}
 
 /* ---------- 오른쪽 버튼 / 획득 알림 ---------- */
-.side{position:absolute;right:10px;top:150px;display:flex;flex-direction:column;gap:10px}
 .sbtn{width:48px;display:flex;flex-direction:column;align-items:center;gap:2px;font-family:var(--display);font-size:11px;color:#fff;text-shadow:0 1px 1px #000}
 .sbtn b{width:44px;height:44px;border-radius:10px;display:grid;place-items:center;background:linear-gradient(180deg,#4a372c,#2a201c);border:2px solid #7a5838;font-size:22px;color:#f2c14e}
 .feed{position:absolute;right:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;pointer-events:none}
@@ -176,6 +175,15 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
 .slottabs button{padding:6px 0;border-radius:6px;background:#3a2d26;border:2px solid var(--edge);font-family:var(--display);font-size:14px;color:#cdb89c;min-width:0;white-space:nowrap}
 .slottabs button.on{background:linear-gradient(180deg,#9a7858,#6a5040);border-color:#c8a070;color:#fff;text-shadow:0 1px 0 rgba(0,0,0,.4)}
 .ggrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px 10px}
+.lb-stage{position:relative;border-radius:14px;overflow:hidden;background:linear-gradient(180deg,#3a2230,#2a1a16 60%,#1f1714);border:2px solid #8a6b4d}
+.lb-stage canvas{display:block;width:100%;max-width:360px;aspect-ratio:6/5;margin:0 auto;cursor:pointer}
+.lb-name{position:absolute;left:12px;top:10px;display:flex;align-items:center;gap:6px;font-family:var(--display);font-size:17px;color:#fff;text-shadow:0 2px 0 #000}
+.lb-cp{position:absolute;right:12px;top:12px;display:flex;align-items:center;gap:5px;font-size:12px;color:#e8d9c0}
+.lb-cp b{font-family:var(--display);font-weight:400;font-size:15px;color:#ffe6b0}
+.lb-row{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:10px;align-items:stretch}
+.lb-snd{font-size:13px;padding:6px 12px}
+.lb-kv{display:grid;grid-template-columns:1fr auto 1fr auto;gap:4px 10px;font-size:12px}
+.lb-kv b{text-align:right;font-family:var(--display);font-weight:400;font-size:13px}
 .stab{margin-top:12px;background:#3a2d26;border:2px solid var(--edge);border-radius:10px;padding:8px 10px}
 .stab h5{margin:0 0 6px;display:flex;justify-content:space-between;font-size:13px;color:var(--gold)}
 .stab h5 span{color:var(--muted);font-weight:400}
@@ -313,11 +321,6 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
       <button class="bossbtn pe" id="bossBtn" hidden>보스 도전하기</button>
     </div>
 
-    <div class="side">
-      <button class="sbtn pe" id="fxBtn"><b><svg class="i" viewBox="0 0 24 24"><path d="M4 20h16v-2H4zm2-3h3V9H6zm5 0h3V4h-3zm5 0h3v-6h-3z"/></svg></b>능력치</button>
-      <button class="sbtn pe" id="genBtn"><b><svg class="i" viewBox="0 0 24 24"><path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-4.4 0-8 2.2-8 5v3h16v-3c0-2.8-3.6-5-8-5z"/></svg></b><span id="genTxt">여닌자</span></button>
-      <button class="sbtn pe" id="muteBtn"><b id="muteIco">♪</b>소리</button>
-    </div>
 
     <div class="feed" id="feed"></div>
 
@@ -1017,7 +1020,7 @@ function updateTop(){
   $('goldG').textContent=fmtKo(save.gold); $('gemG').textContent=fmtKo(save.gems);
   $('stageG').textContent=save.stage;
   $('phGold').textContent=fmtKo(save.gold); $('phGem').textContent=fmtKo(save.gems);
-  $('phTitle').innerHTML=panel==='gear'?`보유 장비 <span class="num">${Object.values(save.inv).filter(x=>x.lv>0).length}</span> / ${8*TIERS}`:panel==='grow'?`LV.${save.lv} · 전투력 <span class="num">${fmtKo(st.cp)}</span>`:panel==='rank'?`현재 계급 · ${RANKS[save.rank].n}`:panel==='summon'?`총 소환 <span class="num">${save.pulls.toLocaleString()}</span>회`:'';
+  $('phTitle').innerHTML=panel==='gear'?`보유 장비 <span class="num">${Object.values(save.inv).filter(x=>x.lv>0).length}</span> / ${8*TIERS}`:panel==='grow'?`LV.${save.lv} · 전투력 <span class="num">${fmtKo(st.cp)}</span>`:panel==='rank'?`현재 계급 · ${RANKS[save.rank].n}`:panel==='summon'?`총 소환 <span class="num">${save.pulls.toLocaleString()}</span>회`:panel==='lobby'?`최고 스테이지 <span class="num">${save.bestStage}</span>`:'';
   const bar=$('stbar');
   if(G&&G.boss){bar.classList.add('boss'); updateBossBar();}
   bar.hidden=!(G&&G.boss);
@@ -1039,8 +1042,7 @@ function updateDots(){
 function drawAvatar(){
   const c=$('av'), x=c.getContext('2d'); x.clearRect(0,0,120,120);
   const g=x.createRadialGradient(60,50,5,60,60,70); g.addColorStop(0,'#6a5040'); g.addColorStop(1,'#2a201c'); x.fillStyle=g; x.fillRect(0,0,120,120);
-  if(base[save.g].idle) drawNinja(x,save.g,pEq(),'idle',0,60,262,250);
-  $('genTxt').textContent=save.g==='f'?'여닌자':'남닌자';
+  if(base[save.g].idle) drawNinja(x,save.g,pEq(),'idle',0,58,186,168); // 머리 윗부분까지 원 안에 들어오게
 }
 
 /* ================= 패널 ================= */
@@ -1048,7 +1050,7 @@ let panel=null;
 const view={grow:'gold',gear:'equip',mult:1,spMult:1,slot:7,sel:0};
 function setMid(){
   const mid=$('navMid'); mid.classList.toggle('close',!!panel);
-  mid.innerHTML=panel?`<b>${svgI('close')}</b>`:`${svgI('sword')}전투`;
+  mid.innerHTML=panel?`<b>${svgI('close')}</b>`:`<svg class="i" viewBox="0 0 24 24"><path d="M12 3l9 7h-3v10h-5v-6h-2v6H6V10H3z"/></svg>로비`;
 }
 function openPanel(p){
   panel=panel===p?null:p;
@@ -1057,7 +1059,7 @@ function openPanel(p){
   if(panel){if(panel==='gear'){view.sel=save.eq[view.slot];} renderPanel();}
   requestAnimationFrame(layout);
 }
-function renderPanel(){({grow:renderGrow,gear:renderGear,rank:renderRank,summon:renderSummon})[panel](); updateTop();}
+function renderPanel(){({lobby:renderLobby,grow:renderGrow,gear:renderGear,rank:renderRank,summon:renderSummon})[panel](); updateTop();}
 function tabs(list,cur,fn){
   $('ptabs').innerHTML=list.map(([k,n,dot])=>`<button data-k="${k}" class="${k===cur?'on':''}">${n}${dot?'<span class="dot" style="right:6px;top:-4px">!</span>':''}</button>`).join('');
   $('ptabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{SFX.tap();fn(b.dataset.k);});
@@ -1272,6 +1274,36 @@ function drawRankChar(){
   drawNinja(x,save.g,pEq(),'idle',Math.floor(T*8),110,234,210);
 }
 
+/* ---- 로비: 정면 대기 모습 · 닌자 선택 · 능력치 · 설정 ---- */
+function renderLobby(){
+  tabs([['lobby','로비']],'lobby',()=>{});
+  const st=calc();
+  const rows=[['공격력',fmtKo(st.atk)],['공격 속도',`${st.aps.toFixed(2)}/초`],['크리티컬',fmtPct(st.crit)],['크리티컬 데미지',fmtPct(st.cdmg)],['최대 HP',fmtKo(st.hp)],['HP 회복량',`${fmtKo(st.regen)}/초`],['동시 투척',`${st.shots}개`],['골드 획득량','+'+fmtPct(st.gold)],['경험치 획득량','+'+fmtPct(st.xp)]];
+  $('pbody').innerHTML=`<div class="pscroll">
+    <div class="lb-stage"><canvas id="lbcv" width="360" height="300"></canvas>
+      <div class="lb-name"><b>그림자 닌자</b><span class="rtag">${RANKS[save.rank].n}</span></div>
+      <div class="lb-cp">${svgI('sword')} 전투력 <b class="num">${fmtKo(st.cp)}</b></div></div>
+    <div class="lb-row">
+      <div class="seg lb-gen" style="grid-template-columns:1fr 1fr;padding:0"><button data-g="f" class="${save.g==='f'?'on':''}">여닌자</button><button data-g="m" class="${save.g==='m'?'on':''}">남닌자</button></div>
+      <button class="obtn brown lb-snd" id="lbSnd">${save.mute?'소리 켜기':'소리 끄기'}</button>
+    </div>
+    <div class="stab"><h5>능력치</h5><div class="lb-kv">${rows.map(([k,v])=>`<span>${k}</span><b class="num">${v}</b>`).join('')}</div></div>
+    <div class="stab"><h5>세트 효과 · 고유 능력</h5><div class="chips">${st.active.length?st.active.map(a=>`<span style="--rc:${RC[a.t]}">${SETS[a.t].n} ${a.need<8?`${GR[a.g]}급 ${a.need}세트`:'고유'} · ${a.txt}</span>`).join(''):'<span>같은 세트를 2부위 이상 입으면 켜져요</span>'}</div></div>
+  </div>`;
+  $('pbody').querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>{if(save.g===b.dataset.g) return; save.g=b.dataset.g; persist(); SFX.equip(); drawAvatar(); renderLobby();});
+  $('lbSnd').onclick=()=>{save.mute=!save.mute; persist(); if(!save.mute){ac();SFX.tap();} renderLobby();};
+}
+let lbTap=-9;
+function drawLobbyChar(){
+  const cv0=$('lbcv'); if(cv0&&!cv0.onclick) cv0.onclick=()=>{lbTap=T;SFX.tap();};
+  const c=$('lbcv'); if(!c) return; const x=c.getContext('2d'); x.clearRect(0,0,360,300);
+  const g=x.createRadialGradient(180,200,10,180,200,190); g.addColorStop(0,'rgba(255,200,120,.3)'); g.addColorStop(1,'rgba(255,200,120,0)'); x.fillStyle=g; x.fillRect(0,0,360,300);
+  x.fillStyle='#5a3e2a'; x.beginPath(); x.ellipse(180,282,96,16,0,0,7); x.fill(); x.fillStyle='#c89a5a'; x.beginPath(); x.ellipse(180,278,88,13,0,0,7); x.fill();
+  const st=G?G.st:calc(); if(st.minT>0) aura(x,180,276,240,SETS[st.minT].glow,T);
+  const hop=T-lbTap<.45?Math.sin(Math.PI*(T-lbTap)/.45)*26:0;
+  drawNinja(x,save.g,pEq(),'idle',Math.floor(T*8),180,276-hop,240);
+}
+
 /* ---- 능력치 창 ---- */
 function openInfo(){
   const st=calc();
@@ -1285,11 +1317,8 @@ function openInfo(){
 
 /* ================= 입력 ================= */
 document.querySelectorAll('#nav [data-p]').forEach(b=>b.onclick=()=>{ac();SFX.tap();openPanel(b.dataset.p);});
-$('navMid').onclick=()=>{SFX.tap(); if(panel) openPanel(panel);};
+$('navMid').onclick=()=>{ac();SFX.tap(); openPanel(panel||'lobby');};
 $('bossBtn').onclick=()=>{ac();SFX.tap();startBoss();};
-$('fxBtn').onclick=()=>{ac();SFX.tap();openInfo();};
-$('genBtn').onclick=()=>{save.g=save.g==='f'?'m':'f';persist();SFX.equip();drawAvatar();if(panel) renderPanel();toast(save.g==='f'?'여닌자로 변경':'남닌자로 변경');};
-$('muteBtn').onclick=()=>{save.mute=!save.mute;persist();$('muteIco').textContent=save.mute?'✕':'♪';if(!save.mute){ac();SFX.tap();}};
 $('infoM').onclick=e=>{if(e.target.id==='infoM') $('infoM').hidden=true;};
 addEventListener('resize',resize);
 addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('sumM').hidden) $('sumM').hidden=true; else if(!$('infoM').hidden) $('infoM').hidden=true; else if(panel) openPanel(panel);}});
@@ -1299,7 +1328,7 @@ let last=performance.now();
 function frame(now){
   requestAnimationFrame(frame);
   const dt=Math.min(.05,(now-last)/1000); last=now; T+=dt;
-  try{ if(G) update(dt); render(dt); if(panel==='rank') drawRankChar(); }catch(err){console.error(err);}
+  try{ if(G) update(dt); render(dt); if(panel==='rank') drawRankChar(); if(panel==='lobby') drawLobbyChar(); }catch(err){console.error(err);}
 }
 
 /* ================= 시작 ================= */
@@ -1312,7 +1341,7 @@ setMid(); resize(); requestAnimationFrame(frame);
       jobs.push(loadImg(`${ASSET}${g}_items.webp`).then(img=>{atlas[g]=img;}));
     }
     await Promise.all(jobs);
-    $('loading').hidden=true; $('ui').hidden=false; $('muteIco').textContent=save.mute?'✕':'♪';
+    $('loading').hidden=true; $('ui').hidden=false;
     initBattle(); layout(); drawAvatar(); updateTop(); updateDots();
   }catch(err){$('loading').textContent='그림을 불러오지 못했어요. 새로고침해 주세요.';console.error(err);}
 })();
