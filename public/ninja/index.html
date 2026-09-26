@@ -371,7 +371,9 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
 /* ================= 스프라이트 데이터 ================= */
 const META={"f":{"idle":{"w":142,"h":211,"n":8,"ax":71,"ay":205},"walk":{"w":136,"h":215,"n":8,"ax":68,"ay":209},"throw":{"w":156,"h":212,"n":7,"ax":78,"ay":206},"rear":{"w":142,"h":211,"n":8,"ax":71,"ay":205}},"m":{"idle":{"w":160,"h":212,"n":8,"ax":80,"ay":206},"walk":{"w":156,"h":220,"n":8,"ax":78,"ay":214},"throw":{"w":186,"h":212,"n":8,"ax":93,"ay":206},"rear":{"w":154,"h":216,"n":8,"ax":77,"ay":210}}};
 const ANIMS=['idle','walk','throw','rear'];
-const SPRITE_H=200, ASSET='assets/';
+const SPRITE_H=200;
+// 그림 주소. 안드로이드 앱에서는 그림을 페이지 안에 넣어(ASSET_MAP) 읽는다 (file:// 그림은 픽셀을 못 읽어서)
+const aurl=n=>(window.ASSET_MAP&&window.ASSET_MAP[n])||'assets/'+n;
 
 /* ================= 장비 기본 데이터 ================= */
 const SLOTS=[{n:'두건'},{n:'목도리'},{n:'상의'},{n:'장갑'},{n:{f:'치마',m:'바지'}},{n:'신발'},{n:'허리띠'},{n:'쿠나이'}];
@@ -675,7 +677,7 @@ function drawKunaiIcon(c,g,t,x,y,size,ang){
   c.drawImage(img,7*112,t*112,112,112,-size/2,-size/2,size,size);
   c.restore();
 }
-function iconEl(s,t){return `<i class="ic" style="--atlas:url(${ASSET}${save.g}_items.webp);background-position:${s/7*100}% ${setOf(t)/9*100}%"></i>`;}
+function iconEl(s,t){return `<i class="ic" style="--atlas:url(${aurl(save.g+'_items.webp')});background-position:${s/7*100}% ${setOf(t)/9*100}%"></i>`;}
 function gbox(s,t,opt={}){
   const it=inv(s,t), own=!!(it&&it.lv>0);
   return `<span class="gbox${own||opt.show?'':' lock'}" style="--rc:${RC[setOf(t)]};--gc:${GRC[grOf(t)]}">${iconEl(s,t)}<span class="gl">${setNo(t)}</span><span class="gg">${GR[grOf(t)]}</span>${own&&!opt.nolv?`<span class="lv">LV.${it.lv}</span>`:''}${!own&&!opt.show?'<span class="no">미보유</span>':''}${opt.eq?'<span class="eq">E</span>':''}</span>`;
@@ -1410,8 +1412,8 @@ setMid(); resize(); requestAnimationFrame(frame);
   try{
     const jobs=[];
     for(const g of ['f','m']){
-      for(const a of ANIMS) jobs.push(loadImg(`${ASSET}${g}_${a}.webp`).then(img=>{base[g][a]=analyze(g,a,img);}));
-      jobs.push(loadImg(`${ASSET}${g}_items.webp`).then(img=>{atlas[g]=img;}));
+      for(const a of ANIMS) jobs.push(loadImg(aurl(`${g}_${a}.webp`)).then(img=>{base[g][a]=analyze(g,a,img);}));
+      jobs.push(loadImg(aurl(`${g}_items.webp`)).then(img=>{atlas[g]=img;}));
     }
     await Promise.all(jobs);
     $('loading').hidden=true;

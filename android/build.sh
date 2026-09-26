@@ -25,4 +25,4 @@ javac -cp tools/apksig.jar Sign.java Verify.java
 rm -f ../public/ninja/shadow-shuriken.apk
 $J Sign unsigned.apk ../public/ninja/shadow-shuriken.apk ninja.p12
 $J Verify ../public/ninja/shadow-shuriken.apk
-rm -f unsigned.apk classes.dex AndroidManifest.xml resources.arsc *.class
+rm -f unsigned.apk classes.dex AndroidManifest.xml resources.arsc app_index.html *.class
