@@ -128,6 +128,7 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
 .t-crit{background:linear-gradient(160deg,#ff6a7a,#a8203a)}
 .t-burst{background:linear-gradient(160deg,#ffc04a,#d06a10)}
 .t-bolt{background:linear-gradient(160deg,#ffe07a,#c8901a)}
+.t-exp{background:linear-gradient(160deg,#7ad0ff,#2a6ab8)}
 .t-coin{background:linear-gradient(160deg,#ffe29a,#b8841c)}
 .t-relic{background:linear-gradient(160deg,#c07bff,#5a2a9a)}
 
@@ -470,6 +471,7 @@ const ICONS={
   burst:'<path d="M12 1.5l2.6 6.4 6.9.6-5.2 4.6 1.6 6.8L12 16.3l-5.9 3.6 1.6-6.8L2.5 8.5l6.9-.6z"/>',
   bolt:'<path d="M13.5 1.5L4 14h6.5l-1 8.5L19 10h-6.5z"/>',
   coin:'<circle cx="12" cy="12" r="9.5"/><path fill="#8a5a12" d="M9.5 9.5h5v5h-5z"/>',
+  exp:'<path d="M12 2l2.4 5.2L20 8l-4 4 1 5.6L12 15l-5 2.6L8 12 4 8l5.6-.8z" opacity=".35"/><path d="M5 21h14v-2H5zm2-4h10l-5-9z"/>',
   close:'<path d="M5 6.4L6.4 5 12 10.6 17.6 5 19 6.4 13.4 12 19 17.6 17.6 19 12 13.4 6.4 19 5 17.6 10.6 12z"/>'
 };
 const svgI=k=>`<svg class="i" viewBox="0 0 24 24">${ICONS[k]}</svg>`;
@@ -480,7 +482,9 @@ const UPG=[
   {k:'regen',n:'HP 회복량',ic:'regen',base:14,gr:1.075,max:1e6,val:l=>1+.5*l,show:v=>`${+v.toFixed(1)}/초`},
   {k:'crit',n:'크리티컬 확률',ic:'crit',base:30,gr:1.085,max:450,val:l=>.05+.001*l,show:fmtPct},
   {k:'cdmg',n:'크리티컬 데미지',ic:'burst',base:25,gr:1.08,max:1e6,val:l=>1.5+.01*l,show:fmtPct},
-  {k:'aspd',n:'공격 속도',ic:'bolt',base:40,gr:1.12,max:100,val:l=>.01*l,show:v=>'+'+fmtPct(v)}
+  {k:'aspd',n:'공격 속도',ic:'bolt',base:40,gr:1.12,max:100,val:l=>.01*l,show:v=>'+'+fmtPct(v)},
+  {k:'gold',n:'골드 획득량',ic:'coin',base:30,gr:1.08,max:1e6,val:l=>.02*l,show:v=>'+'+fmtPct(v)},
+  {k:'xp',n:'경험치 획득량',ic:'exp',base:30,gr:1.08,max:1e6,val:l=>.02*l,show:v=>'+'+fmtPct(v)}
 ];
 const upLv=k=>save.up[k]||0;
 const upCost=(u,lv)=>Math.round(u.base*Math.pow(u.gr,lv));
@@ -503,8 +507,9 @@ const SP=[
   {k:'hp',n:'최대 HP 증가',ic:'heart',fx:'hpP',per:.05,max:1e6},
   {k:'regen',n:'HP 회복량 증가',ic:'regen',fx:'regP',per:.05,max:1e6},
   {k:'aspd',n:'공격 속도 증가',ic:'bolt',fx:'aspd',per:.005,max:100},
-  {k:'crit',n:'크리티컬 증가',ic:'crit',fx:'crit',per:.002,max:100},
-  {k:'cdmg',n:'크리티컬 데미지 증가',ic:'burst',fx:'cdmg',per:.03,max:1e6}
+  {k:'cdmg',n:'크리티컬 데미지 증가',ic:'burst',fx:'cdmg',per:.03,max:1e6},
+  {k:'gold',n:'골드 획득량 증가',ic:'coin',fx:'gold',per:.05,max:1e6},
+  {k:'xp',n:'경험치 획득량 증가',ic:'exp',fx:'xp',per:.05,max:1e6}
 ];
 const spSpent=()=>SP.reduce((a,p)=>a+(save.sp[p.k]||0),0);
 const spLeft=()=>Math.max(0,SP_PER_LV*(save.lv-1)-spSpent());
@@ -548,6 +553,7 @@ function calc(eq=save.eq){
   // 골드 강화
   s.atkF=UPG[0].val(upLv('atk')); s.hpF=UPG[1].val(upLv('hp')); s.regF=UPG[2].val(upLv('regen'));
   s.crit=UPG[3].val(upLv('crit')); s.cdmg=UPG[4].val(upLv('cdmg')); s.aspd=UPG[5].val(upLv('aspd'));
+  s.gold+=UPG[6].val(upLv('gold')); s.xp+=UPG[7].val(upLv('xp'));
   // 레벨 스텟
   for(const p of SP) s[p.fx]+=(save.sp[p.k]||0)*p.per;
   // 장착 효과
