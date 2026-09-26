@@ -1,0 +1,7 @@
+tools/
+out/
+*.class
+unsigned.apk
+classes.dex
+AndroidManifest.xml
+resources.arsc
