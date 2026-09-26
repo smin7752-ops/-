@@ -520,7 +520,9 @@ try{
 }catch(e){}
 for(let s=0;s<8;s++) if(!save.inv[s+'-0']) save.inv[s+'-0']={n:0,lv:1}; // 입문자 장비는 처음부터 보유
 // 🧪 테스트용: 모든 장비(8부위 × 10세트 × 4등급) 지급. 정식 배포 때 false 로
-const TEST_ALL_GEAR=true;
+const TEST_ALL_GEAR=false;
+// 테스트로 받은 장비 정리(한 번만): 장비 창을 입문자 장비만 있는 처음 상태로. 골드·레벨·스테이지는 그대로
+if(!TEST_ALL_GEAR&&!save.testGearCleared){save.testGearCleared=true; save.inv={}; for(let s=0;s<8;s++) save.inv[s+'-0']={n:0,lv:1}; save.eq=[0,0,0,0,0,0,0,0]; try{localStorage.setItem(SKEY,JSON.stringify(save))}catch(e){}}
 if(TEST_ALL_GEAR) for(let s=0;s<8;s++) for(let t=0;t<TIERS;t++){const k=s+'-'+t; if(!save.inv[k]||!save.inv[k].lv) save.inv[k]={n:(save.inv[k]&&save.inv[k].n)||0,lv:1};}
 let saveT=0;
 function persist(){try{localStorage.setItem(SKEY,JSON.stringify(save))}catch(e){}}
