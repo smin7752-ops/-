@@ -548,7 +548,7 @@ function equipFx(s,tier,lv){const m=lvMul(lv), t=tier/4;
   }}
 // 보유 효과: 가지고만 있어도 공격력
 const ownFx=(s,t,lv)=>({atkP:.05*gMul(t)*lvMul(lv)});
-const enhCost=(t,lv)=>Math.round(60*Math.pow(1.9,t/4)*Math.pow(lv,1.35));
+const enhCost=(t,lv)=>Math.round(60*Math.pow(1.7,t/4)*Math.pow(lv,1.3));
 const FXN={atkP:'공격력',hpP:'최대 HP',regP:'HP 회복량',aspd:'공격 속도',crit:'크리티컬',cdmg:'크리티컬 데미지',gold:'골드 획득량',xp:'경험치 획득량'};
 
 // 세트 효과: 같은 등급 2·4부위 / 고유 능력(8): 모든 부위가 k등급 이상이면 1~k 고유 능력을 전부 이어받음
@@ -580,17 +580,18 @@ const ICONS={
 const svgI=k=>`<svg class="i" viewBox="0 0 24 24">${ICONS[k]}</svg>`;
 const BASE_APS=1.4;
 const UPG=[
-  {k:'atk',n:'기본 공격력',ic:'sword',base:10,gr:1.07,max:1e6,val:l=>10+2*l,show:v=>fmtKo(v)},
-  {k:'aspd',n:'공격 속도',ic:'bolt',base:40,gr:1.12,max:100,val:l=>.01*l,show:v=>'+'+fmtPct(v)},
-  {k:'hp',n:'최대 HP',ic:'heart',base:10,gr:1.07,max:1e6,val:l=>100+20*l,show:v=>fmtKo(v)},
-  {k:'regen',n:'HP 회복량',ic:'regen',base:14,gr:1.075,max:1e6,val:l=>1+.5*l,show:v=>`${+v.toFixed(1)}/초`},
-  {k:'crit',n:'크리티컬 확률',ic:'crit',base:30,gr:1.085,max:450,val:l=>.05+.001*l,show:fmtPct},
-  {k:'cdmg',n:'크리티컬 데미지',ic:'burst',base:25,gr:1.08,max:1e6,val:l=>1.5+.01*l,show:fmtPct},
-  {k:'gold',n:'골드 획득량',ic:'coin',base:30,gr:1.08,max:1e6,val:l=>.02*l,show:v=>'+'+fmtPct(v)},
-  {k:'xp',n:'경험치 획득량',ic:'exp',base:30,gr:1.08,max:1e6,val:l=>.02*l,show:v=>'+'+fmtPct(v)}
+  {k:'atk',n:'기본 공격력',ic:'sword',base:8,gr:1.03,max:1e6,val:l=>10+2*l+.02*l*l,show:v=>fmtKo(v)},
+  {k:'aspd',n:'공격 속도',ic:'bolt',base:30,gr:1.03,max:100,val:l=>.01*l,show:v=>'+'+fmtPct(v)},
+  {k:'hp',n:'최대 HP',ic:'heart',base:8,gr:1.03,max:1e6,val:l=>100+20*l+.2*l*l,show:v=>fmtKo(v)},
+  {k:'regen',n:'HP 회복량',ic:'regen',base:10,gr:1.03,max:1e6,val:l=>1+.5*l+.005*l*l,show:v=>`${+v.toFixed(1)}/초`},
+  {k:'crit',n:'크리티컬 확률',ic:'crit',base:20,gr:1.03,max:450,val:l=>.05+.001*l,show:fmtPct},
+  {k:'cdmg',n:'크리티컬 데미지',ic:'burst',base:20,gr:1.03,max:1e6,val:l=>1.5+.01*l,show:fmtPct},
+  {k:'gold',n:'골드 획득량',ic:'coin',base:25,gr:1.03,max:1e6,val:l=>.02*l,show:v=>'+'+fmtPct(v)},
+  {k:'xp',n:'경험치 획득량',ic:'exp',base:25,gr:1.03,max:1e6,val:l=>.02*l,show:v=>'+'+fmtPct(v)}
 ];
 const upLv=k=>save.up[k]||0;
-const upCost=(u,lv)=>Math.round(u.base*Math.pow(u.gr,lv));
+// 비용: 레벨에 따라 완만하게 (다항식 × 약한 지수). 예전 1.07~1.12배씩 오르던 것을 1.03배로
+const upCost=(u,lv)=>Math.round(u.base*Math.pow(1+.1*lv,1.2)*Math.pow(u.gr,lv));
 // 배수 구매: 가진 골드로 살 수 있는 만큼(최대 배수까지)
 // x1·x10·x100: 그 횟수 전체 비용이 있어야만 강화 (ok=false 면 버튼 꺼짐)
 // MAX: 가진 골드로 할 수 있는 만큼 (최대 5,000회)
@@ -890,7 +891,7 @@ function arena(){
   const vh=L.view, ph=Math.min(vh*.3,W*.36,210), py=vh-12, eh=Math.min(vh*.22,W*.26,170);
   return {vh,ph,px:W/2,py,lineY:py-ph*.62,eh,margin:eh*.35+10};
 }
-const sScale=s=>Math.pow(1.12,s-1), dScale=s=>Math.pow(1.085,s-1), gScale=s=>Math.pow(1.1,s-1), xScale=s=>Math.pow(1.07,s-1);
+const sScale=s=>Math.pow(1.10,s-1), dScale=s=>Math.pow(1.08,s-1), gScale=s=>Math.pow(1.1,s-1), xScale=s=>Math.pow(1.08,s-1);   // 적 체력 증가 1.12→1.10, 공격 1.085→1.08
 function spawnEnemy(type){
   const s=save.stage, other=save.g==='f'?'m':'f', g=Math.random()<.6?other:save.g, hs=sScale(s);
   let set,hp,travel;
@@ -960,7 +961,7 @@ function hurtPlayer(dmg){
   playerText('-'+fmtKo(dmg),'#ff6a5a',20);
   if(G.hp<=0){const A=arena();G.dead=true;G.deathT=0;puff(A.px,A.py-A.ph*.45,A.ph*.7,'#b9aec9');}
 }
-const xpNeed=lv=>Math.round(20*Math.pow(1.11,lv-1)+lv*8);
+const xpNeed=lv=>Math.round(20*Math.pow(1.09,lv-1)+lv*8);
 function gainXp(n){
   save.xp+=n; let ups=0;
   while(save.xp>=xpNeed(save.lv)){save.xp-=xpNeed(save.lv);save.lv++;ups++;}
