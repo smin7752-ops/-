@@ -402,6 +402,13 @@ function drawReal(c,cx,g,set,frame,x,y,hgt,alpha=1,clamp=false){
   cx.save(); cx.globalAlpha=alpha; cx.drawImage(img,f*m.w,0,m.w,m.h,x-m.ax*sc,y-m.ay*sc,m.w*sc,m.h*sc); cx.restore();
   return true;
 }
+// 정면 대기(로비·승급·닌자 고르기): 프레임을 왕복으로 돌리고 숨쉬듯 살짝 늘었다 줄었다
+function drawIdle(cx,g,set,x,y,hgt,t=T){
+  if(!realImg('i',g,set)) return false;
+  const n=mMeta('i',g,set).n, k=Math.floor(t*7)%(n*2-2), f=k<n?k:n*2-2-k, b=Math.sin(t*2.6);
+  cx.save(); cx.translate(x,y); cx.scale(1-b*.012,1+b*.022); drawReal('i',cx,g,set,f,0,0,hgt); cx.restore();
+  return true;
+}
 const hasP=(g,set)=>!!realImg('p',g,set);
 function drawRealBack(c,g,set,frame,x,y,hgt,alpha=1){drawReal('p',c,g,set,frame,x,y,hgt,alpha);}
 // 날아가는 쿠나이: 오른쪽을 향한 그림을 진행 방향으로 돌리고, 리본이 펄럭이게 프레임을 넘긴다
@@ -1364,7 +1371,7 @@ function drawRankChar(){
   const g=x.createRadialGradient(110,200,10,110,200,110); g.addColorStop(0,'rgba(255,200,120,.35)'); g.addColorStop(1,'rgba(255,200,120,0)'); x.fillStyle=g; x.fillRect(0,0,220,260);
   x.fillStyle='#6a4a30'; x.beginPath(); x.ellipse(110,238,70,14,0,0,7); x.fill(); x.fillStyle='#c89a5a'; x.beginPath(); x.ellipse(110,234,64,11,0,0,7); x.fill();
   if(save.rank>0) aura(x,110,234,210,SETS[Math.min(9,save.rank*2)].glow,T);
-  if(!drawReal('i',x,save.g,setOf(save.eq[2]),Math.floor(T*8),110,234,210)) drawNinja(x,save.g,pEq(),'idle',Math.floor(T*8),110,234,210);
+  if(!drawIdle(x,save.g,setOf(save.eq[2]),110,234,210)) drawNinja(x,save.g,pEq(),'idle',Math.floor(T*8),110,234,210);
 }
 
 /* ---- 컨텐츠: 자리만 먼저 (구상 후 하나씩 채울 예정) ---- */
@@ -1408,7 +1415,7 @@ function drawLobbyChar(){
   x.fillStyle='#5a3e2a'; x.beginPath(); x.ellipse(180,282,96,16,0,0,7); x.fill(); x.fillStyle='#c89a5a'; x.beginPath(); x.ellipse(180,278,88,13,0,0,7); x.fill();
   const st=G?G.st:calc(); if(st.minT>0) aura(x,180,276,240,SETS[st.minT].glow,T);
   const hop=T-lbTap<.45?Math.sin(Math.PI*(T-lbTap)/.45)*26:0;
-  if(!drawReal('i',x,save.g,setOf(save.eq[2]),Math.floor(T*8),180,276-hop,240)) drawNinja(x,save.g,pEq(),'idle',Math.floor(T*8),180,276-hop,240);
+  if(!drawIdle(x,save.g,setOf(save.eq[2]),180,276-hop,240)) drawNinja(x,save.g,pEq(),'idle',Math.floor(T*8),180,276-hop,240);
 }
 
 /* ---- 능력치 창 ---- */
@@ -1461,7 +1468,7 @@ function drawPick(){
     x.clearRect(0,0,170,212);
     x.fillStyle='rgba(0,0,0,.35)'; x.beginPath(); x.ellipse(85,200,48,9,0,0,7); x.fill();
     const hop=pickSel===g?Math.abs(Math.sin(T*3))*6:0;
-    if(!drawReal('i',x,g,0,Math.floor(T*8),85,200-hop,180)) drawNinja(x,g,[0,0,0,0,0,0,0,0],'idle',Math.floor(T*8),85,200-hop,180);});
+    if(!drawIdle(x,g,0,85,200-hop,180)) drawNinja(x,g,[0,0,0,0,0,0,0,0],'idle',Math.floor(T*8),85,200-hop,180);});
 }
 function showPick(){
   $('pickM').hidden=false;
