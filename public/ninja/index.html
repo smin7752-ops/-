@@ -46,7 +46,7 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
 .lvb{position:absolute;left:50%;bottom:-9px;transform:translateX(-50%);background:#2a201c;border:2px solid #c89a5a;color:#fff;font-family:var(--display);font-size:11px;padding:1px 7px;border-radius:999px;white-space:nowrap}
 .pinfo{display:flex;flex-direction:column;gap:3px;min-width:0}
 .nick{display:flex;align-items:center;gap:6px;font-family:var(--display);font-size:16px;color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.5);white-space:nowrap}
-.rtag{font-family:var(--body);font-size:11px;font-weight:700;color:#241a08;background:var(--gold);border-radius:999px;padding:1px 7px}
+.rtag{font-family:var(--body);font-size:11px;font-weight:700;color:#241a08;background:var(--gold);border-radius:999px;padding:2px 8px;text-shadow:none;line-height:1.3;letter-spacing:.02em}
 .cp{display:flex;align-items:center;gap:5px;font-family:var(--display);font-size:14px;color:#ffe6b0;text-shadow:0 2px 0 rgba(0,0,0,.5)}
 .cp svg{color:#d9d4cc;font-size:15px}
 .xp{width:112px;height:7px;border-radius:999px;background:#1a1210;border:1px solid #4a3a30;overflow:hidden}
@@ -1042,7 +1042,7 @@ function updateDots(){
 function drawAvatar(){
   const c=$('av'), x=c.getContext('2d'); x.clearRect(0,0,120,120);
   const g=x.createRadialGradient(60,50,5,60,60,70); g.addColorStop(0,'#6a5040'); g.addColorStop(1,'#2a201c'); x.fillStyle=g; x.fillRect(0,0,120,120);
-  if(base[save.g].idle) drawNinja(x,save.g,pEq(),'idle',0,58,186,168); // 머리 윗부분까지 원 안에 들어오게
+  if(base[save.g].idle) drawNinja(x,save.g,pEq(),'idle',0,63,176,168); // 머리 윗부분까지 원 안에 들어오게
 }
 
 /* ================= 패널 ================= */
