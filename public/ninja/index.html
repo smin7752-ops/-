@@ -967,12 +967,12 @@ const xpNeed=lv=>Math.round(20*Math.pow(1.09,lv-1)+lv*8);
 function gainXp(n){
   save.xp+=n; let ups=0;
   while(save.xp>=xpNeed(save.lv)){save.xp-=xpNeed(save.lv);save.lv++;ups++;}
-  if(ups){save.gems+=10*ups; feed(`레벨 업! <b>LV.${save.lv}</b> · 스텟 포인트 +${SP_PER_LV*ups}`); SFX.buy(); updateDots(); if(panel==='grow'&&view.grow==='stat') refreshGrow();}
+  if(ups){save.gems+=20*ups; feed(`레벨 업! <b>LV.${save.lv}</b> · 스텟 포인트 +${SP_PER_LV*ups} · 보석 +${20*ups}`); SFX.buy(); updateDots(); if(panel==='grow'&&view.grow==='stat') refreshGrow();}
 }
 function killEnemy(e,chain){
   e.state='die'; e.t=0; e.poisonT=0;
   const s=save.stage, r=enemyRect(e), bossy=e.type==='boss'||e.type==='mboss';
-  const gold=Math.round(({grunt:3,elite:10,mboss:150,boss:400})[e.type]*gScale(s)*(1+G.st.gold));
+  const gold=Math.round(({grunt:6,elite:20,mboss:300,boss:800})[e.type]*gScale(s)*(1+G.st.gold));
   const xp=Math.round(({grunt:2,elite:6,mboss:50,boss:120})[e.type]*xScale(s)*(1+G.st.xp));
   save.gold+=gold; G.goldAcc+=gold; gainXp(xp);
   const nc=({boss:8,mboss:6,elite:3,grunt:2})[e.type];
@@ -1002,7 +1002,7 @@ function startBoss(){
   SFX.wave(); updateTop();
 }
 function bossCleared(){
-  const gems=20+save.stage;
+  const gems=50+save.stage*2;
   save.gems+=gems; G.boss=null; G.timeMax=0;
   const hp=Math.round(G.st.hp*.3); G.hp=Math.min(G.st.hp,G.hp+hp);
   feed(`스테이지 ${save.stage} 클리어 · <b>보석 +${gems}</b>`); pop('gemPill');
@@ -1463,8 +1463,8 @@ function renderRank(){
       ${infos.map(i=>{const ok=i.cur>=i.need;return `<div class="mis"><div><b>${i.t}</b><div class="mbar"><i style="width:${Math.min(100,i.cur/i.need*100)}%"></i><span class="num">${Math.min(i.cur,i.need).toLocaleString()}/${i.need.toLocaleString()}</span></div></div><span class="mst${ok?' ok':''}">${ok?'달성 완료':'진행 중'}</span></div>`;}).join('')}`;
   }else html+=`<div class="rkhead">최고 계급에 도달했어요</div>`;
   $('pbody').innerHTML=html+'</div>';
-  const go=$('rkGo'); if(go) go.onclick=()=>{if(!rankReady()) return; save.rank++; save.gems+=500; persist(); SFX.buy(); refreshStats(); updateDots();
-    G.banner={txt:`${RANKS[save.rank].n} 승급!`,sub:'보석 +500',t:0}; renderGrow();};
+  const go=$('rkGo'); if(go) go.onclick=()=>{if(!rankReady()) return; save.rank++; save.gems+=1000; persist(); SFX.buy(); refreshStats(); updateDots();
+    G.banner={txt:`${RANKS[save.rank].n} 승급!`,sub:'보석 +1,000',t:0}; renderGrow();};
 }
 function drawRankChar(){
   const c=$('rkcv'); if(!c) return; const x=sharp(c,220,260); x.clearRect(0,0,220,260);
@@ -1533,7 +1533,7 @@ function openInfo(){
 const OFF_MIN=60, OFF_MAX=12*3600, OFF_KPM=10; // 1분 이상부터, 최대 12시간, 1분에 졸개 10마리 잡은 셈
 function offlineCalc(sec){
   const st=calc(), s=save.stage, m=Math.min(OFF_MAX,sec)/60;
-  return {gold:Math.round(3*gScale(s)*(1+st.gold)*OFF_KPM*m), xp:Math.round(2*xScale(s)*(1+st.xp)*OFF_KPM*m)};
+  return {gold:Math.round(6*gScale(s)*(1+st.gold)*OFF_KPM*m), xp:Math.round(2*xScale(s)*(1+st.xp)*OFF_KPM*m)};
 }
 function offlineCheck(){
   const now=Date.now(), last=save.seen||0; save.seen=now; persist();
