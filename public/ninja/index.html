@@ -594,7 +594,7 @@ try{
 }catch(e){}
 for(let s=0;s<8;s++) if(!save.inv[s+'-0']) save.inv[s+'-0']={n:0,lv:1}; // 입문자 장비는 처음부터 보유
 // 🧪 테스트용: 모든 장비(8부위 × 10세트 × 4등급) 지급. 정식 배포 때 false 로
-const TEST_ALL_GEAR=false;
+const TEST_ALL_GEAR=true;
 // 전체 초기화(한 번만): 닌자 성별·소리 설정만 남기고 레벨·재화·스테이지·강화·스텟·장비·유물·승급·소환·던전 모두 처음으로
 if(save.picked&&save.resetTag!=='full2'){const keep={g:save.g,mute:save.mute,picked:true};
   for(const k of Object.keys(save)) delete save[k];
