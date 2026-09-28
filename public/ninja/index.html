@@ -516,7 +516,9 @@ function monImg(k,c){
 const monReady=k=>['w','a','q','h','d'].every(c=>REAL['X'+k+c] instanceof HTMLImageElement);
 const preloadMon=k=>Promise.all(['w','a','q','h','d'].map(c=>new Promise(res=>{monImg(k,c); const t=setInterval(()=>{const v=REAL['X'+k+c]; if(v instanceof HTMLImageElement||v==='fail'){clearInterval(t);res();}},50); setTimeout(()=>{clearInterval(t);res();},8000);})));
 function drawMon(cx,k,c,frame,x,y,hgt,alpha=1,clamp=false){
-  const img=monImg(k,c); if(!img) return false;
+  let img=monImg(k,c);
+  if(!img&&c!=='d'){ for(const c2 of ['q','w','a','h']){ if(c2===c) continue; const i2=monImg(k,c2); if(i2){img=i2; c=c2; clamp=false; break;} } }   // 아직 못 받은 동작은 같은 몬스터의 다른 동작으로 (닌자 그림으로 바뀌지 않게)
+  if(!img) return false;
   const m=MON[k][c], sc=hgt/MON[k].ref*MON_SZ[k], f=clamp?Math.max(0,Math.min(m.n-1,frame)):((frame%m.n)+m.n)%m.n;
   cx.save(); cx.globalAlpha=alpha; cx.drawImage(img,f*m.w,0,m.w,m.h,x-m.ax*sc,y-m.ay*sc,m.w*sc,m.h*sc); cx.restore();
   return true;
@@ -1425,7 +1427,8 @@ function render(dt){
     if(e.type==='boss'||e.type==='mboss') aura(ctx,r.x,r.y,r.h,e.type==='boss'?'#ff5a3a':'#ff9a3a',T);
     let done=false;
     // 몬스터 그림: 걷기 / 공격 / 공격 후 대기 / 피격 / 사망
-    if(monImg(e.kind,'w')){
+    const anyMon=['w','q','a','h','d'].some(c=>monImg(e.kind,c));
+    if(anyMon){
       const k=e.kind, mal=e.state==='die'?Math.max(0,Math.min(1,(DIE_T-e.t)/.15)):1;
       if(e.state==='die') done=drawMon(ctx,k,'d',Math.floor(e.t/DIE_T*8),r.x,r.y,r.h,mal,true);
       else if(e.atk>=0) done=drawMon(ctx,k,'a',Math.floor(e.atk/ATK_T*8),r.x,r.y,r.h,1,true);
@@ -1435,7 +1438,9 @@ function render(dt){
       if(done&&e.hitFx>0&&e.atk>=0){ctx.save();ctx.globalCompositeOperation='lighter';drawMon(ctx,k,'a',Math.floor(e.atk/ATK_T*8),r.x,r.y,r.h,e.hitFx*3,true);ctx.restore();}
       if(done&&e.state==='die') done=true;
     }
-    // 예전 닌자 그림 (몬스터 그림을 아직 못 받았을 때)
+    // 몬스터 그림을 받는 중이면 잠깐 그리지 않는다 (예전 닌자 그림이 섞여 보이지 않게). 받기에 실패했을 때만 예전 닌자 그림
+    const monFail=['w','q'].every(c=>REAL['X'+e.kind+c]==='fail');
+    if(!done&&!monFail) done=true;
     if(!done&&e.state==='die'&&hasD) done=drawReal('d',ctx,e.g,es,Math.floor(e.t/DIE_T*8),r.x,r.y,r.h,al,true);
     else if(!done&&e.state==='flinch') done=drawReal('h',ctx,e.g,es,Math.floor(e.t/.3*8),r.x,r.y,r.h,al,true);
     if(!done&&e.state!=='die') done=drawReal('i',ctx,e.g,es,Math.floor(e.at*8),r.x,r.y+(moving?-Math.abs(Math.sin(e.at*9))*r.h*.03:0),r.h,al);
@@ -2059,7 +2064,8 @@ function askName(first){
   $('nmOk').onclick=()=>{const e=nameErr(inp.value); if(e){$('nmErr').textContent=e; return;}
     save.name=cleanName(inp.value); persist(); SFX.buy(); $('infoM').hidden=true; updateTop(); if(panel==='lobby') renderLobby(); toast(`${save.name} 닌자, 잘 부탁해요!`); setTimeout(attPopup,600);};
 }
-function startGame(){ $('ui').hidden=false; initBattle(); layout(); drawAvatar(); updateTop(); updateDots(); openPanel('lobby'); offlineCheck(); if(AUTO&&!save.name) save.name='테스트'; if(!save.name) askName(true); tutInit(); attPopup(); } // 시작은 로비부터
+function startGame(){ setTimeout(()=>{for(let k=0;k<MON_N.length;k++) for(const c of 'waqhd') monImg(k,c);},1500);   // 던전에서 나오는 몬스터까지 미리 받아 둔다
+  $('ui').hidden=false; initBattle(); layout(); drawAvatar(); updateTop(); updateDots(); openPanel('lobby'); offlineCheck(); if(AUTO&&!save.name) save.name='테스트'; if(!save.name) askName(true); tutInit(); attPopup(); } // 시작은 로비부터
 
 /* ---- 튜토리얼: 처음 시작한 닌자에게 한 단계씩 손가락 안내 ---- */
 const navB=p=>document.querySelector(`#nav [data-p="${p}"]`);
