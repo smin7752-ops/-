@@ -277,6 +277,15 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
 .lb-row{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:10px;align-items:stretch}
 .lb-snd{font-size:13px;padding:6px 10px}
 .lb-sw{display:flex;gap:6px}
+.st .stab{margin-bottom:10px}
+.st-row{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:10px;padding:9px 2px;border-bottom:1px solid rgba(255,255,255,.07)}
+.st-row:last-child{border-bottom:0}
+.st-row b{display:block;font-size:15px}.st-row small{display:block;font-size:11px;color:var(--muted);margin-top:2px}
+.tgl{grid-column:3;width:52px;height:28px;border-radius:999px;border:2px solid #5a4430;background:#2a201a;position:relative;padding:0;cursor:pointer;transition:background .2s}
+.tgl i{position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#bba68a;transition:transform .2s,background .2s}
+.tgl.on{background:linear-gradient(180deg,var(--orange-hi),var(--orange));border-color:var(--orange-d)}.tgl.on i{transform:translateX(24px);background:#fff}
+.st-rng{width:130px;accent-color:#f0a040}.st-pc{width:40px;text-align:right;font-size:13px}
+.st-btns{display:grid;gap:8px;margin-top:4px}.st-btns .obtn{font-size:14px;padding:9px}
 .ms-prog{height:8px;border-radius:5px;background:rgba(0,0,0,.25);overflow:hidden;margin-top:4px}.ms-prog i{display:block;height:100%;background:linear-gradient(90deg,#e0913a,#ffd36a)}
 .urow.ms-done{opacity:.55}
 .ms-rw{display:flex;align-items:center;gap:3px;font-family:var(--display);font-size:13px;justify-content:center}
@@ -921,7 +930,7 @@ function resize(){
 let toastT=0;
 function toast(msg){const t=$('toast');t.textContent=msg;t.style.opacity=1;clearTimeout(toastT);toastT=setTimeout(()=>t.style.opacity=0,1400);}
 function pop(id){const p=$(id);p.classList.remove('pop');void p.offsetWidth;p.classList.add('pop');}
-function feed(html){
+function feed(html){ if(save.noFeed) return;
   const f=$('feed'), d=document.createElement('div'); d.innerHTML=html; f.appendChild(d);
   while(f.children.length>5) f.firstChild.remove();
   setTimeout(()=>{d.style.opacity=0;setTimeout(()=>d.remove(),500);},2600);
@@ -1015,7 +1024,8 @@ function makeBus(){ {
       for(let c=0;c<2;c++){const d=ir.getChannelData(c); for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2.6);}
       const rev=AC.createConvolver(); rev.buffer=ir; const rg=AC.createGain(); rg.gain.value=.32; rev.connect(rg).connect(master);
       BUS={master,sfx,bgm,rev}; NZ=null; sndApply(); } }
-function sndApply(){ if(!BUS) return; BUS.sfx.gain.value=save.sfxOff?0:.85; BUS.bgm.gain.value=save.bgmOff?0:.42; }
+const BGM_V=()=>save.bgmOff?0:.6*(save.bgmVol??.7), SFX_V=()=>save.sfxOff?0:1.05*(save.sfxVol??.8);
+function sndApply(){ if(!BUS) return; BUS.sfx.gain.value=SFX_V(); BUS.bgm.gain.value=BGM_V(); }
 document.addEventListener('visibilitychange',()=>{ if(!AC) return; if(document.hidden) AC.suspend(); else if(!save.mute) AC.resume(); });
 // 기본 악기 ---------------------------------------------------------------
 function env(g,t,a,peak,dec,sus=0.0001){ g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(peak,t+a); g.gain.exponentialRampToValueAtTime(Math.max(sus,.0001),t+a+dec); }
@@ -1082,7 +1092,7 @@ function bgmTick(horizon=.25){ const A=AC; if(!A||!BUS||save.mute||save.bgmOff||
     BGM.step++; BGM.next+=spb; }
 }
 function bgmPlay(name){ if(BGM.cur===name) return; BGM.cur=name; if(!AC) return; BGM.step=0; BGM.next=AC.currentTime+.1;
-  if(BUS){ const g=BUS.bgm.gain; g.cancelScheduledValues(AC.currentTime); g.setValueAtTime(0,AC.currentTime); g.linearRampToValueAtTime(save.bgmOff?0:.42,AC.currentTime+1.2); } }
+  if(BUS){ const g=BUS.bgm.gain; g.cancelScheduledValues(AC.currentTime); g.setValueAtTime(0,AC.currentTime); g.linearRampToValueAtTime(BGM_V(),AC.currentTime+1.2); } }
 function bgmUpdate(){ if(!AC||save.mute) return; if(!BGM.timer) BGM.timer=setInterval(bgmTick,60);
   const want=typeof G!=='undefined'&&G?(G.dun?'dun':(G.boss?'boss':(panel==='lobby'?'lobby':'field'))):'lobby';
   BGM.mapShift=[0,2,-2,-4][mapIdx(save.stage)]||0;
@@ -1405,7 +1415,8 @@ function damageEnemy(e,dmg,opt={}){
   if(!opt.fixed&&Math.random()<G.st.crit){crit=true;dmg=dmg*G.st.cdmg;}
   dmg=Math.max(1,Math.round(dmg)); e.hp-=dmg;
   const jx=rnd(-.25,.25)*r.hw;
-  if(crit) floatText(r.x+jx,r.y-r.h*1.15,fmtKo(dmg),'#ffd36a',21);
+  if(save.noDmg){}
+  else if(crit) floatText(r.x+jx,r.y-r.h*1.15,fmtKo(dmg),'#ffd36a',21);
   else floatText(r.x+jx,r.y-r.h*1.05,fmtKo(dmg),opt.col||'#efe6d2',opt.fixed?14:16);
   if(crit&&G.st.shadow&&!opt.ghost){const t=autoTargets(2,null).filter(o=>o!==e);fireKunai(t.length?t:[e],1,true);}
   if(e.hp<=0) killEnemy(e,opt.chain);
@@ -1622,7 +1633,7 @@ function render(dt){
   if(!floorTile) return;
   if(!G){ctx.fillStyle='#14111b';ctx.fillRect(0,0,W,H);return;}
   const A=arena();
-  let ox=0,oy=0; if(G.shake>0){ox=rnd(-5,5)*G.shake*2;oy=rnd(-5,5)*G.shake*2;}
+  let ox=0,oy=0; if(G.shake>0&&!save.noShake){ox=rnd(-5,5)*G.shake*2;oy=rnd(-5,5)*G.shake*2;}
   drawFloor(0);   // 배경은 흔들림 없이 고정
   ctx.save(); ctx.translate(ox,oy);
   // (몬스터가 멈추는 선은 화면에 그리지 않음 — 캐릭터 뒤로 희미한 줄이 보여서)
@@ -2258,26 +2269,48 @@ function renderContent(){
 
 /* ---- 로비: 정면 대기 모습 · 닌자 선택 · 능력치 · 설정 ---- */
 function renderLobby(){
-  tabs([['lobby','로비']],'lobby',()=>{});
+  tabs([['lobby','로비'],['set','⚙ 설정']],view.lob||'lobby',k=>{view.lob=k;renderLobby();});
+  if(view.lob==='set') return renderSettings();
   const st=calc();
   const rows=[['공격력',fmtKo(st.atk)],['공격 속도',`${st.aps.toFixed(2)}/초`],['최대 HP',fmtKo(st.hp)],['HP 회복량',`${fmtKo(st.regen)}/초`],['크리티컬',fmtPct(st.crit)],['크리티컬 데미지',fmtPct(st.cdmg)],['동시 투척',`${st.shots}개`],['골드 획득량','+'+fmtPct(st.gold)],['경험치 획득량','+'+fmtPct(st.xp)]];
   $('pbody').innerHTML=`<div class="pscroll">
     <div class="lb-stage"><canvas id="lbcv" width="360" height="300"></canvas>
       <div class="lb-name"><b id="lbNm"></b><span class="rtag">${RANKS[save.rank].n}</span><button class="nmed" id="lbNmEd">✎ 이름</button></div>
       <div class="lb-cp">${svgI('sword')} 전투력 <b class="num">${fmtKo(st.cp)}</b></div></div>
-    <div class="lb-row">
-      <div class="lb-who" style="white-space:nowrap">${save.g==='f'?'여닌자':'남닌자'}</div>
-      <div class="lb-sw"><button class="obtn brown lb-snd" id="lbBgm">${save.bgmOff||save.mute?'🔇':'🎵'} 음악</button><button class="obtn brown lb-snd" id="lbSfx">${save.sfxOff||save.mute?'🔇':'🔊'} 효과음</button></div>
-    </div>
-    <div class="lb-btns"><button class="obtn brown" id="lbBak">기록 백업 · 불러오기</button><button class="obtn brown" id="lbTut">튜토리얼 다시 보기</button></div>
     <div class="stab"><h5>능력치</h5><div class="lb-kv">${rows.map(([k,v])=>`<span>${k}</span><b class="num">${v}</b>`).join('')}</div></div>
     <div class="stab"><h5>세트 효과 · 고유 능력</h5><div class="chips">${st.active.length?st.active.map(a=>`<span style="--rc:${RC[a.t]}">${SETS[a.t].n} ${a.need<8?`${GR[a.g]}급 ${a.need}세트`:'고유'} · ${a.txt}</span>`).join(''):'<span>같은 세트를 2부위 이상 입으면 켜져요</span>'}</div></div>
   </div>`;
-  $('lbBgm').onclick=()=>{ if(save.mute){save.mute=false; save.sfxOff=true;} save.bgmOff=!save.bgmOff; persist(); ac(); sndApply(); SFX.tap(); renderLobby();};
-  $('lbSfx').onclick=()=>{ if(save.mute){save.mute=false; save.bgmOff=true;} save.sfxOff=!save.sfxOff; persist(); ac(); sndApply(); SFX.tap(); renderLobby();};
   $('lbNm').textContent=myName(); $('lbNmEd').onclick=()=>{SFX.tap(); askName(false);};
-  $('lbBak').onclick=()=>{SFX.tap(); openBackup();};
-  $('lbTut').onclick=()=>{SFX.tap(); openPanel('lobby'); tutStart();};
+}
+
+/* ---- 설정 ---- */
+const onoff=(id,on,label,sub)=>`<div class="st-row"><div><b>${label}</b>${sub?`<small>${sub}</small>`:''}</div><button class="tgl${on?' on':''}" id="${id}" role="switch" aria-checked="${on}"><i></i></button></div>`;
+const slider=(id,v,label)=>`<div class="st-row"><div><b>${label}</b></div><input type="range" class="st-rng" id="${id}" min="0" max="100" step="5" value="${Math.round(v*100)}"><span class="num st-pc" id="${id}V">${Math.round(v*100)}%</span></div>`;
+function renderSettings(){
+  if(save.mute){save.mute=false; save.bgmOff=true; save.sfxOff=true;}   // 예전 '소리 끄기'는 음악·효과음 끔으로 옮긴다
+  const bv=save.bgmVol??.7, sv=save.sfxVol??.8;
+  $('pbody').innerHTML=`<div class="pscroll st">
+    <div class="stab"><h5>소리</h5>
+      ${onoff('stBgm',!save.bgmOff,'배경음악')}${slider('stBgmV',bv,'음악 크기')}
+      ${onoff('stSfx',!save.sfxOff,'효과음')}${slider('stSfxV',sv,'효과음 크기')}</div>
+    <div class="stab"><h5>화면</h5>
+      ${onoff('stShake',!save.noShake,'화면 흔들림','맞거나 보스가 나올 때 흔들려요')}
+      ${onoff('stDmg',!save.noDmg,'데미지 숫자','적 위에 뜨는 숫자')}
+      ${onoff('stFeed',!save.noFeed,'획득 알림','오른쪽 아래 골드·레벨 알림')}</div>
+    <div class="stab"><h5>계정</h5>
+      <div class="st-btns"><button class="obtn brown" id="stName">✎ 이름 바꾸기</button><button class="obtn brown" id="stBak">기록 백업 · 불러오기</button><button class="obtn brown" id="stTut">튜토리얼 다시 보기</button></div></div>
+    <div class="stab"><h5>게임 정보</h5><p class="note" style="margin:0">닌자 키우기 · 앱 버전 1.6<br>만든 사람: 갓생맘 🎀 (@godseng.mom)</p></div>
+  </div>`;
+  const re=()=>{persist(); sndApply(); renderSettings();};
+  $('stBgm').onclick=()=>{save.bgmOff=!save.bgmOff; ac(); re(); SFX.tap();};
+  $('stSfx').onclick=()=>{save.sfxOff=!save.sfxOff; ac(); re(); SFX.tap();};
+  $('stShake').onclick=()=>{save.noShake=!save.noShake; SFX.tap(); re();};
+  $('stDmg').onclick=()=>{save.noDmg=!save.noDmg; SFX.tap(); re();};
+  $('stFeed').onclick=()=>{save.noFeed=!save.noFeed; SFX.tap(); re();};
+  for(const [id,k] of [['stBgmV','bgmVol'],['stSfxV','sfxVol']]){ const r=$(id); r.oninput=()=>{save[k]=r.value/100; $(id+'V').textContent=r.value+'%'; ac(); sndApply();}; r.onchange=()=>{persist(); if(k==='sfxVol') SFX.hit();}; }
+  $('stName').onclick=()=>{SFX.tap(); askName(false);};
+  $('stBak').onclick=()=>{SFX.tap(); openBackup();};
+  $('stTut').onclick=()=>{SFX.tap(); view.lob='lobby'; openPanel('lobby'); tutStart();};
 }
 
 /* ---- 기록 백업: 진행 기록을 글자 코드로 복사해 두고, 나중에 붙여넣어 되살린다 ---- */
