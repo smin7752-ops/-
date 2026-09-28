@@ -79,6 +79,7 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
 /* 전투력 칼 */
 .cpi{display:inline-block;width:20px;height:20px;background:var(--ui-sword) center/contain no-repeat;flex:none}
 /* 재화 칸 (동그라미 안에 아이콘) */
+.cur .pill b{flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-align:right;padding-left:34px}
 .cur .pill{width:112px;height:31px;font-size:13px;padding:0 14px 0 0;min-width:0;background:var(--ui-cur) center/100% 100% no-repeat;border:0;border-radius:0;padding:0 18px 0 0;position:relative;justify-content:flex-end;text-shadow:0 1px 2px #000;padding-right:14px}
 .cur .pill .coin,.cur .pill .gem{position:absolute;left:16.4%;top:50%;transform:translate(-50%,-50%);width:19px;height:19px}
 /* ---------- 스테이지 ---------- */
@@ -509,6 +510,16 @@ function fmtKo(n){
   for(let i=0;i<U.length;i++){const [v,u]=U[i]; if(n>=v){const a=Math.floor(n/v); let s=a.toLocaleString()+u;
     if(i<U.length-1){const [v2,u2]=U[i+1]; const b=Math.floor((n-a*v)/v2); if(b) s+=b+u2;} return s;}}
 }
+// 재화 칸용 짧은 표기: 12.3만, 1,234만, 5.67억 (소수점 버림)
+function fmtShort(n){
+  n=Math.floor(n); if(!isFinite(n)) return '∞'; if(n<10000) return n.toLocaleString();
+  const U=[[1e20,'해'],[1e16,'경'],[1e12,'조'],[1e8,'억'],[1e4,'만']];
+  for(const [v,u] of U) if(n>=v){const x=n/v, d=x<10?2:x<100?1:0, f=Math.pow(10,d);
+    return (Math.floor(x*f)/f).toLocaleString(undefined,{maximumFractionDigits:d})+u;}
+}
+// 칸을 넘치면 글자를 줄인다
+function fitText(el,max){el.style.fontSize=''; let fs=parseFloat(getComputedStyle(el).fontSize);
+  while(el.scrollWidth>el.clientWidth+1&&fs>9){fs-=1; el.style.fontSize=fs+'px';}}
 const fmtPct=v=>{const p=v*100; return (p>=10000?fmtKo(p):(+p.toFixed(p<10?2:p<100?1:0)).toLocaleString())+'%';};
 
 /* ================= 저장 ================= */
@@ -1225,9 +1236,9 @@ function updateTop(){
   const st=G?G.st:calc();
   $('lvG').textContent=save.lv; $('xpG').style.width=Math.min(100,save.xp/xpNeed(save.lv)*100)+'%';
   $('cpG').textContent=fmtKo(st.cp); $('rankG').textContent=RANKS[save.rank].n;
-  $('goldG').textContent=fmtKo(save.gold); $('gemG').textContent=fmtKo(save.gems);
+  $('goldG').textContent=fmtShort(save.gold); $('gemG').textContent=fmtShort(save.gems); $('goldG').title=fmtKo(save.gold); $('gemG').title=fmtKo(save.gems); fitText($('goldG')); fitText($('gemG'));
   $('stageG').textContent=save.stage;
-  $('phGold').textContent=fmtKo(save.gold); $('phGem').textContent=fmtKo(save.gems);
+  $('phGold').textContent=fmtShort(save.gold); $('phGem').textContent=fmtShort(save.gems);
   $('phTitle').innerHTML=panel==='gear'?`보유 장비 <span class="num">${Object.values(save.inv).filter(x=>x.lv>0).length}</span> / ${8*TIERS}`:panel==='grow'?`LV.${save.lv} · ${RANKS[save.rank].n} · 전투력 <span class="num">${fmtKo(st.cp)}</span>`:panel==='content'?'컨텐츠 · 준비 중':panel==='summon'?`총 소환 <span class="num">${save.pulls.toLocaleString()}</span>회`:panel==='lobby'?`최고 스테이지 <span class="num">${save.bestStage}</span>`:'';
   const bar=$('stbar');
   if(G&&G.boss&&G.boss.on){bar.classList.add('boss'); updateBossBar();}
