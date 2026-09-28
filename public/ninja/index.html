@@ -222,6 +222,20 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
 .lb-cp b{font-family:var(--display);font-weight:400;font-size:15px;color:#ffe6b0}
 .lb-row{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:10px;align-items:stretch}
 .lb-snd{font-size:13px;padding:6px 12px}
+.ms-prog{height:8px;border-radius:5px;background:rgba(0,0,0,.25);overflow:hidden;margin-top:4px}.ms-prog i{display:block;height:100%;background:linear-gradient(90deg,#e0913a,#ffd36a)}
+.urow.ms-done{opacity:.55}
+.ms-rw{display:flex;align-items:center;gap:3px;font-family:var(--display);font-size:13px;justify-content:center}
+.ms-rw i{width:16px;height:16px;background-size:contain;background-repeat:no-repeat;background-position:center;display:inline-block}
+.ms-all{background:linear-gradient(180deg,#3a2616,#2a1b10);border:2px solid #c89a5a;border-radius:12px;padding:10px 12px;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;color:#f3ecdf;margin-bottom:8px}
+.ms-all b{color:var(--gold)}
+.att{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.att .ad{position:relative;background:var(--card);border:2px solid var(--card-edge);border-radius:10px;padding:6px 2px 8px;text-align:center;color:var(--ink);display:flex;flex-direction:column;align-items:center;gap:3px}
+.att .ad small{font-size:11px;font-weight:700}
+.att .ad i{width:34px;height:34px;background-size:contain;background-repeat:no-repeat;background-position:center}
+.att .ad b{font-family:var(--display);font-weight:400;font-size:13px}
+.att .ad.big{grid-column:span 2;background:linear-gradient(180deg,#ffe7a8,#f2c14e)}
+.att .ad.now{border-color:#ff6a3a;box-shadow:0 0 0 2px #ffb86a,0 0 12px #ff9a4a}
+.att .ad.got::after{content:'✔';position:absolute;inset:0;display:grid;place-items:center;font-size:34px;color:#2f9a4a;background:rgba(255,255,255,.55);border-radius:8px}
 .lb-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}.lb-btns .obtn{font-size:13px;padding:7px 6px}
 .bk textarea{width:100%;box-sizing:border-box;height:74px;resize:none;border-radius:8px;border:2px solid #7a5838;background:#1c1512;color:#f3ecdf;font-size:11px;padding:6px;word-break:break-all;font-family:monospace}
 .bk .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
@@ -410,7 +424,7 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
       <button data-p="grow"><i class="tab" style="background-image:var(--tab-grow)" aria-hidden="true"></i><span class="sr">성장</span><span class="dot" id="dotGrow" hidden></span></button>
       <button data-p="gear"><i class="tab" style="background-image:var(--tab-gear)" aria-hidden="true"></i><span class="sr">장비</span><span class="dot" id="dotGear" hidden></span></button>
       <button class="mid" id="navMid"></button>
-      <button data-p="content"><i class="tab" style="background-image:var(--tab-content)" aria-hidden="true"></i><span class="sr">컨텐츠</span></button>
+      <button data-p="content"><i class="tab" style="background-image:var(--tab-content)" aria-hidden="true"></i><span class="sr">컨텐츠</span><span class="dot" id="dotCt" hidden></span></button>
       <button data-p="summon"><i class="tab" style="background-image:var(--tab-summon)" aria-hidden="true"></i><span class="sr">소환</span><span class="dot" id="dotSum" hidden></span></button>
     </nav>
   </div>
@@ -427,6 +441,7 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
     <button class="obtn big" id="pickGo" disabled>닌자를 골라 주세요</button>
   </section>
   <section class="modal" id="infoM" hidden><div class="sheet info" id="infoBody"></div></section>
+  <section class="modal" id="attM" hidden><div class="sheet info" id="attBody"></div></section>
   <section class="modal" id="offM" hidden><div class="sheet info off" id="offBody"></div></section>
   <section class="modal" id="sumM" hidden><div class="sheet" id="sumBody"></div></section>
   <div id="tut" hidden><div class="tdim" id="tDim"></div><div class="tring" id="tRing"></div><div class="tbub" id="tBub"></div></div>
@@ -1032,7 +1047,7 @@ function spawnGold(D){
     hp:Math.round(14*hs),maxHp:Math.round(14*hs),u:rnd(.05,.95),p:0,speed:1/rnd(3.2,4.4),stopAt:1,sway:rnd(0,6),state:'live',t:0,at:Math.random()*8,fireT:1e9,warn:0,big:1});
 }
 function dunStart(k,L){ mapImg(k);
-  const d=dunState(); if(k!=='tower'){ if(!(d.n[k]>0)) return; d.n[k]--; } persist();
+  const d=dunState(); if(k!=='tower'){ if(!(d.n[k]>0)) return; d.n[k]--; } mis('dun'); persist();
   if(panel) openPanel(panel);
   G.enemies=[]; G.shots=[]; G.kunais=[]; G.boss=null; G.bossDelay=0; G.dead=false; G.hp=G.st.hp;
   G.dun={k,lv:L,t:DUN[k].time,kills:0,gold:0,cat:view.dcat||'wep',phase:'wave',wave:1,left:k==='tower'?towerCount(L):(DUN[k].wsize||0),extra:0}; G.timeMax=DUN[k].time; G.timeLeft=G.dun.t; G.spawnT=.6; prefetchMon();
@@ -1120,7 +1135,7 @@ function dunPopup(k,L){
   $('dSw').onclick=()=>{ac();$('infoM').hidden=true;dunSweep(k,L);};
 }
 function dunSweep(k,L){
-  const d=dunState(); if(!(d.n[k]>0)||(d.best[k]||0)<L) return;
+  const d=dunState(); if(!(d.n[k]>0)||(d.best[k]||0)<L) return; mis('dun');
   if(k==='rush'){d.n[k]--; const R=rushReward(L,DUN.rush.need); renderContent(); rushResult(L,DUN.rush.need,true,R,true); return;}
   if(k==='equip'){d.n[k]--; const R=eqReward(L); renderContent(); eqResult(L,null,true,R,true); return;}
   d.n[k]--; const kills=DUN[k].need, gold=dunGoldPer(L,calc())*kills;
@@ -1202,7 +1217,7 @@ function killEnemy(e,chain){
     puff(r.x,r.cy,r.h*.9,'#ff8a3a'); G.shake=Math.max(G.shake,.12);
     for(const o of G.enemies){if(o===e||o.state==='die')continue; const q=enemyRect(o); if(Math.hypot(q.x-r.x,q.cy-r.cy)<r.h*1.3) damageEnemy(o,G.st.atk*.6,{fixed:true,chain:true,col:'#ff8a3a'});}
   }
-  SFX.kill();
+  SFX.kill(); mis('kill'); if(bossy) mis('boss');
   if(bossy&&G.boss) bossCleared();
 
   persistSoon(); updateTop();
@@ -1244,7 +1259,7 @@ function revive(){
 function update(dt){
   const st=G.st;
   if(G.inv>0) G.inv-=dt; if(G.shake>0) G.shake-=dt; if(G.flash>0) G.flash-=dt;
-  G.banner.t+=dt; G.rearT+=dt; if(!G.dead) G.scroll+=H*.05*dt;
+  G.banner.t+=dt; G.rearT+=dt; mis('play',dt); if(!G.dead) G.scroll+=H*.05*dt;
   if(!G.dead&&G.hp<st.hp) G.hp=Math.min(st.hp,G.hp+st.regen*dt);
   // 골드 획득 알림은 모아서
   G.goldT+=dt; if(G.goldT>2.5){G.goldT=0; if(G.goldAcc>0){feed(`[골드] <b>${fmtKo(G.goldAcc)}</b> 획득`); G.goldAcc=0;}}
@@ -1496,6 +1511,7 @@ function updateDots(){
   let comb=false; for(const k in save.inv){if(save.inv[k].n>=MERGE&&+k.split('-')[1]<TIERS-1){comb=true;break;}} $('dotGear').hidden=!comb; $('dotGear').textContent='!';
   if(!sp&&rankReady()){$('dotGrow').hidden=false;$('dotGrow').textContent='!';}
   const fr=freeLeft(); $('dotSum').hidden=!fr; $('dotSum').textContent=fr;
+  const ct=misReady()||attReady(); $('dotCt').hidden=!ct; $('dotCt').textContent='!';
 }
 function drawAvatar(){
   const c=$('av'), x=sharp(c,120,120); x.clearRect(0,0,120,120);
@@ -1505,7 +1521,7 @@ function drawAvatar(){
 
 /* ================= 패널 ================= */
 let panel=null;
-const view={grow:'gold',gear:'equip',mult:1,spMult:1,slot:7,sel:0};
+const view={ct:'dun',grow:'gold',gear:'equip',mult:1,spMult:1,slot:7,sel:0};
 function setMid(){
   const mid=$('navMid'); mid.classList.toggle('close',!!panel);
   mid.innerHTML=panel?`<b>${svgI('close')}</b>`:`<i class="tab" style="background-image:var(--tab-lobby)" aria-hidden="true"></i><span class="sr">로비</span>`;
@@ -1540,7 +1556,7 @@ function renderGrow(){
     bindMult(m=>{view.mult=m;renderGrow();});
     body.querySelectorAll('[data-u]').forEach(row=>row.querySelector('button').onclick=()=>{
       const u=UPG.find(x=>x.k===row.dataset.u), b=upBatch(u,view.mult); if(!b.ok) return;
-      save.gold-=b.cost; save.up[u.k]=upLv(u.k)+b.n; SFX.up(); refreshStats(); persistSoon(); updateDots();});
+      save.gold-=b.cost; save.up[u.k]=upLv(u.k)+b.n; mis('up',b.n); SFX.up(); refreshStats(); persistSoon(); updateDots();});
   }else{
     body.innerHTML=multSeg(view.spMult,'MAX')+`<div class="pscroll"><div class="spcard"><div><small>현재 레벨 LV.${save.lv}</small><br><b class="num">스텟 포인트 <em id="spL">0</em> / <span id="spT">0</span></b></div><small style="text-align:right">레벨이 오를 때마다<br>스텟 포인트 ${SP_PER_LV}개</small></div>${SP.map(p=>`
       <div class="urow" data-s="${p.k}"><div class="itile pic" style="background-image:var(--st-${p.k})"></div>
@@ -1604,7 +1620,7 @@ function renderGear(){
   $('gComb').onclick=()=>{if(combine(s,t)){SFX.buy();toast(`${itemName(s,t+1)} 획득!`);afterGear();}};
   $('gEq').disabled=!own||isEq;
   $('gEq').onclick=()=>{save.eq[s]=t;SFX.equip();toast(`${itemName(s,t)} 장착`);afterGear();};
-  $('gEnh').onclick=()=>{const c=enhCost(t,lv); if(!own||lv>=ITEM_MAX||save.gold<c) return; save.gold-=c; it.lv++; SFX.up(); afterGear();};
+  $('gEnh').onclick=()=>{const c=enhCost(t,lv); if(!own||lv>=ITEM_MAX||save.gold<c) return; save.gold-=c; it.lv++; mis('enh'); SFX.up(); afterGear();};
   $('gAllComb').onclick=()=>{let c=0; for(let sl=0;sl<8;sl++) for(let k=0;k<TIERS-1;k++) while(combine(sl,k)) c++; if(c){SFX.buy();toast(`합성 ${c}회 완료`);afterGear();} else toast('합성할 장비가 없어요');};
   $('gAuto').onclick=()=>{let ch=0; for(let sl=0;sl<8;sl++){let best=0; for(let k=0;k<TIERS;k++) if(owned(sl,k)) best=k; if(save.eq[sl]!==best){save.eq[sl]=best;ch++;}} if(ch){SFX.equip();toast(`${ch}부위 자동 장착`);view.sel=save.eq[view.slot];afterGear();} else toast('이미 가장 좋은 장비를 입고 있어요');};
   refreshGearBtns();
@@ -1622,7 +1638,7 @@ function setTable(k){
 function combine(s,t){
   const it=inv(s,t); if(!it||it.n<MERGE||t>=TIERS-1) return false;
   it.n-=MERGE; const key=s+'-'+(t+1), nx=save.inv[key]||(save.inv[key]={n:0,lv:0});
-  if(nx.lv>0) nx.n++; else nx.lv=1;
+  if(nx.lv>0) nx.n++; else nx.lv=1; mis('enh');
   return true;
 }
 function afterGear(){persist(); refreshStats(); updateDots(); renderGear();}
@@ -1698,7 +1714,7 @@ function summon(b,count,free){
       const isNew=it.lv===0; if(isNew) it.lv=1; else it.n++; res.push({s,t,isNew});}
     if(S.lv<SUM_MAX){S.xp++; if(S.xp>=sumNeed(S.lv)){S.xp=0;S.lv++;}}
   }
-  save.pulls+=count; persist(); SFX.buy(); refreshStats(); updateDots(); if(panel==='summon') renderSummon();
+  save.pulls+=count; mis('sum',count); persist(); SFX.buy(); refreshStats(); updateDots(); if(panel==='summon') renderSummon();
   $('sumBody').innerHTML=`<h2>${b.n} 결과</h2><div class="rgrid">${res.map(r=>r.relic?`<div><div class="itile relic" style="width:100%;height:auto;aspect-ratio:1"><i style="background-image:var(--rl-${r.relic.k})"></i></div><div class="gname">${r.relic.n.replace(' 증가','')}</div></div>`
     :`<div style="position:relative">${gbox(r.s,r.t,{show:true,nolv:true})}${r.isNew?'<span class="new">NEW</span>':''}<div class="gname">${SETS[setOf(r.t)].n} ${GR[grOf(r.t)]}</div></div>`).join('')}</div>
     <div class="gbtns" style="grid-template-columns:1fr 1fr"><button class="obtn brown big" id="sumOk">확인</button><button class="obtn big" id="sumAgain" ${save.gems<COST10?'disabled':''}>10회 더<span class="cost"><i class="gem"></i>${COST10}</span></button></div>`;
@@ -1732,6 +1748,73 @@ function drawRankChar(){
 }
 
 /* ---- 컨텐츠: 자리만 먼저 (구상 후 하나씩 채울 예정) ---- */
+/* ---- 일일 미션: 폰 시간 자정마다 새로 · 보석 보상 ---- */
+const MISSIONS=[
+  {k:'kill',n:'몬스터 200마리 처치',need:200,gem:50,im:'--st-atk'},
+  {k:'boss',n:'보스 3마리 처치',need:3,gem:50,im:'--ct-boss'},
+  {k:'up',n:'골드 강화 30회',need:30,gem:50,im:'--st-gold'},
+  {k:'enh',n:'장비 강화·합성 5회',need:5,gem:50,im:'--tab-gear'},
+  {k:'sum',n:'소환 10회',need:10,gem:50,im:'--tab-summon'},
+  {k:'dun',n:'던전 2회 도전 (소탕 포함)',need:2,gem:80,im:'--ct-gold'},
+  {k:'play',n:'10분 동안 플레이',need:600,gem:50,im:'--st-xp',time:true},
+];
+const MIS_ALL=200;   // 전부 완료 보너스
+function misState(){const m=save.daily||(save.daily={day:'',c:{},got:{}}); if(m.day!==today()){m.day=today(); m.c={}; m.got={};} return m;}
+function mis(k,n=1){const m=misState(), M=MISSIONS.find(x=>x.k===k); if(!M||m.got[k]) return;
+  const was=(m.c[k]||0)>=M.need; m.c[k]=(m.c[k]||0)+n;
+  if(!was&&m.c[k]>=M.need){ updateDots(); if(panel==='content'&&view.ct==='mis') renderMissions(); else if(k!=='play') feed(`[미션 완료] <b>${M.n}</b> · 컨텐츠 탭에서 보상을 받으세요`); }
+  if(k!=='play') persistSoon();}
+const misDone=M=>(misState().c[M.k]||0)>=M.need;
+function misReady(){const m=misState(); return MISSIONS.some(M=>misDone(M)&&!m.got[M.k])||(MISSIONS.every(M=>m.got[M.k])&&!m.got.all);}
+const gemI='<i style="background-image:var(--ico-gem)"></i>', coinI='<i style="background-image:var(--ico-coin)"></i>';
+function renderMissions(){
+  const m=misState(), gotN=MISSIONS.filter(M=>m.got[M.k]).length, allOk=gotN===MISSIONS.length;
+  $('pbody').innerHTML=`<div class="pscroll">
+    <div class="ms-all"><div>오늘의 미션 <b class="num">${gotN} / ${MISSIONS.length}</b><br><small style="color:var(--muted)">모두 완료하면 보너스 보석 ${MIS_ALL}</small></div>
+      <button class="obtn" id="msAll" ${allOk&&!m.got.all?'':'disabled'}>${m.got.all?'받음':`<span class="ms-rw">${gemI}${MIS_ALL}</span>`}</button></div>
+    ${MISSIONS.map(M=>{const c=Math.min(M.need,Math.floor(m.c[M.k]||0)), ok=c>=M.need, got=m.got[M.k];
+      const cur=M.time?`${Math.floor(c/60)}분 / ${M.need/60}분`:`${c} / ${M.need}`;
+      return `<div class="urow${got?' ms-done':''}" data-m="${M.k}"><div class="itile relic"><i style="background-image:var(${M.im})"></i></div>
+        <div class="uinfo"><b>${M.n}</b><span class="uval num" style="font-size:12px">${cur}</span><div class="ms-prog"><i style="width:${c/M.need*100}%"></i></div></div>
+        <div class="uright"><button class="obtn" ${ok&&!got?'':'disabled'}>${got?'완료':`<span class="ms-rw">${gemI}${M.gem}</span>`}</button></div></div>`;}).join('')}
+    <p class="note">미션은 매일 밤 12시(폰 시간)에 새로 바뀌어요.</p></div>`;
+  $('pbody').querySelectorAll('[data-m] .obtn').forEach(b=>b.onclick=()=>{const k=b.closest('[data-m]').dataset.m, M=MISSIONS.find(x=>x.k===k);
+    if(!misDone(M)||m.got[k]) return; m.got[k]=1; save.gems+=M.gem; SFX.buy(); toast(`보석 +${M.gem}`); persist(); updateTop(); updateDots(); renderContent();});
+  $('msAll').onclick=()=>{if(!allOk||m.got.all) return; m.got.all=1; save.gems+=MIS_ALL; SFX.buy(); toast(`미션 보너스! 보석 +${MIS_ALL}`); persist(); updateTop(); updateDots(); renderContent();};
+}
+
+/* ---- 출석 보상: 하루 한 번, 7일마다 한 바퀴 (연속이 아니어도 됨) ---- */
+const attGold=m=>Math.round(6*gScale(Math.max(1,save.bestStage||1))*300*m);   // 지금 스테이지 몹 300마리분
+const ATT=[{g:100},{c:1},{g:200},{t:1},{c:2},{g:300},{g:1000}];
+function attState(){return save.att||(save.att={day:'',n:0});}
+const attReady=()=>attState().day!==today();
+function attLabel(r){return r.g?[`var(--ico-gem)`,`보석 ${r.g}`]:r.c?[`var(--ico-coin)`,`엽전 ${fmtKo(attGold(r.c))}`]:[`var(--ct-equip)`,`던전 입장권 +1`];}
+function attHtml(){
+  const a=attState(), ready=attReady(), gotN=ready?a.n%7:(a.n-1)%7+1, now=ready?a.n%7:-1;
+  return `<div class="att">${ATT.map((r,i)=>{const [im,txt]=attLabel(r), got=i<gotN;
+    return `<div class="ad${i===6?' big':''}${i===now?' now':''}${got?' got':''}"><small>${i+1}일차</small><i style="background-image:${im}"></i><b>${txt}</b></div>`;}).join('')}</div>`;
+}
+function attClaim(){
+  if(!attReady()) return; const a=attState(), r=ATT[a.n%7];
+  if(r.g) save.gems+=r.g; if(r.c) save.gold+=attGold(r.c);
+  if(r.t){const d=dunState(); for(const k in DUN) if(DUN[k].tickets) d.n[k]=(d.n[k]||0)+1;}
+  a.day=today(); a.n++; persist(); updateTop(); updateDots(); SFX.buy();
+  toast(`${a.n%7===0?'7일 완주! ':''}${attLabel(r)[1]} 받았어요`);
+}
+function renderAttend(){
+  const a=attState(), ready=attReady();
+  $('pbody').innerHTML=`<div class="pscroll"><div class="ms-all"><div>출석 <b class="num">${a.n}일째</b><br><small style="color:var(--muted)">하루 한 번 · 7일마다 처음부터 다시</small></div>
+    <button class="obtn" id="attGo" ${ready?'':'disabled'}>${ready?'오늘 보상 받기':'내일 또 만나요'}</button></div>${attHtml()}
+    <p class="note" style="margin-top:8px">매일 이어서 오지 않아도 괜찮아요. 들어온 날만큼 한 칸씩 채워져요. 입장권은 오늘 하루 동안 쓸 수 있어요.</p></div>`;
+  $('attGo').onclick=()=>{attClaim(); renderContent();};
+}
+function attPopup(){
+  if(!attReady()||!save.name||save.tut!=='done') return;
+  const a=attState();
+  $('attBody').innerHTML=`<h2>출석 보상</h2><p class="note" style="text-align:center">${a.n+1}번째 출석! 오늘의 보상을 받아 가세요.</p>${attHtml()}<button class="obtn big" id="attOk">받기</button>`;
+  $('attM').hidden=false; $('attOk').onclick=()=>{attClaim(); $('attM').hidden=true; if(panel==='content') renderContent();};
+}
+
 const CONTENTS=[
   {im:'equip',k:'equip',n:'장비 던전',d:'쿠나이·방어구·장신구를 한꺼번에! 단계가 오를수록 더 많이, 더 높은 세트로',ic:'burst',c:'t-crit'},
   {im:'gold',k:'gold',n:'골드 던전',d:'30초 동안 황금 산적을 잡아 엽전을 쓸어 담아요',ic:'coin',c:'t-coin'},
@@ -1739,7 +1822,9 @@ const CONTENTS=[
   {im:'tower',k:'tower',n:'수련의 탑',d:'한 층씩 올라 보석과 10층마다 영구 능력치를 얻어요',ic:'bolt',c:'t-bolt'}
 ];
 function renderContent(){
-  tabs([['content','컨텐츠']],'content',()=>{});
+  tabs([['dun','던전'],['mis','일일 미션',misReady()],['att','출석',attReady()]],view.ct,k=>{view.ct=k;renderContent();});
+  if(view.ct==='mis') return renderMissions();
+  if(view.ct==='att') return renderAttend();
   const d=dunState();
   $('pbody').innerHTML=`<div class="pscroll">${CONTENTS.map(x=>{
     if(x.k&&DUN[x.k]){const D=DUN[x.k], locked=save.bestStage<D.open, best=d.best[x.k]||0;
@@ -1908,9 +1993,9 @@ function askName(first){
   inp.oninput=()=>{$('nmErr').textContent=inp.value?nameErr(inp.value):'';};
   if($('nmNo')) $('nmNo').onclick=()=>{SFX.tap();$('infoM').hidden=true;};
   $('nmOk').onclick=()=>{const e=nameErr(inp.value); if(e){$('nmErr').textContent=e; return;}
-    save.name=cleanName(inp.value); persist(); SFX.buy(); $('infoM').hidden=true; updateTop(); if(panel==='lobby') renderLobby(); toast(`${save.name} 닌자, 잘 부탁해요!`);};
+    save.name=cleanName(inp.value); persist(); SFX.buy(); $('infoM').hidden=true; updateTop(); if(panel==='lobby') renderLobby(); toast(`${save.name} 닌자, 잘 부탁해요!`); setTimeout(attPopup,600);};
 }
-function startGame(){ $('ui').hidden=false; initBattle(); layout(); drawAvatar(); updateTop(); updateDots(); openPanel('lobby'); offlineCheck(); if(AUTO&&!save.name) save.name='테스트'; if(!save.name) askName(true); tutInit(); } // 시작은 로비부터
+function startGame(){ $('ui').hidden=false; initBattle(); layout(); drawAvatar(); updateTop(); updateDots(); openPanel('lobby'); offlineCheck(); if(AUTO&&!save.name) save.name='테스트'; if(!save.name) askName(true); tutInit(); attPopup(); } // 시작은 로비부터
 
 /* ---- 튜토리얼: 처음 시작한 닌자에게 한 단계씩 손가락 안내 ---- */
 const navB=p=>document.querySelector(`#nav [data-p="${p}"]`);
@@ -1934,16 +2019,16 @@ function tutInit(){
 }
 function tutStart(){ save.tut=0; persist(); tutGo(0); }
 function tutGo(i){
-  if(i>=TUT.length){ tut.i=-1; $('tut').hidden=true; save.tut='done'; if(!save.tutRw){save.tutRw=1; save.gems+=300; toast('튜토리얼 완료! 보석 +300');} else toast('튜토리얼 완료!'); persist(); updateTop(); SFX.buy(); return; }
+  if(i>=TUT.length){ tut.i=-1; $('tut').hidden=true; save.tut='done'; if(!save.tutRw){save.tutRw=1; save.gems+=300; toast('튜토리얼 완료! 보석 +300');} else toast('튜토리얼 완료!'); persist(); updateTop(); SFX.buy(); updateDots(); setTimeout(attPopup,1500); return; }
   tut.i=i; save.tut=i; persist(); const S=TUT[i]; if(S.enter) S.enter(); if(S.init) S.init(tut);
   $('tBub').innerHTML=`<div>${typeof S.txt==='function'?S.txt():S.txt}</div><div class="tfoot"><button class="tskip" id="tSkip">건너뛰기</button><span class="tstep">${i+1} / ${TUT.length}</span>${S.done?'':'<button class="obtn" id="tNext">다음</button>'}</div>`;
-  $('tSkip').onclick=()=>{SFX.tap(); tut.i=-1; $('tut').hidden=true; save.tut='done'; persist();};
+  $('tSkip').onclick=()=>{SFX.tap(); tut.i=-1; $('tut').hidden=true; save.tut='done'; persist(); setTimeout(attPopup,400);};
   if($('tNext')) $('tNext').onclick=()=>{SFX.tap(); tutGo(i+1);};
   $('tut').hidden=true; tutTick();
 }
 function tutTick(){
   if(tut.i<0) return;
-  const S=TUT[tut.i], busy=!$('offM').hidden||!$('infoM').hidden||!$('pickM').hidden||!$('sumM').hidden;
+  const S=TUT[tut.i], busy=!$('offM').hidden||!$('attM').hidden||!$('infoM').hidden||!$('pickM').hidden||!$('sumM').hidden;
   if(busy){$('tut').hidden=true; return;}
   if(S.done&&S.done(tut)){ SFX.up(); tutGo(tut.i+1); return; }
   $('tut').hidden=false;

@@ -31,7 +31,8 @@ public class MainActivity extends Activity {
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         web = new WebView(this);
-        web.setBackgroundColor(Color.rgb(20, 17, 27));
+        web.setBackgroundColor(Color.rgb(11, 10, 23));
+        getWindow().getDecorView().setBackgroundColor(Color.rgb(11, 10, 23));
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
@@ -43,7 +44,9 @@ public class MainActivity extends Activity {
         web.setWebChromeClient(new WebChromeClient());
         web.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LOW_PROFILE);
         setContentView(web);
-        web.loadDataWithBaseURL(BASE, "<body style='margin:0;background:#14111b;color:#b9a58c;font:20px sans-serif;display:grid;place-items:center;height:100vh'>최신 버전 확인 중…</body>", "text/html", "utf-8", null);
+        String splash;
+        try { splash = read(getAssets().open("splash.html")); } catch (Exception e) { splash = "<body style='margin:0;background:#0b0a17'></body>"; }
+        web.loadDataWithBaseURL(BASE, splash, "text/html", "utf-8", null);   // 게임 로딩 화면과 같은 그림
         new Thread(new Runnable() {
             public void run() {
                 String html = download(BASE + "index.html?t=" + System.currentTimeMillis());
@@ -59,7 +62,7 @@ public class MainActivity extends Activity {
     private String download(String u) {
         try {
             HttpURLConnection c = (HttpURLConnection) new URL(u).openConnection();
-            c.setConnectTimeout(5000);
+            c.setConnectTimeout(4000);
             c.setReadTimeout(8000);
             c.setUseCaches(false);
             if (c.getResponseCode() != 200) return null;
