@@ -544,6 +544,10 @@ try{
 for(let s=0;s<8;s++) if(!save.inv[s+'-0']) save.inv[s+'-0']={n:0,lv:1}; // 입문자 장비는 처음부터 보유
 // 🧪 테스트용: 모든 장비(8부위 × 10세트 × 4등급) 지급. 정식 배포 때 false 로
 const TEST_ALL_GEAR=false;
+// 리밸런싱 초기화(한 번만): 재화·스테이지·던전 기록을 처음으로. 레벨·강화·장비·유물은 유지
+if(save.picked&&save.resetTag!=='rebal1'){save.resetTag='rebal1'; save.gold=0; save.gems=3000; save.stage=1; save.bestStage=0; save.kills=0;
+  save.dun={day:'',n:{},best:{}}; for(const k in save.relic) save.relic[k].n=0; save.seen=Date.now(); try{localStorage.setItem(SKEY,JSON.stringify(save))}catch(e){}}
+else if(!save.picked) save.resetTag='rebal1';
 // 테스트로 받은 장비 정리(한 번만): 장비 창을 입문자 장비만 있는 처음 상태로. 골드·레벨·스테이지는 그대로
 if(!TEST_ALL_GEAR&&!save.testGearCleared){save.testGearCleared=true; save.inv={}; for(let s=0;s<8;s++) save.inv[s+'-0']={n:0,lv:1}; save.eq=[0,0,0,0,0,0,0,0]; try{localStorage.setItem(SKEY,JSON.stringify(save))}catch(e){}}
 if(TEST_ALL_GEAR) for(let s=0;s<8;s++) for(let t=0;t<TIERS;t++){const k=s+'-'+t; if(!save.inv[k]||!save.inv[k].lv) save.inv[k]={n:(save.inv[k]&&save.inv[k].n)||0,lv:1};}
@@ -928,7 +932,7 @@ function arena(){
   const vh=L.view, ph=Math.min(vh*.3,W*.36,210), py=vh-12, eh=Math.min(vh*.22,W*.26,170);
   return {vh,ph,px:W/2,py,lineY:py-ph*.62,eh,margin:eh*.35+10};
 }
-const sScale=s=>Math.pow(1.10,s-1), dScale=s=>Math.pow(1.07,s-1), gScale=s=>Math.pow(1.1,s-1), xScale=s=>Math.pow(1.08,s-1);   // 적 체력 증가 1.12→1.10, 공격 1.085→1.08
+const sScale=s=>Math.pow(1.11,s-1), dScale=s=>Math.pow(1.07,s-1), gScale=s=>Math.pow(1.1,s-1), xScale=s=>Math.pow(1.08,s-1);   // 적 체력 증가 1.12→1.10, 공격 1.085→1.08
 function spawnEnemy(type){
   const s=curStage(), other=save.g==='f'?'m':'f', g=Math.random()<.6?other:save.g, hs=sScale(s);
   let set,hp,travel;
@@ -945,17 +949,17 @@ function spawnEnemy(type){
 }
 /* ================= 컨텐츠: 골드 던전 ================= */
 // 단계 L 의 적은 스테이지 (L×10) 정도 체력. 30초 동안 황금 산적을 잡을수록 엽전
-const DUN={gold:{n:'골드 던전',open:10,time:30,need:25,tickets:2},
+const DUN={gold:{n:'골드 던전',open:10,time:30,need:30,tickets:2},
            equip:{n:'장비 던전',open:20,time:60,waves:3,wsize:6,tickets:2},
-           rush:{n:'보스 러시',open:30,time:60,need:3,tickets:2},
+           rush:{n:'보스 러시',open:30,time:60,need:5,tickets:2},
            tower:{n:'수련의 탑',open:50,time:45,unit:'층'}};
 const dunUnit=k=>DUN[k].unit||'단계';
 // 보스 러시: 격파 수만큼 유물 조각·보석
-const rushPieces=(L,kills)=>kills*(1+Math.floor(L/2)), rushGems=(L,kills)=>kills*10*L;
+const rushPieces=(L,kills)=>kills*(1+Math.floor(L/3)), rushGems=(L,kills)=>kills*(10+5*L);
 function rushReward(L,kills){const got={}; for(let i=0;i<rushPieces(L,kills);i++){const r=RELICS[Math.floor(Math.random()*RELICS.length)]; rel(r.k).n++; got[r.n]=(got[r.n]||0)+1;}
   const gems=rushGems(L,kills); save.gems+=gems; persist(); updateTop(); updateDots(); return {got,gems};}
 // 수련의 탑: 층 F 의 적 강함 = 스테이지 20+2F, 처음 오른 층마다 보석, 10층마다 영구 능력치
-const towerStage=F=>20+2*F, towerCount=F=>8+Math.floor(F/5), towerGems=F=>20+2*F;
+const towerStage=F=>30+3*F, towerCount=F=>8+Math.floor(F/5), towerGems=F=>20+2*F;
 const TOWER_FX=[{atkP:.1},{aspd:.03},{hpP:.1},{cdmg:.1},{gold:.05}];
 const towerFx=f=>TOWER_FX[(f/10-1)%TOWER_FX.length];
 const curStage=()=>!(G&&G.dun)?save.stage:G.dun.k==='tower'?towerStage(G.dun.lv):G.dun.k==='equip'?eqStage(G.dun.lv):dunStage(G.dun.lv)+(G.dun.extra||0);
@@ -968,7 +972,7 @@ function eqMix(L){ if(L<=10) return [[0,L]];
   return nu>=10?[[up,10]]:[[up,nu],[up-1,10-nu]]; }
 const eqPer=L=>eqMix(L).reduce((a,[,n])=>a+n,0);
 const eqDrops=L=>eqPer(L)*3;
-const eqStage=L=>10+2*L;           // 적 강함
+const eqStage=L=>20+5*L;           // 적 강함
 const eqGrade=L=>Math.min(SUM_MAX,L+1);                    // 소환 레벨처럼 세트 범위 결정
 const eqGems=L=>10*L;
 // 단계마다 정해진 세트: 1단계 입문자 … 10단계 전설 (11단계부터 전설, 좋은 등급이 더 잘 나옴)
@@ -1069,7 +1073,7 @@ function dunPopup(k,L){
     <div class="kv"><span>제한 시간</span><b class="num">${D.time}초</b>${k==='gold'?`<span>클리어 조건</span><b class="num">황금 산적 ${D.need}마리</b>
       <span>1마리당 엽전</span><b class="num">${fmtKo(per)}</b><span>소탕 보상</span><b class="num">${L>best?'-':fmtKo(per*D.need)}</b>`
       :k==='rush'?`<span>클리어 조건</span><b class="num">보스 ${D.need}마리 격파</b><span>첫 보스 강함</span><b class="num">스테이지 ${dunStage(L)}</b>
-      <span>보스 1마리당</span><b class="num">유물 조각 ${1+Math.floor(L/2)} · 보석 ${10*L}</b><span>소탕 보상</span><b class="num">${L>best?'-':`조각 ${rp} · 보석 ${rg}`}</b>`
+      <span>보스 1마리당</span><b class="num">유물 조각 ${1+Math.floor(L/3)} · 보석 ${10+5*L}</b><span>소탕 보상</span><b class="num">${L>best?'-':`조각 ${rp} · 보석 ${rg}`}</b>`
       :`<span>클리어 조건</span><b class="num">${D.waves}웨이브 + 수호자</b><span>적 강함</span><b class="num">스테이지 ${eqStage(L)}</b>
       <span>부위마다</span><b class="num">${eqMix(L).map(([t,n])=>`${SETS[t].n} ${n}개`).join(' + ')}</b><span>구성</span><b class="num">쿠나이·방어구·장신구 각 ${eqPer(L)}개 (총 ${eqDrops(L)}개)</b><span>등급 확률</span><b class="num">${eqGrRate(L).map((p,i)=>`${GR[i]} ${p}%`).join(' · ')}</b><span>추가 보상</span><b class="num">보석 ${eqGems(L)}</b>`}
       <span>입장권</span><b class="num">${n} / ${D.tickets}</b></div>
@@ -1238,7 +1242,7 @@ function update(dt){
       else if(D.phase==='boss'&&!G.enemies.length){D.over=true; dunEnd(true);}
     } else if(D.k==='rush'&&!D.over){
       if(D.t<=0){D.over=true; dunEnd();}
-      else if(!G.enemies.length){ if(D.spawned){D.kills++; D.extra+=3; SFX.buy(); G.banner={txt:`${D.kills}마리 격파!`,sub:'다음 보스는 더 강해요',t:0};}
+      else if(!G.enemies.length){ if(D.spawned){D.kills++; D.extra+=6; SFX.buy(); G.banner={txt:`${D.kills}마리 격파!`,sub:'다음 보스는 더 강해요',t:0};}
         D.spawned=true; spawnEnemy(D.kills%2?'boss':'mboss'); }
     } else if(D.k==='tower'&&!D.over){
       if(D.t<=0){D.over=true; dunEnd(false);}
