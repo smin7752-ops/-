@@ -1008,9 +1008,9 @@ function spawnEnemy(type){
 }
 /* ================= 컨텐츠: 골드 던전 ================= */
 // 단계 L 의 적은 스테이지 (L×10) 정도 체력. 30초 동안 황금 산적을 잡을수록 엽전
-const DUN={gold:{n:'골드 던전',open:10,time:30,need:30,tickets:2},
-           equip:{n:'장비 던전',open:20,time:60,waves:3,wsize:6,tickets:2},
-           rush:{n:'보스 러시',open:30,time:60,need:5,tickets:2},
+const DUN={gold:{n:'골드 던전',open:10,time:30,need:30,tickets:5},
+           equip:{n:'장비 던전',open:20,time:60,waves:3,wsize:6,tickets:5},
+           rush:{n:'보스 러시',open:30,time:60,need:5,tickets:5},
            tower:{n:'수련의 탑',open:50,time:45,unit:'층'}};
 const dunUnit=k=>DUN[k].unit||'단계';
 // 보스 러시: 격파 수만큼 유물 조각·보석
@@ -1048,7 +1048,8 @@ function eqReward(L){
 const dunStage=L=>L*10;
 const dunGoldPer=(L,st)=>Math.round(6*3*gScale(dunStage(L))*(1+st.gold));   // 1마리당 (일반의 3배)
 function dunState(){const d=save.dun||(save.dun={day:'',n:{},best:{}}); d.n=d.n||{}; d.best=d.best||{};
-  if(d.day!==today()){d.day=today(); for(const k in DUN) if(DUN[k].tickets) d.n[k]=DUN[k].tickets;}
+  if(d.day!==today()){d.day=today(); for(const k in DUN) if(DUN[k].tickets) d.n[k]=Math.max(d.n[k]||0,DUN[k].tickets);}   // 남은 입장권(출석 보너스 등)은 지우지 않는다
+  if(save.tkV!==5){save.tkV=5; for(const k in DUN) if(DUN[k].tickets) d.n[k]=Math.max(d.n[k]||0,DUN[k].tickets); persistSoon();}   // 하루 입장권 2→5 로 늘린 날 바로 채워 준다
   for(const k in DUN) if(DUN[k].tickets&&d.n[k]===undefined) d.n[k]=DUN[k].tickets;   // 새로 생긴 던전은 오늘 입장권을 바로 지급
   return d;}
 function spawnGold(D){
@@ -1801,7 +1802,7 @@ const attGold=m=>Math.round(6*gScale(Math.max(1,save.bestStage||1))*300*m);   //
 const ATT=[{g:100},{c:1},{g:200},{t:1},{c:2},{g:300},{g:1000}];
 function attState(){return save.att||(save.att={day:'',n:0});}
 const attReady=()=>attState().day!==today();
-function attLabel(r){return r.g?[`var(--ico-gem)`,`보석 ${r.g}`]:r.c?[`var(--ico-coin)`,`엽전 ${fmtKo(attGold(r.c))}`]:[`var(--ct-equip)`,`던전 입장권 +1`];}
+function attLabel(r){return r.g?[`var(--ico-gem)`,`보석 ${r.g}`]:r.c?[`var(--ico-coin)`,`엽전 ${fmtKo(attGold(r.c))}`]:[`var(--ct-equip)`,`던전 입장권 +3`];}
 function attHtml(){
   const a=attState(), ready=attReady(), gotN=ready?a.n%7:(a.n-1)%7+1, now=ready?a.n%7:-1;
   return `<div class="att">${ATT.map((r,i)=>{const [im,txt]=attLabel(r), got=i<gotN;
@@ -1810,7 +1811,7 @@ function attHtml(){
 function attClaim(){
   if(!attReady()) return; const a=attState(), r=ATT[a.n%7];
   if(r.g) save.gems+=r.g; if(r.c) save.gold+=attGold(r.c);
-  if(r.t){const d=dunState(); for(const k in DUN) if(DUN[k].tickets) d.n[k]=(d.n[k]||0)+1;}
+  if(r.t){const d=dunState(); for(const k in DUN) if(DUN[k].tickets) d.n[k]=(d.n[k]||0)+3;}
   a.day=today(); a.n++; persist(); updateTop(); updateDots(); SFX.buy();
   toast(`${a.n%7===0?'7일 완주! ':''}${attLabel(r)[1]} 받았어요`);
 }
@@ -1818,7 +1819,7 @@ function renderAttend(){
   const a=attState(), ready=attReady();
   $('pbody').innerHTML=`<div class="pscroll"><div class="ms-all"><div>출석 <b class="num">${a.n}일째</b><br><small style="color:var(--muted)">하루 한 번 · 7일마다 처음부터 다시</small></div>
     <button class="obtn" id="attGo" ${ready?'':'disabled'}>${ready?'오늘 보상 받기':'내일 또 만나요'}</button></div>${attHtml()}
-    <p class="note" style="margin-top:8px">매일 이어서 오지 않아도 괜찮아요. 들어온 날만큼 한 칸씩 채워져요. 입장권은 오늘 하루 동안 쓸 수 있어요.</p></div>`;
+    <p class="note" style="margin-top:8px">매일 이어서 오지 않아도 괜찮아요. 들어온 날만큼 한 칸씩 채워져요. 보너스 입장권은 다음 날까지 남아요.</p></div>`;
   $('attGo').onclick=()=>{attClaim(); renderContent();};
 }
 function attPopup(){
