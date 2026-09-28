@@ -607,6 +607,9 @@ else if(!save.picked) save.resetTag='full2';
 if(!TEST_ALL_GEAR&&!save.testGearCleared){save.testGearCleared=true; save.inv={}; for(let s=0;s<8;s++) save.inv[s+'-0']={n:0,lv:1}; save.eq=[0,0,0,0,0,0,0,0]; try{localStorage.setItem(SKEY,JSON.stringify(save))}catch(e){}}
 if(TEST_ALL_GEAR) for(let s=0;s<8;s++) for(let t=0;t<TIERS;t++){const k=s+'-'+t; if(!save.inv[k]||!save.inv[k].lv) save.inv[k]={n:(save.inv[k]&&save.inv[k].n)||0,lv:1};}
 let saveT=0;
+// 🧪 테스트용: 켤 때마다 엽전 1조 · 보석 1000만 까지 채워 줌. 정식 배포 때 false 로
+const TEST_RICH=true;
+if(TEST_RICH&&save.picked){save.gold=Math.max(save.gold||0,1e12); save.gems=Math.max(save.gems||0,1e7);}
 function persist(){try{localStorage.setItem(SKEY,JSON.stringify(save))}catch(e){}}
 function persistSoon(){clearTimeout(saveT);saveT=setTimeout(persist,400);}
 const slotName=s=>{const n=SLOTS[s].n;return typeof n==='string'?n:n[save.g];};
