@@ -632,7 +632,9 @@ const skinMul=lv=>1+.5*lv;
 const skinFx=(k,kind,lv=skinLv(k))=>{const o={},b=SKIN_FX[k][kind]; for(const x in b) o[x]=b[x]*skinMul(lv); return o;};
 const skinGem=(k,lv)=>Math.round(100*(k+1)*(lv+1));
 const SKIN_NEED=5;
-const skinSpare=k=>{let n=0; for(const key in save.inv){const it=save.inv[key]; if(it.lv>0&&setOf(+key.split('-')[1])===k) n+=it.n||0;} return n;};   // 겹친 장비(여분) 수
+// 등급(F·D·A·S)별 겹친 장비(여분) 수 — 강화하려면 등급마다 5개씩 필요
+const skinSpareG=(k,g)=>{let n=0; for(let sl=0;sl<8;sl++){const it=save.inv[sl+'-'+(k*4+g)]; if(it&&it.lv>0) n+=it.n||0;} return n;};
+const skinReady=k=>[0,1,2,3].every(g=>skinSpareG(k,g)>=SKIN_NEED);
 const skinSet=()=>{const k=save.skin|0; return skinOpen(k)?k:0;};
 const pEq=()=>Array(8).fill(skinSet()); // 예전 색 바꾸기 그림도 스킨 기준
 
@@ -1791,24 +1793,25 @@ function renderSkin(){
   for(let k=0;k<SETS.length;k++) realImg('i',save.g,k);
 }
 function skinPopup(k){
-  const S=SETS[k], open=skinOpen(k), lv=skinLv(k), on=k===skinSet(), mx=lv>=SKIN_MAX, gem=skinGem(k,lv), sp=skinSpare(k);
+  const S=SETS[k], open=skinOpen(k), lv=skinLv(k), on=k===skinSet(), mx=lv>=SKIN_MAX, gem=skinGem(k,lv), ready=skinReady(k);
   const row=(kind,t)=>{const a=skinFx(k,kind,lv), b=skinFx(k,kind,Math.min(SKIN_MAX,lv+1)); const ks=Object.keys(a);
     return ks.length?`<h5 style="margin-top:8px">${t}</h5><div class="kv">${ks.map(x=>`<span>${FXN[x]}</span><b class="num">+${fmtPct(a[x])}${mx?'':` › <em style="color:#8fe38f;font-style:normal">+${fmtPct(b[x])}</em>`}</b>`).join('')}</div>`:'';};
   $('infoBody').innerHTML=`<h2>${S.n} 스킨 ${open?`<span style="font-size:18px;color:#ffd36a">+${lv}</span>`:''}</h2>
     <div>${row('eq','착용 효과 (입었을 때)')}${row('own','보유 효과 (해금만 해도)')}</div>
-    ${open?`<div class="kv" style="font-size:13px"><span>강화 재료</span><b class="num" style="color:${sp>=SKIN_NEED?'#8fe38f':'#ff9a8a'}">${S.n} 장비 여분 ${sp}/${SKIN_NEED}</b><span></span><b class="num" style="color:${save.gems>=gem?'#8fe38f':'#ff9a8a'}">보석 ${fmtKo(gem)}</b></div>
-      <p class="note">강화할 때 같은 세트의 겹친 장비(여분) ${SKIN_NEED}개와 보석을 써요. 최대 +${SKIN_MAX}</p>`
+    ${open?`<h5 style="margin-top:4px">강화 재료</h5><div class="kv" style="font-size:13px">${[0,1,2,3].map(g=>{const n=skinSpareG(k,g); return `<span><b style="color:${GRC[g]}">${GR[g]}</b>등급 ${S.n} 장비 여분</span><b class="num" style="color:${n>=SKIN_NEED?'#8fe38f':'#ff9a8a'}">${n}/${SKIN_NEED}</b>`;}).join('')}<span>보석</span><b class="num" style="color:${save.gems>=gem?'#8fe38f':'#ff9a8a'}">${fmtKo(gem)}</b></div>
+      <p class="note">강화할 때 <b>F·D·A·S 등급마다</b> 겹친 장비(여분) ${SKIN_NEED}개씩(모두 ${SKIN_NEED*4}개)과 보석을 써요. 최대 +${SKIN_MAX}</p>`
     :`<p class="note" style="text-align:center">${S.n} 세트 장비 8부위를 모두 모으면 열려요 (지금 ${skinParts(k)}/8)</p>`}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
       <button class="obtn brown" id="skWear" ${open&&!on?'':'disabled'}>${on?'착용 중':'입기'}</button>
-      <button class="obtn" id="skUp" ${open&&!mx&&sp>=SKIN_NEED&&save.gems>=gem?'':'disabled'}>${mx?'최대 강화':'강화하기'}</button></div>
+      <button class="obtn" id="skUp" ${open&&!mx&&ready&&save.gems>=gem?'':'disabled'}>${mx?'최대 강화':'강화하기'}</button></div>
     <button class="obtn big" id="infoOk">닫기</button>`;
   $('infoM').hidden=false; $('infoOk').onclick=()=>{SFX.tap();$('infoM').hidden=true;};
   $('skWear').onclick=()=>{if(!skinOpen(k)) return; save.skin=k; persist(); SFX.buy(); for(const c of ['I','p','i']) realImg(c,save.g,k); realImg('k','',k);
     refreshStats(); drawAvatar(); toast(`${S.n} 스킨으로 갈아입었어요`); renderSkin(); skinPopup(k);};
-  $('skUp').onclick=()=>{const L=skinLv(k), g=skinGem(k,L); if(!skinOpen(k)||L>=SKIN_MAX||save.gems<g||skinSpare(k)<SKIN_NEED) return;
-    // 여분 장비는 낮은 등급부터 사용
-    let need=SKIN_NEED; for(let t=k*4;t<k*4+4&&need>0;t++) for(let sl=0;sl<8&&need>0;sl++){const it=save.inv[sl+'-'+t]; if(it&&it.lv>0&&it.n>0){const u=Math.min(it.n,need); it.n-=u; need-=u;}}
+  $('skUp').onclick=()=>{const L=skinLv(k), g=skinGem(k,L); if(!skinOpen(k)||L>=SKIN_MAX||save.gems<g||!skinReady(k)) return;
+    // 등급마다 여분 5개씩 사용 (여분이 많은 부위부터)
+    for(let gr=0;gr<4;gr++){ let need=SKIN_NEED; const its=[...Array(8).keys()].map(sl=>save.inv[sl+'-'+(k*4+gr)]).filter(it=>it&&it.lv>0&&it.n>0).sort((a,b)=>b.n-a.n);
+      for(const it of its){ if(need<=0) break; const u=Math.min(it.n,need); it.n-=u; need-=u; } }
     save.gems-=g; (save.skinLv||(save.skinLv={}))[k]=L+1; persist(); SFX.up(); refreshStats(); updateTop(); updateDots(); toast(`${S.n} 스킨 +${L+1} 강화 성공!`); renderSkin(); skinPopup(k);};
 }
 function drawSkins(){
