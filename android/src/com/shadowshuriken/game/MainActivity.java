@@ -47,7 +47,7 @@ public class MainActivity extends Activity {
         new Thread(new Runnable() {
             public void run() {
                 String html = download(BASE + "index.html?t=" + System.currentTimeMillis());
-                if (html == null || html.indexOf("그림자 수리검") < 0) html = bundled();
+                if (html == null || html.indexOf("닌자 키우기") < 0) html = bundled();
                 final String page = html;
                 runOnUiThread(new Runnable() {
                     public void run() { web.loadDataWithBaseURL(BASE, page, "text/html", "utf-8", null); }

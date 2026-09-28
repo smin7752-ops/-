@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 그림자 수리검 안드로이드 APK 빌드 (Android SDK 없이 Maven Central 도구만 사용)
+# 닌자 키우기 안드로이드 APK 빌드 (Android SDK 없이 Maven Central 도구만 사용)
 # 결과: ../public/ninja/shadow-shuriken.apk
 set -euo pipefail
 cd "$(dirname "$0")"

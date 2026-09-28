@@ -53,10 +53,10 @@ def build(root):
     return struct.pack('<HHI',0x0003,8,8+len(xml))+xml
 A=lambda n,t,v:('android',n,t,v)
 P=lambda n,t,v:('',n,t,v)
-manifest=('manifest',[P('package',T_STR,'com.shadowshuriken.game'),A('versionCode',T_DEC,5),A('versionName',T_STR,'1.4')],[
+manifest=('manifest',[P('package',T_STR,'com.shadowshuriken.game'),A('versionCode',T_DEC,6),A('versionName',T_STR,'1.5')],[
   ('uses-sdk',[A('minSdkVersion',T_DEC,24),A('targetSdkVersion',T_DEC,34)],[]),
   ('uses-permission',[A('name',T_STR,'android.permission.INTERNET')],[]),
-  ('application',[A('label',T_STR,'그림자 수리검'),A('icon',T_REF,0x7f010000),A('theme',T_REF,0x01030007),A('hardwareAccelerated',T_BOOL,0xffffffff)],[
+  ('application',[A('label',T_STR,'닌자 키우기'),A('icon',T_REF,0x7f010000),A('theme',T_REF,0x01030007),A('hardwareAccelerated',T_BOOL,0xffffffff)],[
     ('activity',[A('name',T_STR,'com.shadowshuriken.game.MainActivity'),A('exported',T_BOOL,0xffffffff),A('screenOrientation',T_DEC,1),A('configChanges',T_HEX,0x4a0)],[
       ('intent-filter',[],[('action',[A('name',T_STR,'android.intent.action.MAIN')],[]),('category',[A('name',T_STR,'android.intent.category.LAUNCHER')],[])])])])])
 open('AndroidManifest.xml','wb').write(build(manifest))
