@@ -219,6 +219,18 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
 .lb-cp b{font-family:var(--display);font-weight:400;font-size:15px;color:#ffe6b0}
 .lb-row{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:10px;align-items:stretch}
 .lb-snd{font-size:13px;padding:6px 12px}
+.lb-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}.lb-btns .obtn{font-size:13px;padding:7px 6px}
+.bk textarea{width:100%;box-sizing:border-box;height:74px;resize:none;border-radius:8px;border:2px solid #7a5838;background:#1c1512;color:#f3ecdf;font-size:11px;padding:6px;word-break:break-all;font-family:monospace}
+.bk .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#tut{position:absolute;inset:0;z-index:40;pointer-events:none}
+#tut .tdim{position:absolute;inset:0;background:rgba(6,4,10,.6)}
+#tut .tring{position:absolute;border:3px solid #ffd36a;border-radius:12px;box-shadow:0 0 0 9999px rgba(6,4,10,.6),0 0 16px #ffd36a;animation:tpulse 1s ease-in-out infinite}
+@keyframes tpulse{50%{border-color:#fff;box-shadow:0 0 0 9999px rgba(6,4,10,.6),0 0 26px #ffd36a}}
+#tut .tbub{position:absolute;left:16px;right:16px;max-width:380px;margin:0 auto;background:var(--pan);border:3px solid #c89a5a;border-radius:14px;padding:12px 14px;pointer-events:auto;color:var(--text);font-size:14px;line-height:1.5;box-shadow:0 6px 18px rgba(0,0,0,.5)}
+#tut .tbub b{color:var(--gold)}
+#tut .tfoot{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+#tut .tskip{background:none;border:0;color:var(--muted);font-size:12px;text-decoration:underline;padding:4px}
+#tut .tstep{font-size:11px;color:var(--muted)}
 .lb-who{display:flex;align-items:center;gap:6px;background:#3a2d26;border:2px solid var(--edge);border-radius:8px;padding:6px 12px;font-family:var(--display);font-size:15px}
 .lb-who small{font-family:var(--body);font-size:11px;color:var(--muted)}
 .pick{position:absolute;inset:0;z-index:8;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:20px 16px;background:radial-gradient(circle at 50% 40%,#3a2230,#14111b 70%);box-sizing:border-box}
@@ -405,6 +417,7 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
   <section class="modal" id="infoM" hidden><div class="sheet info" id="infoBody"></div></section>
   <section class="modal" id="offM" hidden><div class="sheet info off" id="offBody"></div></section>
   <section class="modal" id="sumM" hidden><div class="sheet" id="sumBody"></div></section>
+  <div id="tut" hidden><div class="tdim" id="tDim"></div><div class="tring" id="tRing"></div><div class="tbub" id="tBub"></div></div>
   <div class="toast" id="toast" style="opacity:0"></div>
 </div>
 
@@ -1741,10 +1754,49 @@ function renderLobby(){
       <div class="lb-who">${save.g==='f'?'여닌자':'남닌자'} <small>· 처음 고른 닌자로 진행해요</small></div>
       <button class="obtn brown lb-snd" id="lbSnd">${save.mute?'소리 켜기':'소리 끄기'}</button>
     </div>
+    <div class="lb-btns"><button class="obtn brown" id="lbBak">기록 백업 · 불러오기</button><button class="obtn brown" id="lbTut">튜토리얼 다시 보기</button></div>
     <div class="stab"><h5>능력치</h5><div class="lb-kv">${rows.map(([k,v])=>`<span>${k}</span><b class="num">${v}</b>`).join('')}</div></div>
     <div class="stab"><h5>세트 효과 · 고유 능력</h5><div class="chips">${st.active.length?st.active.map(a=>`<span style="--rc:${RC[a.t]}">${SETS[a.t].n} ${a.need<8?`${GR[a.g]}급 ${a.need}세트`:'고유'} · ${a.txt}</span>`).join(''):'<span>같은 세트를 2부위 이상 입으면 켜져요</span>'}</div></div>
   </div>`;
   $('lbSnd').onclick=()=>{save.mute=!save.mute; persist(); if(!save.mute){ac();SFX.tap();} renderLobby();};
+  $('lbBak').onclick=()=>{SFX.tap(); openBackup();};
+  $('lbTut').onclick=()=>{SFX.tap(); openPanel('lobby'); tutStart();};
+}
+
+/* ---- 기록 백업: 진행 기록을 글자 코드로 복사해 두고, 나중에 붙여넣어 되살린다 ---- */
+const BK_PRE='NINJA1.';
+function backupCode(){persist(); return BK_PRE+btoa(unescape(encodeURIComponent(JSON.stringify(save))));}
+function readBackup(code){
+  code=(code||'').replace(/\s+/g,''); if(!code.startsWith(BK_PRE)) return null;
+  try{const o=JSON.parse(decodeURIComponent(escape(atob(code.slice(BK_PRE.length)))));
+    if(!o||typeof o!=='object'||typeof o.lv!=='number'||typeof o.stage!=='number'||typeof o.inv!=='object') return null; return o;}catch(e){return null;}
+}
+function copyText(ta){
+  const done=()=>toast('백업 코드를 복사했어요');
+  const fb=()=>{ta.focus();ta.select();ta.setSelectionRange(0,ta.value.length);try{document.execCommand('copy')?done():toast('코드를 길게 눌러 직접 복사해 주세요');}catch(e){toast('코드를 길게 눌러 직접 복사해 주세요');}};
+  try{navigator.clipboard.writeText(ta.value).then(done,fb);}catch(e){fb();}
+}
+function openBackup(){
+  let armed=false;
+  $('infoBody').innerHTML=`<h2>기록 백업</h2><div class="bk">
+    <h5>① 백업 코드 복사</h5>
+    <p class="note">앱을 지우거나 폰을 바꾸면 기록이 사라져요. 이 코드를 메모장·카톡 나에게 보내기 등에 저장해 두세요.</p>
+    <textarea id="bkOut" readonly></textarea>
+    <button class="obtn big" id="bkCopy">코드 복사하기</button>
+    <h5 style="margin-top:10px">② 백업 코드로 불러오기</h5>
+    <p class="note">저장해 둔 코드를 붙여넣으면 그때 기록으로 돌아가요. <b style="color:#ff9a8a">지금 기록은 덮어써져요.</b></p>
+    <textarea id="bkIn" placeholder="여기에 백업 코드를 붙여넣어 주세요"></textarea>
+    <div class="row2"><button class="obtn brown" id="bkLoad">불러오기</button><button class="obtn" id="infoOk">닫기</button></div></div>`;
+  $('bkOut').value=backupCode();
+  $('infoM').hidden=false; $('infoOk').onclick=()=>{SFX.tap();$('infoM').hidden=true;};
+  $('bkCopy').onclick=()=>{SFX.tap(); copyText($('bkOut'));};
+  $('bkIn').oninput=()=>{armed=false; $('bkLoad').textContent='불러오기';};
+  $('bkLoad').onclick=()=>{SFX.tap();
+    const o=readBackup($('bkIn').value); if(!o){toast('올바른 백업 코드가 아니에요'); return;}
+    if(!armed){armed=true; $('bkLoad').textContent='한 번 더 눌러 확정'; toast(`LV.${o.lv} · 스테이지 ${o.stage} 기록이에요`); return;}
+    o.resetTag='full2'; o.testGearCleared=true; o.picked=true; o.seen=Date.now(); o.tut='done';
+    try{localStorage.setItem(SKEY,JSON.stringify(o));}catch(e){toast('저장 공간 오류로 불러오지 못했어요'); return;}
+    window.onbeforeunload=null; location.reload();};
 }
 let lbTap=-9;
 function drawLobbyChar(){
@@ -1823,14 +1875,59 @@ function showPick(){
   $('pickGo').onclick=()=>{if(!pickSel) return; ac(); save.g=pickSel; save.picked=true; persist(); SFX.buy();
     $('pickM').hidden=true; startGame();};
 }
-function startGame(){ $('ui').hidden=false; initBattle(); layout(); drawAvatar(); updateTop(); updateDots(); openPanel('lobby'); offlineCheck(); } // 시작은 로비부터
+function startGame(){ $('ui').hidden=false; initBattle(); layout(); drawAvatar(); updateTop(); updateDots(); openPanel('lobby'); offlineCheck(); tutInit(); } // 시작은 로비부터
+
+/* ---- 튜토리얼: 처음 시작한 닌자에게 한 단계씩 손가락 안내 ---- */
+const navB=p=>document.querySelector(`#nav [data-p="${p}"]`);
+const TUT=[
+  {txt:'어서 와요, 닌자! 🥷<br>닌자는 <b>자동으로 쿠나이를 던져요.</b><br>적을 쓰러뜨리면 <b>엽전(골드)</b>과 <b>경험치</b>를 얻어요.'},
+  {txt:'엽전으로 닌자를 강하게 만들어 봐요.<br>아래 <b>[성장]</b> 탭을 눌러 주세요.', el:()=>navB('grow'), done:()=>panel==='grow'},
+  {txt:()=>'<b>공격력</b>의 강화 버튼을 눌러 보세요!'+(tut.gift?'<br>(선물로 <b>엽전 300</b>을 드렸어요)':''), enter:()=>{tut.gift=!save.tutG; if(tut.gift){save.tutG=1; save.gold+=300; persist(); updateTop();}},
+    el:()=>panel!=='grow'?navB('grow'):view.grow!=='gold'?document.querySelector('#ptabs [data-k="gold"]'):document.querySelector('#pbody [data-u="atk"] .obtn'),
+    done:t=>upLv('atk')>t.a0, init:t=>{t.a0=upLv('atk');}},
+  {txt:'잘했어요! 이번엔 <b>[장비]</b> 탭을 눌러 보세요.', el:()=>navB('gear'), done:()=>panel==='gear'},
+  {txt:'장비는 <b>같은 것을 모아 합성</b>하고, <b>엽전으로 강화</b>해요.<br>좋은 장비를 입으면 <b>닌자 모습도 바뀌어요!</b>', el:()=>$('pbody')},
+  {txt:'<b>[컨텐츠]</b> 탭도 눌러 볼까요?', el:()=>navB('content'), done:()=>panel==='content'},
+  {txt:'여기엔 <b>던전</b>이 있어요. 스테이지를 넘을수록 하나씩 열리고,<br>입장권은 <b>매일 다시 채워져요.</b>', el:()=>$('pbody')},
+  {txt:'적을 쓰러뜨리다 보면 <b>보스</b>가 나타나요.<br>보스를 잡으면 <b>다음 스테이지</b>로 넘어가요!', el:()=>$('stagebox'), enter:()=>{if(panel) openPanel(panel);}},
+  {txt:'가운데 <b>로비</b> 버튼에서 <b>소리 끄기</b>와 <b>기록 백업</b>을 할 수 있어요.<br>기록 백업은 꼭 한 번 해 두세요!', el:()=>$('navMid')},
+];
+const tut={i:-1};
+function tutInit(){
+  if(save.tut===undefined){ save.tut=(save.lv<=3&&(save.bestStage||0)<3)?0:'done'; persist(); }
+  if(save.tut!=='done') tutGo(save.tut|0);
+}
+function tutStart(){ save.tut=0; persist(); tutGo(0); }
+function tutGo(i){
+  if(i>=TUT.length){ tut.i=-1; $('tut').hidden=true; save.tut='done'; if(!save.tutRw){save.tutRw=1; save.gems+=300; toast('튜토리얼 완료! 보석 +300');} else toast('튜토리얼 완료!'); persist(); updateTop(); SFX.buy(); return; }
+  tut.i=i; save.tut=i; persist(); const S=TUT[i]; if(S.enter) S.enter(); if(S.init) S.init(tut);
+  $('tBub').innerHTML=`<div>${typeof S.txt==='function'?S.txt():S.txt}</div><div class="tfoot"><button class="tskip" id="tSkip">건너뛰기</button><span class="tstep">${i+1} / ${TUT.length}</span>${S.done?'':'<button class="obtn" id="tNext">다음</button>'}</div>`;
+  $('tSkip').onclick=()=>{SFX.tap(); tut.i=-1; $('tut').hidden=true; save.tut='done'; persist();};
+  if($('tNext')) $('tNext').onclick=()=>{SFX.tap(); tutGo(i+1);};
+  $('tut').hidden=true; tutTick();
+}
+function tutTick(){
+  if(tut.i<0) return;
+  const S=TUT[tut.i], busy=!$('offM').hidden||!$('infoM').hidden||!$('pickM').hidden||!$('sumM').hidden;
+  if(busy){$('tut').hidden=true; return;}
+  if(S.done&&S.done(tut)){ SFX.up(); tutGo(tut.i+1); return; }
+  $('tut').hidden=false;
+  const app=$('app').getBoundingClientRect(), e=S.el&&S.el(), r=e&&e.getBoundingClientRect(), ring=$('tRing'), bub=$('tBub'), dim=$('tDim');
+  if(r&&r.width>0){
+    const pad=4; ring.hidden=false; dim.hidden=true;
+    Object.assign(ring.style,{left:(r.left-app.left-pad)+'px',top:(r.top-app.top-pad)+'px',width:(r.width+pad*2)+'px',height:(r.height+pad*2)+'px'});
+    const mid=r.top-app.top+r.height/2, bh=bub.offsetHeight;
+    if(mid>app.height*.5) bub.style.top=Math.max(8,r.top-app.top-pad-bh-12)+'px';
+    else bub.style.top=Math.min(app.height-bh-8,r.bottom-app.top+pad+12)+'px';
+  }else{ ring.hidden=true; dim.hidden=false; bub.style.top=Math.max(8,(app.height-bub.offsetHeight)/2)+'px'; }
+}
 
 /* ================= 루프 ================= */
 let last=performance.now();
 function frame(now){
   requestAnimationFrame(frame);
   const dt=Math.min(.05,(now-last)/1000); last=now; T+=dt;
-  try{ if(G&&$('pickM').hidden) update(dt); render(dt); if(panel==='grow'&&view.grow==='rank') drawRankChar(); if(panel==='lobby') drawLobbyChar(); drawPick(); }catch(err){console.error(err);}
+  try{ if(G&&$('pickM').hidden) update(dt); render(dt); if(panel==='grow'&&view.grow==='rank') drawRankChar(); if(panel==='lobby') drawLobbyChar(); drawPick(); tutTick(); }catch(err){console.error(err);}
 }
 
 /* ================= 시작 ================= */
