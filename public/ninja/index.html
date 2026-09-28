@@ -626,7 +626,12 @@ const setNo=t=>String(setOf(t)+1).padStart(2,'0');
 const skinParts=k=>{let n=0; for(let sl=0;sl<8;sl++){ for(let t=k*4;t<k*4+4;t++){const it=save.inv[sl+'-'+t]; if(it&&it.lv>0){n++;break;}} } return n;};
 const skinOpen=k=>k===0||skinParts(k)>=8;
 // 스킨 능력치: 착용 효과(입은 스킨만) + 보유 효과(해금한 스킨 모두). 강화할수록 커진다
-const SKIN_MAX=10;
+const SKIN_MAX=100, SKIN_TR_MAX=9;   // 스킨: 기본 100레벨, 초월할 때마다 +100
+const skinTr=k=>(save.skinTr&&save.skinTr[k])||0;
+const skinMaxLv=k=>SKIN_MAX*(1+skinTr(k));
+// 스킨 초월 조건: 그 세트 장비가 8부위 모두 (스킨 초월 횟수+1)번 이상 초월돼 있어야 함
+const skinTrParts=k=>{const need=skinTr(k)+1; let n=0; for(let sl=0;sl<8;sl++){ for(let t=k*4;t<k*4+4;t++){const it=save.inv[sl+'-'+t]; if(it&&it.lv>0&&(it.tr||0)>=need){n++;break;}} } return n;};
+const skinTrGem=k=>Math.round(3000*(k+1)*(skinTr(k)+1));
 const SKIN_FX=[
   {eq:{atkP:.05},own:{}},
   {eq:{atkP:.3},own:{atkP:.1}},
@@ -639,9 +644,9 @@ const SKIN_FX=[
   {eq:{gold:.3,xp:.3},own:{gold:.1,xp:.1}},
   {eq:{atkP:1,cdmg:.5},own:{atkP:.3}}];
 const skinLv=k=>(save.skinLv&&save.skinLv[k])||0;
-const skinMul=lv=>1+.5*lv;
+const skinMul=lv=>1+.05*lv;   // 100레벨이면 6배
 const skinFx=(k,kind,lv=skinLv(k))=>{const o={},b=SKIN_FX[k][kind]; for(const x in b) o[x]=b[x]*skinMul(lv); return o;};
-const skinGem=(k,lv)=>Math.round(100*(k+1)*(lv+1));
+const skinGem=(k,lv)=>Math.round(20*(k+1)*(1+lv/5));
 const SKIN_NEED=5;
 // 등급(F·D·A·S)별 겹친 장비(여분) 수 — 강화하려면 등급마다 5개씩 필요
 const skinSpareG=(k,g)=>{let n=0; for(let sl=0;sl<8;sl++){const it=save.inv[sl+'-'+(k*4+g)]; if(it&&it.lv>0) n+=it.n||0;} return n;};
@@ -700,6 +705,7 @@ let saveT=0;
 // 🧪 테스트용: 켤 때마다 엽전 1조 · 보석 1000만 까지 채워 줌. 정식 배포 때 false 로
 const TEST_RICH=true;
 if(TEST_RICH&&save.picked){save.gold=Math.max(save.gold||0,1e12); save.gems=Math.max(save.gems||0,1e7);}
+if(save.skinV!==2){ if(save.skinLv) for(const k in save.skinLv) save.skinLv[k]*=10; save.skinV=2; }   // 스킨 최대 10→100 으로 바뀌어 예전 강화 단계를 10배로
 if(save.skin===undefined) save.skin=setOf((save.eq||[])[2]||0);   // 처음엔 지금 입은 옷 모습 그대로
 function persist(){try{localStorage.setItem(SKEY,JSON.stringify(save))}catch(e){}}
 function persistSoon(){clearTimeout(saveT);saveT=setTimeout(persist,400);}
@@ -709,7 +715,10 @@ const itemName=(s,t)=>`${SETS[setOf(t)].n} ${GR[grOf(t)]}급 ${slotName(s)}`;
 /* ================= 장비 효과 ================= */
 const inv=(s,t)=>save.inv[s+'-'+t];
 const owned=(s,t)=>{const it=inv(s,t);return !!(it&&it.lv>0);};
-const ITEM_MAX=100;
+const ITEM_MAX=100, TR_MAX=9;   // 장비: 100레벨마다 초월하면 최대 레벨 +100 (최대 9번 → 1000레벨)
+const itemMax=it=>ITEM_MAX*(1+((it&&it.tr)||0));
+const trNeed=it=>2*(((it&&it.tr)||0)+1);                 // 초월 재료: 같은 장비 여분
+const trGem=(t,it)=>Math.round(200*(1+t/4)*(((it&&it.tr)||0)+1));
 const lvMul=lv=>1+.12*(lv-1);
 const gMul=t=>Math.pow(2,t/4); // 세트마다 2배, 등급마다 약 19%
 // 장착 효과: 부위마다 다른 능력치
@@ -758,18 +767,18 @@ const ICONS={
 const svgI=k=>`<svg class="i" viewBox="0 0 24 24">${ICONS[k]}</svg>`;
 const BASE_APS=1.8;
 const UPG=[
-  {k:'atk',n:'기본 공격력',ic:'sword',base:4,gr:1.018,max:1e6,val:l=>10+2*l+.02*l*l,show:v=>fmtKo(v)},
-  {k:'aspd',n:'공격 속도',ic:'bolt',base:15,gr:1.018,max:200,val:l=>.025*l,show:v=>'+'+fmtPct(v)},
-  {k:'hp',n:'최대 HP',ic:'heart',base:4,gr:1.018,max:1e6,val:l=>100+20*l+.2*l*l,show:v=>fmtKo(v)},
-  {k:'regen',n:'HP 회복량',ic:'regen',base:5,gr:1.018,max:1e6,val:l=>1+.5*l+.005*l*l,show:v=>`${+v.toFixed(1)}/초`},
-  {k:'crit',n:'크리티컬 확률',ic:'crit',base:10,gr:1.018,max:950,val:l=>.05+.001*l,show:fmtPct},
-  {k:'cdmg',n:'크리티컬 데미지',ic:'burst',base:10,gr:1.018,max:1e6,val:l=>1.5+.01*l,show:fmtPct},
-  {k:'gold',n:'골드 획득량',ic:'coin',base:12,gr:1.018,max:1e6,val:l=>.02*l,show:v=>'+'+fmtPct(v)},
-  {k:'xp',n:'경험치 획득량',ic:'exp',base:12,gr:1.018,max:1e6,val:l=>.02*l,show:v=>'+'+fmtPct(v)}
+  {k:'atk',n:'기본 공격력',ic:'sword',base:4,gr:1.011,max:1e6,val:l=>10+2*l+.02*l*l,show:v=>fmtKo(v)},
+  {k:'aspd',n:'공격 속도',ic:'bolt',base:15,gr:1.011,max:200,val:l=>.025*l,show:v=>'+'+fmtPct(v)},
+  {k:'hp',n:'최대 HP',ic:'heart',base:4,gr:1.011,max:1e6,val:l=>100+20*l+.2*l*l,show:v=>fmtKo(v)},
+  {k:'regen',n:'HP 회복량',ic:'regen',base:5,gr:1.011,max:1e6,val:l=>1+.5*l+.005*l*l,show:v=>`${+v.toFixed(1)}/초`},
+  {k:'crit',n:'크리티컬 확률',ic:'crit',base:10,gr:1.011,max:950,val:l=>.05+.001*l,show:fmtPct},
+  {k:'cdmg',n:'크리티컬 데미지',ic:'burst',base:10,gr:1.011,max:1e6,val:l=>1.5+.01*l,show:fmtPct},
+  {k:'gold',n:'골드 획득량',ic:'coin',base:12,gr:1.011,max:1e6,val:l=>.02*l,show:v=>'+'+fmtPct(v)},
+  {k:'xp',n:'경험치 획득량',ic:'exp',base:12,gr:1.011,max:1e6,val:l=>.02*l,show:v=>'+'+fmtPct(v)}
 ];
 const upLv=k=>save.up[k]||0;
 // 비용: 레벨에 따라 완만하게 (다항식 × 약한 지수). 예전 1.07~1.12배씩 오르던 것을 1.03배로
-const upCost=(u,lv)=>Math.round(u.base*Math.pow(1+.1*lv,1.1)*Math.pow(u.gr,lv));
+const upCost=(u,lv)=>Math.max(1,Math.round(u.base*.4*Math.pow(1+.1*lv,1.05)*Math.pow(u.gr,lv)));   // 골드 강화 비용 크게 낮춤
 // 배수 구매: 가진 골드로 살 수 있는 만큼(최대 배수까지)
 // x1·x10·x100: 그 횟수 전체 비용이 있어야만 강화 (ok=false 면 버튼 꺼짐)
 // MAX: 가진 골드로 할 수 있는 만큼 (최대 5,000회)
@@ -970,7 +979,7 @@ function drawKunaiIcon(c,g,t,x,y,size,ang){
 function iconEl(s,t){return `<i class="ic" style="--atlas:url(${aurl(save.g+'_items.webp')});background-position:${s/7*100}% ${setOf(t)/9*100}%"></i>`;}
 function gbox(s,t,opt={}){
   const it=inv(s,t), own=!!(it&&it.lv>0);
-  return `<span class="gbox${own||opt.show?'':' lock'}" style="--rc:${RC[setOf(t)]};--gc:${GRC[grOf(t)]}">${iconEl(s,t)}<span class="gl">${setNo(t)}</span><span class="gg">${GR[grOf(t)]}</span>${own&&!opt.nolv?`<span class="lv">LV.${it.lv}</span>`:''}${!own&&!opt.show?'<span class="no">미보유</span>':''}${opt.eq?'<span class="eq">E</span>':''}</span>`;
+  return `<span class="gbox${own||opt.show?'':' lock'}" style="--rc:${RC[setOf(t)]};--gc:${GRC[grOf(t)]}">${iconEl(s,t)}<span class="gl">${setNo(t)}</span><span class="gg">${GR[grOf(t)]}</span>${own&&!opt.nolv?`<span class="lv">${it.tr?'★'+it.tr+' ':''}LV.${it.lv}</span>`:''}${!own&&!opt.show?'<span class="no">미보유</span>':''}${opt.eq?'<span class="eq">E</span>':''}</span>`;
 }
 
 /* ================= 소리 ================= */
@@ -1655,7 +1664,7 @@ function updateDots(){
   if(!sp&&rankReady()){$('dotGrow').hidden=false;$('dotGrow').textContent='!';}
   const fr=freeLeft(); $('dotSum').hidden=!fr; $('dotSum').textContent=fr;
   const mr=misReady(), ar=attReady(); $('dotCt').hidden=!(mr||ar); $('dotCt').textContent='!';
-  const hr=achReadyN(); ach.ready=hr; $('dotMis').hidden=!mr; $('dotAtt').hidden=!ar; $('dotAch').hidden=!hr; $('dotAch').textContent=hr>9?'9+':hr;
+  const hr=achReadyN(); ach.ready=hr; $('dotMis').hidden=!(mr||repReady()); $('dotAtt').hidden=!ar; $('dotAch').hidden=!hr; $('dotAch').textContent=hr>9?'9+':hr;
   $('dotReb').hidden=!(rebCanUp()||(rebReady()&&!(save.reb&&save.reb.n)));
   if(hr){$('dotCt').hidden=false;}
 }
@@ -1741,13 +1750,13 @@ function renderGear(){
   if(view.gear==='relic') return renderRelic();
   if(view.gear==='skin') return renderSkin();
   const s=view.slot, t=view.sel, it=inv(s,t), own=!!(it&&it.lv>0), lv=own?it.lv:1, n=it?it.n:0, isEq=save.eq[s]===t;
-  const cur=equipFx(s,t,lv), nxt=equipFx(s,t,Math.min(ITEM_MAX,lv+1)), oc=ownFx(s,t,lv), on=ownFx(s,t,Math.min(ITEM_MAX,lv+1));
-  const rows=(a,b)=>Object.keys(a).map(k=>`<div class="fxr"><span>${FXN[k]} 증가</span><span class="num">${fmtPct(a[k])}${own&&lv<ITEM_MAX?` › <em>${fmtPct(b[k])}</em>`:''}</span></div>`).join('');
+  const IM=itemMax(it), cur=equipFx(s,t,lv), nxt=equipFx(s,t,Math.min(IM,lv+1)), oc=ownFx(s,t,lv), on=ownFx(s,t,Math.min(IM,lv+1));
+  const rows=(a,b)=>Object.keys(a).map(k=>`<div class="fxr"><span>${FXN[k]} 증가</span><span class="num">${fmtPct(a[k])}${own&&lv<IM?` › <em>${fmtPct(b[k])}</em>`:''}</span></div>`).join('');
   const cnt=k=>{const x=inv(s,k);return x?x.n:0;};
   $('pbody').innerHTML=`
     <div class="gdet">
       <div>${gbox(s,t,{show:true,eq:isEq})}<div class="cbar${n>=MERGE?' full':''}"><i style="width:${Math.min(100,n/MERGE*100)}%"></i><span class="num">${n}/${MERGE}</span></div></div>
-      <div class="ginfo"><h4>${itemName(s,t)}<span class="num">${own?`LV.${lv}/<b>${ITEM_MAX}</b>`:'미보유'}</span></h4>
+      <div class="ginfo"><h4>${itemName(s,t)}<span class="num">${own?`${it.tr?`<em style="color:#ffcf5a;font-style:normal">★${it.tr}</em> `:''}LV.${lv}/<b>${IM}</b>`:'미보유'}</span></h4>
         <div class="fxs"><h5>장착효과</h5>${rows(cur,nxt)}<h5 class="sep">보유효과</h5>${rows(oc,on)}</div></div>
       <div class="gbtns">
         <button class="obtn brown" id="gComb">합성하기<span class="cost">${MERGE}개 → ${t<TIERS-1?`${SETS[setOf(t+1)].n} ${GR[grOf(t+1)]}`:'최고 등급'}</span></button>
@@ -1767,7 +1776,11 @@ function renderGear(){
   $('gComb').onclick=()=>{if(combine(s,t)){SFX.buy();toast(`${itemName(s,t+1)} 획득!`);afterGear();}};
   $('gEq').disabled=!own||isEq;
   $('gEq').onclick=()=>{save.eq[s]=t;SFX.equip();toast(`${itemName(s,t)} 장착`);afterGear();};
-  $('gEnh').onclick=()=>{const c=enhCost(t,lv); if(!own||lv>=ITEM_MAX||save.gold<c) return; save.gold-=c; it.lv++; mis('enh'); SFX.up(); afterGear();};
+  $('gEnh').onclick=()=>{ if(!own) return;
+    if(lv>=IM){ // 초월
+      const nd=trNeed(it), g=trGem(t,it); if((it.tr||0)>=TR_MAX||it.n<nd||save.gems<g) return;
+      it.n-=nd; save.gems-=g; it.tr=(it.tr||0)+1; mis('tr'); SFX.buy(); toast(`${itemName(s,t)} ★${it.tr} 초월! 최대 레벨 ${itemMax(it)}`); afterGear(); return; }
+    const c=enhCost(t,lv); if(save.gold<c) return; save.gold-=c; it.lv++; mis('enh'); SFX.up(); afterGear();};
   $('gAllComb').onclick=()=>{let c=0; for(let sl=0;sl<8;sl++) for(let k=0;k<TIERS-1;k++) while(combine(sl,k)) c++; if(c){SFX.buy();toast(`합성 ${c}회 완료`);afterGear();} else toast('합성할 장비가 없어요');};
   $('gAuto').onclick=()=>{let ch=0; for(let sl=0;sl<8;sl++){let best=0; for(let k=0;k<TIERS;k++) if(owned(sl,k)) best=k; if(save.eq[sl]!==best){save.eq[sl]=best;ch++;}} if(ch){SFX.equip();toast(`${ch}부위 자동 장착`);view.sel=save.eq[view.slot];afterGear();} else toast('이미 가장 좋은 장비를 입고 있어요');};
   refreshGearBtns();
@@ -1792,7 +1805,10 @@ function afterGear(){persist(); refreshStats(); updateDots(); renderGear();}
 function refreshGearBtns(){
   const b=$('gEnh'); if(!b) return;
   const s=view.slot,t=view.sel,it=inv(s,t),own=!!(it&&it.lv>0),lv=own?it.lv:1;
-  if(own&&lv>=ITEM_MAX){b.className='obtn green';b.innerHTML='최대레벨';b.disabled=true;return;}
+  if(own&&lv>=itemMax(it)){
+    if((it.tr||0)>=TR_MAX){b.className='obtn green';b.innerHTML='최대레벨';b.disabled=true;return;}
+    const nd=trNeed(it), g=trGem(t,it); b.className='obtn green'; b.disabled=it.n<nd||save.gems<g;
+    b.innerHTML=`초월하기<span class="cost">여분 ${it.n}/${nd} · <i class="gem"></i>${fmtKo(g)}</span>`; return;}
   const c=enhCost(t,lv); b.className='obtn'; b.disabled=!own||save.gold<c;
   b.innerHTML=`강화하기<span class="cost"><i class="coin"></i>${fmtKo(c)}</span>`;
 }
@@ -1801,28 +1817,31 @@ function renderSkin(){
   const cur=skinSet();
   $('pbody').innerHTML=`<div class="pscroll"><p class="note" style="margin:0 0 8px">세트 장비 <b>8부위를 모두 모으면</b> 스킨이 열려요. 스킨은 모습과 함께 능력치도 올려 줘요. 카드를 누르면 강화할 수 있어요.</p>
     <div class="skgrid">${SETS.map((S,k)=>{const open=skinOpen(k), on=k===cur, lv=skinLv(k);
-      return `<button class="skc${on?' on':''}${open?'':' lock'}" data-k="${k}"><canvas width="150" height="170"></canvas>${open&&lv?`<em class="sklv">+${lv}</em>`:''}
+      return `<button class="skc${on?' on':''}${open?'':' lock'}" data-k="${k}"><canvas width="150" height="170"></canvas>${open&&(lv||skinTr(k))?`<em class="sklv">${skinTr(k)?'★'+skinTr(k)+' ':''}+${lv}</em>`:''}
         <b style="border-bottom:3px solid ${S.glow}">${S.n}</b><span>${on?'착용 중':open?'보기':`🔒 ${skinParts(k)}/8`}</span></button>`;}).join('')}</div></div>`;
   $('pbody').querySelectorAll('.skc').forEach(b=>b.onclick=()=>{SFX.tap(); skinPopup(+b.dataset.k);});
   for(let k=0;k<SETS.length;k++) realImg('i',save.g,k);
 }
 function skinPopup(k){
-  const S=SETS[k], open=skinOpen(k), lv=skinLv(k), on=k===skinSet(), mx=lv>=SKIN_MAX, gem=skinGem(k,lv), ready=skinReady(k);
-  const row=(kind,t)=>{const a=skinFx(k,kind,lv), b=skinFx(k,kind,Math.min(SKIN_MAX,lv+1)); const ks=Object.keys(a);
+  const S=SETS[k], open=skinOpen(k), lv=skinLv(k), on=k===skinSet(), SM=skinMaxLv(k), mx=lv>=SM, trDone=skinTr(k)>=SKIN_TR_MAX, gem=skinGem(k,lv), ready=skinReady(k), tp=skinTrParts(k), tg=skinTrGem(k);
+  const row=(kind,t)=>{const a=skinFx(k,kind,lv), b=skinFx(k,kind,Math.min(SM,lv+1)); const ks=Object.keys(a);
     return ks.length?`<h5 style="margin-top:8px">${t}</h5><div class="kv">${ks.map(x=>`<span>${FXN[x]}</span><b class="num">+${fmtPct(a[x])}${mx?'':` › <em style="color:#8fe38f;font-style:normal">+${fmtPct(b[x])}</em>`}</b>`).join('')}</div>`:'';};
-  $('infoBody').innerHTML=`<h2>${S.n} 스킨 ${open?`<span style="font-size:18px;color:#ffd36a">+${lv}</span>`:''}</h2>
+  $('infoBody').innerHTML=`<h2>${S.n} 스킨 ${open?`<span style="font-size:18px;color:#ffd36a">${skinTr(k)?'★'+skinTr(k)+' ':''}+${lv}/${SM}</span>`:''}</h2>
     <div>${row('eq','착용 효과 (입었을 때)')}${row('own','보유 효과 (해금만 해도)')}</div>
     ${open?`<h5 style="margin-top:4px">강화 재료</h5><div class="kv" style="font-size:13px">${[0,1,2,3].map(g=>{const n=skinSpareG(k,g); return `<span><b style="color:${GRC[g]}">${GR[g]}</b>등급 ${S.n} 장비 여분</span><b class="num" style="color:${n>=SKIN_NEED?'#8fe38f':'#ff9a8a'}">${n}/${SKIN_NEED}</b>`;}).join('')}<span>보석</span><b class="num" style="color:${save.gems>=gem?'#8fe38f':'#ff9a8a'}">${fmtKo(gem)}</b></div>
-      <p class="note">강화할 때 <b>F·D·A·S 등급마다</b> 겹친 장비(여분) ${SKIN_NEED}개씩(모두 ${SKIN_NEED*4}개)과 보석을 써요. 최대 +${SKIN_MAX}</p>`
+      <p class="note">강화할 때 <b>F·D·A·S 등급마다</b> 겹친 장비(여분) ${SKIN_NEED}개씩(모두 ${SKIN_NEED*4}개)과 보석을 써요. 최대 +${SM}</p>
+      ${mx&&!trDone?`<h5 style="margin-top:4px">스킨 초월 (최대 레벨 +${SKIN_MAX})</h5><div class="kv" style="font-size:13px"><span>★${skinTr(k)+1} 이상 초월한 ${S.n} 장비 (부위)</span><b class="num" style="color:${tp>=8?'#8fe38f':'#ff9a8a'}">${tp}/8</b><span>보석</span><b class="num" style="color:${save.gems>=tg?'#8fe38f':'#ff9a8a'}">${fmtKo(tg)}</b></div>`:''}`
     :`<p class="note" style="text-align:center">${S.n} 세트 장비 8부위를 모두 모으면 열려요 (지금 ${skinParts(k)}/8)</p>`}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
       <button class="obtn brown" id="skWear" ${open&&!on?'':'disabled'}>${on?'착용 중':'입기'}</button>
-      <button class="obtn" id="skUp" ${open&&!mx&&ready&&save.gems>=gem?'':'disabled'}>${mx?'최대 강화':'강화하기'}</button></div>
+      ${mx&&!trDone?`<button class="obtn green" id="skTr" ${tp>=8&&save.gems>=tg?'':'disabled'}>스킨 초월</button>`:`<button class="obtn" id="skUp" ${open&&!mx&&ready&&save.gems>=gem?'':'disabled'}>${mx?'최대 강화':'강화하기'}</button>`}</div>
     <button class="obtn big" id="infoOk">닫기</button>`;
   $('infoM').hidden=false; $('infoOk').onclick=()=>{SFX.tap();$('infoM').hidden=true;};
   $('skWear').onclick=()=>{if(!skinOpen(k)) return; save.skin=k; persist(); SFX.buy(); for(const c of ['I','p','i']) realImg(c,save.g,k); realImg('k','',k);
     refreshStats(); drawAvatar(); toast(`${S.n} 스킨으로 갈아입었어요`); renderSkin(); skinPopup(k);};
-  $('skUp').onclick=()=>{const L=skinLv(k), g=skinGem(k,L); if(!skinOpen(k)||L>=SKIN_MAX||save.gems<g||!skinReady(k)) return;
+  if($('skTr')) $('skTr').onclick=()=>{ if(skinLv(k)<skinMaxLv(k)||skinTr(k)>=SKIN_TR_MAX||skinTrParts(k)<8||save.gems<skinTrGem(k)) return;
+    save.gems-=skinTrGem(k); (save.skinTr||(save.skinTr={}))[k]=skinTr(k)+1; persist(); SFX.buy(); updateTop(); toast(`${S.n} 스킨 ★${skinTr(k)} 초월! 최대 +${skinMaxLv(k)}`); renderSkin(); skinPopup(k);};
+  if($('skUp')) $('skUp').onclick=()=>{const L=skinLv(k), g=skinGem(k,L); if(!skinOpen(k)||L>=skinMaxLv(k)||save.gems<g||!skinReady(k)) return;
     // 등급마다 여분 5개씩 사용 (여분이 많은 부위부터)
     for(let gr=0;gr<4;gr++){ let need=SKIN_NEED; const its=[...Array(8).keys()].map(sl=>save.inv[sl+'-'+(k*4+gr)]).filter(it=>it&&it.lv>0&&it.n>0).sort((a,b)=>b.n-a.n);
       for(const it of its){ if(need<=0) break; const u=Math.min(it.n,need); it.n-=u; need-=u; } }
@@ -1946,6 +1965,31 @@ const MISSIONS=[
   {k:'play',n:'10분 동안 플레이',need:600,gem:50,im:'--st-xp',time:true},
 ];
 const MIS_ALL=200;   // 전부 완료 보너스
+// 반복 미션: 누적 기록이 목표만큼 쌓일 때마다 계속 받을 수 있다
+const REP=[
+  {k:'kill',n:'몬스터 처치',need:1000,gem:30,im:'--st-atk'},
+  {k:'boss',n:'보스 처치',need:20,gem:40,im:'--ct-boss'},
+  {k:'up',n:'골드 강화',need:300,gem:30,im:'--st-gold'},
+  {k:'enh',n:'장비 강화·합성',need:50,gem:30,im:'--tab-gear'},
+  {k:'sum',n:'소환',need:50,gem:50,im:'--tab-summon'},
+  {k:'dun',n:'던전 도전',need:10,gem:50,im:'--ct-gold'},
+  {k:'tr',n:'장비 초월',need:1,gem:100,im:'--tab-gear'}];
+const repGot=k=>(save.rep&&save.rep[k])||0;
+const repCan=R=>Math.max(0,Math.floor(tot(R.k)/R.need)-repGot(R.k));
+const repReady=()=>REP.some(R=>repCan(R)>0);
+function renderRep(){
+  $('mpBody').innerHTML=`<div class="pscroll"><div class="ms-all"><div>반복 미션<br><small style="color:var(--muted)">목표를 채울 때마다 몇 번이든 다시 받아요</small></div>
+      <button class="obtn" id="rpAll" ${repReady()?'':'disabled'}>모두 받기</button></div>
+    ${REP.map(R=>{const c=repCan(R), prog=tot(R.k)-(repGot(R.k)+c)*R.need, cur=Math.min(R.need,Math.max(0,prog));
+      return `<div class="urow" data-rp="${R.k}"><div class="itile relic"><i style="background-image:var(${R.im})"></i></div>
+        <div class="uinfo"><b>${R.n} ${fmtKo(R.need)}${R.k==='tr'?'번':R.k==='up'||R.k==='enh'||R.k==='sum'||R.k==='dun'?'회':'마리'}마다</b><span class="uval num" style="font-size:12px">${c?`받을 보상 ${c}번`:`${fmtKo(cur)} / ${fmtKo(R.need)}`}</span><div class="ms-prog"><i style="width:${c?100:cur/R.need*100}%"></i></div></div>
+        <div class="uright"><button class="obtn" ${c?'':'disabled'}><span class="ms-rw">${gemI}${R.gem*(c||1)}</span></button></div></div>`;}).join('')}
+    <p class="note">반복 미션은 매일 초기화되지 않고 계속 쌓여요.</p></div>`;
+  const claim=R=>{const c=repCan(R); if(!c) return 0; (save.rep||(save.rep={}))[R.k]=repGot(R.k)+c; save.gems+=R.gem*c; return R.gem*c;};
+  const after=g=>{SFX.buy(); toast(`보석 +${fmtKo(g)}`); persist(); updateTop(); updateDots(); renderPop();};
+  $('mpBody').querySelectorAll('[data-rp] .obtn').forEach(b=>b.onclick=()=>{const g=claim(REP.find(x=>x.k===b.closest('[data-rp]').dataset.rp)); if(g) after(g);});
+  $('rpAll').onclick=()=>{let g=0; for(const R of REP) g+=claim(R); if(g) after(g);};
+}
 function misState(){const m=save.daily||(save.daily={day:'',c:{},got:{}}); if(m.day!==today()){m.day=today(); m.c={}; m.got={};} return m;}
 function mis(k,n=1){if(k!=='play'){const T=save.tot||(save.tot={}); T[k]=(T[k]||0)+n; if(achReadyN()!==ach.ready) updateDots();}
   const m=misState(), M=MISSIONS.find(x=>x.k===k); if(!M||m.got[k]) return;
@@ -2090,10 +2134,10 @@ $('rbM').onclick=e=>{if(e.target===$('rbM')) $('rbM').hidden=true;};
 
 /* ---- 미션 · 출석 · 업적 팝업 ---- */
 function renderPop(){
-  const TB=[['mis','미션',misReady()],['att','출석',attReady()],['ach','업적',achReadyN()>0]];
+  const TB=[['mis','미션',misReady()],['rep','반복',repReady()],['att','출석',attReady()],['ach','업적',achReadyN()>0]];
   $('mpTabs').innerHTML=TB.map(([k,n,dot])=>`<button data-k="${k}" class="${k===view.ct?'on':''}">${n}${dot?'<span class="dot" style="right:6px;top:-4px">!</span>':''}</button>`).join('');
   $('mpTabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{SFX.tap(); view.ct=b.dataset.k; renderPop();});
-  ({mis:renderMissions,att:renderAttend,ach:renderAch})[view.ct]();
+  ({mis:renderMissions,rep:renderRep,att:renderAttend,ach:renderAch})[view.ct]();
 }
 function openPop(k){ if(G&&G.dun) return; view.ct=k; $('mpM').hidden=false; renderPop(); }
 $('mpClose').onclick=()=>{SFX.tap(); $('mpM').hidden=true;};
