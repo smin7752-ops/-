@@ -137,6 +137,12 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
 #dunX .ray{position:absolute;left:50%;top:40%;width:640px;height:640px;margin:-320px 0 0 -320px;background:repeating-conic-gradient(rgba(255,210,120,.18) 0 8deg,transparent 8deg 22deg);border-radius:50%;opacity:0;transform:scale(.4) rotate(0);transition:opacity .4s,transform 1.4s ease-out;-webkit-mask:radial-gradient(circle,#000 20%,transparent 65%);mask:radial-gradient(circle,#000 20%,transparent 65%)}
 #dunX.go.win .ray{opacity:1;transform:scale(1) rotate(40deg)}
 #dunX.dark .ray,#dunX.out .ray{opacity:0}
+.sheet.mp{padding:10px 10px 12px;gap:8px;max-height:calc(100% - 40px);height:min(640px,calc(100% - 40px))}
+.mptabs{display:flex;gap:6px;padding:0!important;background:none!important}.mptabs button{flex:1}
+.mpbody{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.mpbody .pscroll{height:auto;overflow:visible;padding:2px}
+#ui.indun .nav button,#ui.indun .nav .mid{filter:grayscale(.7) brightness(.6)}
+#ui.indun .sideb{display:none}
 .sideb{position:absolute;right:8px;top:198px;display:flex;flex-direction:column;gap:10px;z-index:2}
 .sideb button{position:relative;width:54px;height:58px;padding:0;border-radius:14px;border:2px solid #d6a85a;background:linear-gradient(180deg,#4a3222,#2a1b12);box-shadow:0 3px 0 #1a100a,0 0 0 1px #000,inset 0 1px 0 rgba(255,230,170,.35);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;color:#ffe6b0;font-family:var(--display);font-size:11px;text-shadow:0 1px 0 #000;cursor:pointer}
 .sideb button:active{transform:translateY(2px);box-shadow:0 1px 0 #1a100a}
@@ -491,6 +497,7 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
     <button class="obtn big" id="pickGo" disabled>닌자를 골라 주세요</button>
   </section>
   <section class="modal" id="infoM" hidden><div class="sheet info" id="infoBody"></div></section>
+  <section class="modal" id="mpM" hidden><div class="sheet mp"><div class="mptabs ptabs" id="mpTabs"></div><div class="mpbody" id="mpBody"></div><button class="obtn big" id="mpClose">닫기</button></div></section>
   <section class="modal" id="attM" hidden><div class="sheet info" id="attBody"></div></section>
   <section class="modal" id="offM" hidden><div class="sheet info off" id="offBody"></div></section>
   <section class="modal" id="sumM" hidden><div class="sheet" id="sumBody"></div></section>
@@ -509,7 +516,7 @@ const ANIMS=['idle','walk','throw','rear'];
 const SPRITE_H=200;
 // 그림 주소. 안드로이드 앱에서는 그림을 페이지 안에 넣어(ASSET_MAP) 읽는다 (file:// 그림은 픽셀을 못 읽어서)
 // 세트별 실제 옷 뒷모습 던지기 동작(8프레임)과 쿠나이 비행 동작. 키: p[성별][세트0~9], k[세트0~9]
-const MOTION={"p":{"f":{"0":{"w":179,"h":210,"n":8,"ax":83.9,"ay":207.8},"1":{"w":183,"h":212,"n":8,"ax":91.7,"ay":209.3},"2":{"w":165,"h":206,"n":8,"ax":86.1,"ay":202.5},"3":{"w":171,"h":204,"n":8,"ax":80.0,"ay":201.5},"4":{"w":190,"h":209,"n":8,"ax":109.5,"ay":205.1},"5":{"w":182,"h":205,"n":8,"ax":102.3,"ay":201.5},"6":{"w":199,"h":205,"n":8,"ax":84.4,"ay":202.4},"7":{"w":186,"h":207,"n":8,"ax":109.9,"ay":203.6},"8":{"w":194,"h":210,"n":8,"ax":100.1,"ay":206.6},"9":{"w":165,"h":207,"n":8,"ax":81.6,"ay":203.4}},"m":{"0":{"w":203,"h":228,"n":8,"ax":85.7,"ay":225.0},"1":{"w":185,"h":205,"n":8,"ax":84.7,"ay":202.2},"2":{"w":186,"h":208,"n":8,"ax":91.2,"ay":204.4},"3":{"w":189,"h":206,"n":8,"ax":102.8,"ay":202.6},"4":{"w":191,"h":210,"n":8,"ax":96.4,"ay":206.2},"5":{"w":183,"h":219,"n":8,"ax":78.5,"ay":215.9},"6":{"w":184,"h":205,"n":8,"ax":95.3,"ay":201.5},"7":{"w":226,"h":212,"n":8,"ax":133.9,"ay":209.0},"8":{"w":184,"h":215,"n":8,"ax":91.1,"ay":211.3},"9":{"w":202,"h":208,"n":8,"ax":97.5,"ay":205.2}}},"k":{"0":{"w":153,"h":77,"n":8,"ax":1.2,"ay":38.3},"1":{"w":153,"h":79,"n":8,"ax":1.2,"ay":39.3},"2":{"w":153,"h":86,"n":8,"ax":1.2,"ay":42.8},"3":{"w":153,"h":82,"n":8,"ax":1.1,"ay":41.0},"4":{"w":153,"h":90,"n":8,"ax":1.2,"ay":45.0},"5":{"w":153,"h":84,"n":8,"ax":1.2,"ay":41.7},"6":{"w":153,"h":92,"n":8,"ax":1.1,"ay":45.7},"7":{"w":153,"h":85,"n":8,"ax":1.1,"ay":42.1},"8":{"w":153,"h":80,"n":8,"ax":1.2,"ay":39.7},"9":{"w":153,"h":102,"n":8,"ax":1.1,"ay":50.7}},"i":{"f":{"1":{"w":177,"h":209,"n":8,"ax":86.9,"ay":205.2},"2":{"w":154,"h":210,"n":8,"ax":63.3,"ay":206.2},"3":{"w":155,"h":214,"n":8,"ax":64.3,"ay":209.9},"4":{"w":171,"h":213,"n":8,"ax":66.7,"ay":210.3},"5":{"w":166,"h":212,"n":8,"ax":66.6,"ay":207.7},"6":{"w":162,"h":212,"n":8,"ax":64.6,"ay":207.7},"7":{"w":175,"h":217,"n":8,"ax":63.2,"ay":214.0},"8":{"w":168,"h":208,"n":8,"ax":70.5,"ay":205.9},"9":{"w":158,"h":208,"n":8,"ax":62.5,"ay":203.9}},"m":{"2":{"w":170,"h":217,"n":8,"ax":69.0,"ay":213.8},"3":{"w":163,"h":208,"n":8,"ax":66.6,"ay":204.7},"4":{"w":166,"h":211,"n":8,"ax":67.3,"ay":206.8},"5":{"w":170,"h":214,"n":8,"ax":63.6,"ay":209.7},"6":{"w":171,"h":210,"n":8,"ax":67.4,"ay":207.5},"7":{"w":182,"h":205,"n":8,"ax":68.6,"ay":202.1},"8":{"w":159,"h":212,"n":8,"ax":66.2,"ay":209.1},"9":{"w":168,"h":206,"n":8,"ax":65.2,"ay":203.6},"1":{"w":160,"h":204,"n":8,"ax":64.9,"ay":201.5}}},"h":{"f":{"1":{"w":190,"h":209,"n":8,"ax":78.5,"ay":207.4},"2":{"w":192,"h":208,"n":8,"ax":88.3,"ay":204.0},"3":{"w":185,"h":209,"n":8,"ax":72.6,"ay":205.1},"4":{"w":202,"h":210,"n":8,"ax":85.8,"ay":206.4},"5":{"w":191,"h":216,"n":8,"ax":71.7,"ay":212.1},"6":{"w":206,"h":209,"n":8,"ax":79.0,"ay":205.1},"7":{"w":203,"h":224,"n":8,"ax":78.3,"ay":219.8},"8":{"w":195,"h":205,"n":8,"ax":81.9,"ay":201.5},"9":{"w":186,"h":210,"n":8,"ax":90.3,"ay":206.5}},"m":{"0":{"w":215,"h":212,"n":8,"ax":100.0,"ay":210.2},"2":{"w":204,"h":208,"n":8,"ax":96.1,"ay":203.6},"3":{"w":188,"h":219,"n":8,"ax":87.2,"ay":216.1},"4":{"w":205,"h":216,"n":8,"ax":94.0,"ay":211.8},"5":{"w":201,"h":209,"n":8,"ax":90.9,"ay":205.1},"6":{"w":209,"h":212,"n":8,"ax":90.9,"ay":209.5},"7":{"w":211,"h":221,"n":8,"ax":85.8,"ay":217.7},"8":{"w":210,"h":215,"n":8,"ax":92.2,"ay":212.2},"9":{"w":198,"h":213,"n":8,"ax":93.5,"ay":209.3}}},"d":{"f":{"1":{"w":224,"h":230,"n":8,"ax":102.1,"ay":227.9},"2":{"w":227,"h":229,"n":8,"ax":114.6,"ay":226.7},"3":{"w":206,"h":239,"n":8,"ax":93.9,"ay":237.3},"4":{"w":209,"h":224,"n":8,"ax":93.6,"ay":222.1},"5":{"w":215,"h":226,"n":8,"ax":93.8,"ay":224.4},"6":{"w":219,"h":228,"n":8,"ax":98.8,"ay":225.5},"7":{"w":213,"h":231,"n":8,"ax":95.9,"ay":229.1},"8":{"w":221,"h":243,"n":8,"ax":92.7,"ay":241.2},"9":{"w":212,"h":222,"n":8,"ax":107.5,"ay":219.8}},"m":{"0":{"w":228,"h":204,"n":8,"ax":110.0,"ay":201.7},"2":{"w":233,"h":242,"n":8,"ax":100.6,"ay":239.9},"3":{"w":208,"h":204,"n":8,"ax":95.1,"ay":201.6},"4":{"w":203,"h":204,"n":8,"ax":92.5,"ay":201.6},"5":{"w":215,"h":204,"n":8,"ax":101.1,"ay":201.6},"6":{"w":223,"h":204,"n":8,"ax":97.9,"ay":201.7},"7":{"w":202,"h":204,"n":8,"ax":83.0,"ay":201.6},"8":{"w":212,"h":238,"n":8,"ax":88.6,"ay":235.3},"9":{"w":231,"h":241,"n":8,"ax":114.9,"ay":239.2}}},"r":{"f":{"1":{"w":152,"h":204,"n":8,"ax":89.4,"ay":202.4},"2":{"w":140,"h":205,"n":8,"ax":80.2,"ay":202.4},"3":{"w":148,"h":208,"n":8,"ax":86.2,"ay":204.8},"4":{"w":164,"h":213,"n":8,"ax":99.3,"ay":209.3},"5":{"w":154,"h":203,"n":8,"ax":92.7,"ay":201.5},"6":{"w":155,"h":220,"n":8,"ax":91.8,"ay":216.6},"7":{"w":158,"h":212,"n":8,"ax":100.0,"ay":209.2},"8":{"w":150,"h":220,"n":8,"ax":86.8,"ay":216.0},"9":{"w":157,"h":204,"n":8,"ax":97.2,"ay":201.9}},"m":{"2":{"w":157,"h":211,"n":8,"ax":87.1,"ay":207.5},"3":{"w":150,"h":209,"n":8,"ax":83.6,"ay":205.9},"4":{"w":174,"h":212,"n":8,"ax":103.2,"ay":207.9},"5":{"w":163,"h":212,"n":8,"ax":66.5,"ay":208.7},"6":{"w":158,"h":208,"n":8,"ax":90.5,"ay":205.9},"7":{"w":180,"h":226,"n":8,"ax":113.3,"ay":222.9},"8":{"w":169,"h":211,"n":8,"ax":97.3,"ay":206.9},"9":{"w":176,"h":208,"n":8,"ax":106.7,"ay":205.5},"1":{"w":180,"h":211,"n":8,"ax":97.7,"ay":208.7}}},"I":{"f":{"1":{"w":345,"h":412,"n":8,"ax":170.3,"ay":406.6,"base":400},"2":{"w":298,"h":414,"n":8,"ax":121.4,"ay":408.5,"base":400},"3":{"w":302,"h":412,"n":8,"ax":123.0,"ay":405.9,"base":400},"4":{"w":328,"h":413,"n":8,"ax":127.1,"ay":407.7,"base":400},"5":{"w":323,"h":415,"n":8,"ax":129.3,"ay":409.6,"base":400},"6":{"w":314,"h":415,"n":8,"ax":124.4,"ay":409.6,"base":400},"7":{"w":341,"h":418,"n":8,"ax":123.6,"ay":412.3,"base":400},"8":{"w":318,"h":411,"n":8,"ax":132.5,"ay":405.7,"base":400},"9":{"w":308,"h":411,"n":8,"ax":121.4,"ay":404.8,"base":400}},"m":{"2":{"w":334,"h":418,"n":8,"ax":133.7,"ay":411.7,"base":400},"3":{"w":320,"h":411,"n":8,"ax":131.1,"ay":404.2,"base":400},"4":{"w":323,"h":410,"n":8,"ax":130.8,"ay":403.8,"base":400},"5":{"w":332,"h":411,"n":8,"ax":124.3,"ay":404.8,"base":400},"6":{"w":339,"h":420,"n":8,"ax":133.2,"ay":414.1,"base":400},"7":{"w":357,"h":411,"n":8,"ax":133.8,"ay":405.1,"base":400},"8":{"w":315,"h":416,"n":8,"ax":131.1,"ay":410.1,"base":400},"9":{"w":335,"h":416,"n":8,"ax":131.7,"ay":408.4,"base":400},"1":{"w":314,"h":409,"n":8,"ax":127.6,"ay":403.9,"base":400}}}};
+const MOTION={"p":{"f":{"0":{"w":362,"h":420,"n":8,"ax":176.7,"ay":415.6,"base":400},"1":{"w":377,"h":423,"n":8,"ax":177.3,"ay":418.6,"base":400},"2":{"w":341,"h":409,"n":8,"ax":164.2,"ay":403.0,"base":400},"3":{"w":342,"h":408,"n":8,"ax":167.0,"ay":403.0,"base":400},"4":{"w":363,"h":414,"n":8,"ax":199.5,"ay":410.2,"base":400},"5":{"w":355,"h":408,"n":8,"ax":194.4,"ay":403.1,"base":400},"6":{"w":379,"h":409,"n":8,"ax":184.2,"ay":404.8,"base":400},"7":{"w":383,"h":411,"n":8,"ax":220.8,"ay":407.1,"base":400},"8":{"w":417,"h":415,"n":8,"ax":203.3,"ay":410.4,"base":400},"9":{"w":332,"h":410,"n":8,"ax":159.4,"ay":404.9,"base":400}},"m":{"0":{"w":402,"h":455,"n":8,"ax":176.2,"ay":443.9,"base":400},"1":{"w":364,"h":411,"n":8,"ax":169.4,"ay":404.3,"base":400},"2":{"w":388,"h":414,"n":8,"ax":215.0,"ay":408.7,"base":400},"3":{"w":369,"h":410,"n":8,"ax":176.6,"ay":403.1,"base":400},"4":{"w":374,"h":418,"n":8,"ax":196.0,"ay":406.3,"base":400},"5":{"w":355,"h":436,"n":8,"ax":163.5,"ay":427.7,"base":400},"6":{"w":351,"h":408,"n":8,"ax":183.5,"ay":403.0,"base":400},"7":{"w":412,"h":423,"n":8,"ax":224.1,"ay":412.0,"base":400},"8":{"w":386,"h":427,"n":8,"ax":184.2,"ay":422.5,"base":400},"9":{"w":373,"h":417,"n":8,"ax":184.9,"ay":413.2,"base":400}}},"k":{"0":{"w":153,"h":77,"n":8,"ax":1.2,"ay":38.3},"1":{"w":153,"h":79,"n":8,"ax":1.2,"ay":39.3},"2":{"w":153,"h":86,"n":8,"ax":1.2,"ay":42.8},"3":{"w":153,"h":82,"n":8,"ax":1.1,"ay":41.0},"4":{"w":153,"h":90,"n":8,"ax":1.2,"ay":45.0},"5":{"w":153,"h":84,"n":8,"ax":1.2,"ay":41.7},"6":{"w":153,"h":92,"n":8,"ax":1.1,"ay":45.7},"7":{"w":153,"h":85,"n":8,"ax":1.1,"ay":42.1},"8":{"w":153,"h":80,"n":8,"ax":1.2,"ay":39.7},"9":{"w":153,"h":102,"n":8,"ax":1.1,"ay":50.7}},"i":{"f":{"1":{"w":177,"h":209,"n":8,"ax":86.9,"ay":205.2},"2":{"w":154,"h":210,"n":8,"ax":63.3,"ay":206.2},"3":{"w":155,"h":214,"n":8,"ax":64.3,"ay":209.9},"4":{"w":171,"h":213,"n":8,"ax":66.7,"ay":210.3},"5":{"w":166,"h":212,"n":8,"ax":66.6,"ay":207.7},"6":{"w":162,"h":212,"n":8,"ax":64.6,"ay":207.7},"7":{"w":175,"h":217,"n":8,"ax":63.2,"ay":214.0},"8":{"w":168,"h":208,"n":8,"ax":70.5,"ay":205.9},"9":{"w":158,"h":208,"n":8,"ax":62.5,"ay":203.9}},"m":{"2":{"w":170,"h":217,"n":8,"ax":69.0,"ay":213.8},"3":{"w":163,"h":208,"n":8,"ax":66.6,"ay":204.7},"4":{"w":166,"h":211,"n":8,"ax":67.3,"ay":206.8},"5":{"w":170,"h":214,"n":8,"ax":63.6,"ay":209.7},"6":{"w":171,"h":210,"n":8,"ax":67.4,"ay":207.5},"7":{"w":182,"h":205,"n":8,"ax":68.6,"ay":202.1},"8":{"w":159,"h":212,"n":8,"ax":66.2,"ay":209.1},"9":{"w":168,"h":206,"n":8,"ax":65.2,"ay":203.6},"1":{"w":160,"h":204,"n":8,"ax":64.9,"ay":201.5}}},"h":{"f":{"1":{"w":190,"h":209,"n":8,"ax":78.5,"ay":207.4},"2":{"w":192,"h":208,"n":8,"ax":88.3,"ay":204.0},"3":{"w":185,"h":209,"n":8,"ax":72.6,"ay":205.1},"4":{"w":202,"h":210,"n":8,"ax":85.8,"ay":206.4},"5":{"w":191,"h":216,"n":8,"ax":71.7,"ay":212.1},"6":{"w":206,"h":209,"n":8,"ax":79.0,"ay":205.1},"7":{"w":203,"h":224,"n":8,"ax":78.3,"ay":219.8},"8":{"w":195,"h":205,"n":8,"ax":81.9,"ay":201.5},"9":{"w":186,"h":210,"n":8,"ax":90.3,"ay":206.5}},"m":{"0":{"w":215,"h":212,"n":8,"ax":100.0,"ay":210.2},"2":{"w":204,"h":208,"n":8,"ax":96.1,"ay":203.6},"3":{"w":188,"h":219,"n":8,"ax":87.2,"ay":216.1},"4":{"w":205,"h":216,"n":8,"ax":94.0,"ay":211.8},"5":{"w":201,"h":209,"n":8,"ax":90.9,"ay":205.1},"6":{"w":209,"h":212,"n":8,"ax":90.9,"ay":209.5},"7":{"w":211,"h":221,"n":8,"ax":85.8,"ay":217.7},"8":{"w":210,"h":215,"n":8,"ax":92.2,"ay":212.2},"9":{"w":198,"h":213,"n":8,"ax":93.5,"ay":209.3}}},"d":{"f":{"1":{"w":224,"h":230,"n":8,"ax":102.1,"ay":227.9},"2":{"w":227,"h":229,"n":8,"ax":114.6,"ay":226.7},"3":{"w":206,"h":239,"n":8,"ax":93.9,"ay":237.3},"4":{"w":209,"h":224,"n":8,"ax":93.6,"ay":222.1},"5":{"w":215,"h":226,"n":8,"ax":93.8,"ay":224.4},"6":{"w":219,"h":228,"n":8,"ax":98.8,"ay":225.5},"7":{"w":213,"h":231,"n":8,"ax":95.9,"ay":229.1},"8":{"w":221,"h":243,"n":8,"ax":92.7,"ay":241.2},"9":{"w":212,"h":222,"n":8,"ax":107.5,"ay":219.8}},"m":{"0":{"w":228,"h":204,"n":8,"ax":110.0,"ay":201.7},"2":{"w":233,"h":242,"n":8,"ax":100.6,"ay":239.9},"3":{"w":208,"h":204,"n":8,"ax":95.1,"ay":201.6},"4":{"w":203,"h":204,"n":8,"ax":92.5,"ay":201.6},"5":{"w":215,"h":204,"n":8,"ax":101.1,"ay":201.6},"6":{"w":223,"h":204,"n":8,"ax":97.9,"ay":201.7},"7":{"w":202,"h":204,"n":8,"ax":83.0,"ay":201.6},"8":{"w":212,"h":238,"n":8,"ax":88.6,"ay":235.3},"9":{"w":231,"h":241,"n":8,"ax":114.9,"ay":239.2}}},"r":{"f":{"1":{"w":152,"h":204,"n":8,"ax":89.4,"ay":202.4},"2":{"w":140,"h":205,"n":8,"ax":80.2,"ay":202.4},"3":{"w":148,"h":208,"n":8,"ax":86.2,"ay":204.8},"4":{"w":164,"h":213,"n":8,"ax":99.3,"ay":209.3},"5":{"w":154,"h":203,"n":8,"ax":92.7,"ay":201.5},"6":{"w":155,"h":220,"n":8,"ax":91.8,"ay":216.6},"7":{"w":158,"h":212,"n":8,"ax":100.0,"ay":209.2},"8":{"w":150,"h":220,"n":8,"ax":86.8,"ay":216.0},"9":{"w":157,"h":204,"n":8,"ax":97.2,"ay":201.9}},"m":{"2":{"w":157,"h":211,"n":8,"ax":87.1,"ay":207.5},"3":{"w":150,"h":209,"n":8,"ax":83.6,"ay":205.9},"4":{"w":174,"h":212,"n":8,"ax":103.2,"ay":207.9},"5":{"w":163,"h":212,"n":8,"ax":66.5,"ay":208.7},"6":{"w":158,"h":208,"n":8,"ax":90.5,"ay":205.9},"7":{"w":180,"h":226,"n":8,"ax":113.3,"ay":222.9},"8":{"w":169,"h":211,"n":8,"ax":97.3,"ay":206.9},"9":{"w":176,"h":208,"n":8,"ax":106.7,"ay":205.5},"1":{"w":180,"h":211,"n":8,"ax":97.7,"ay":208.7}}},"I":{"f":{"1":{"w":345,"h":412,"n":8,"ax":170.3,"ay":406.6,"base":400},"2":{"w":298,"h":414,"n":8,"ax":121.4,"ay":408.5,"base":400},"3":{"w":302,"h":412,"n":8,"ax":123.0,"ay":405.9,"base":400},"4":{"w":328,"h":413,"n":8,"ax":127.1,"ay":407.7,"base":400},"5":{"w":323,"h":415,"n":8,"ax":129.3,"ay":409.6,"base":400},"6":{"w":314,"h":415,"n":8,"ax":124.4,"ay":409.6,"base":400},"7":{"w":341,"h":418,"n":8,"ax":123.6,"ay":412.3,"base":400},"8":{"w":318,"h":411,"n":8,"ax":132.5,"ay":405.7,"base":400},"9":{"w":308,"h":411,"n":8,"ax":121.4,"ay":404.8,"base":400}},"m":{"2":{"w":334,"h":418,"n":8,"ax":133.7,"ay":411.7,"base":400},"3":{"w":320,"h":411,"n":8,"ax":131.1,"ay":404.2,"base":400},"4":{"w":323,"h":410,"n":8,"ax":130.8,"ay":403.8,"base":400},"5":{"w":332,"h":411,"n":8,"ax":124.3,"ay":404.8,"base":400},"6":{"w":339,"h":420,"n":8,"ax":133.2,"ay":414.1,"base":400},"7":{"w":357,"h":411,"n":8,"ax":133.8,"ay":405.1,"base":400},"8":{"w":315,"h":416,"n":8,"ax":131.1,"ay":410.1,"base":400},"9":{"w":335,"h":416,"n":8,"ax":131.7,"ay":408.4,"base":400},"1":{"w":314,"h":409,"n":8,"ax":127.6,"ay":403.9,"base":400}}}};
 // 실제 그림은 필요할 때만 불러온다 (전부 합치면 커서 시작이 느려짐). 못 불러왔으면 예전 색 바꾸기 그림으로 그린다
 // 동작 코드: p 던지기(뒤) · r 대기(뒤) · i 대기(앞) · w 걷기(앞) · h 피격(앞) · d 사망(앞) · k 쿠나이
 const REAL={};
@@ -1131,7 +1138,7 @@ function dunEnter(k,L){
       el.classList.add('out'); TR.busy=false; setTimeout(()=>{el.hidden=true; el.className='';},520); };
     wait(); },380);
 }
-function dunStart(k,L){ mapImg(k);
+function dunStart(k,L){ mapImg(k); $('ui').classList.add('indun'); $('mpM').hidden=true;
   const d=dunState(); if(k!=='tower'){ if(!(d.n[k]>0)) return; d.n[k]--; } mis('dun'); persist();
   if(panel) openPanel(panel);
   G.enemies=[]; G.shots=[]; G.kunais=[]; G.boss=null; G.bossDelay=0; G.dead=false; G.hp=G.st.hp;
@@ -1153,6 +1160,7 @@ function dunEnd(ok){
     setTimeout(()=>{el.hidden=true; el.className='';},600); },1800);
 }
 function dunEndNow(ok){
+  $('ui').classList.remove('indun');
   const D=G.dun, d=dunState(), k=D.k, clear=(k==='gold'||k==='rush')?D.kills>=DUN[k].need:!!ok;
   const firstTower=k==='tower'&&clear&&D.lv>(d.best.tower||0);
   if(clear) d.best[k]=Math.max(d.best[k]||0,D.lv);
@@ -1491,8 +1499,7 @@ function render(dt){
   let ox=0,oy=0; if(G.shake>0){ox=rnd(-5,5)*G.shake*2;oy=rnd(-5,5)*G.shake*2;}
   drawFloor(0);   // 배경은 흔들림 없이 고정
   ctx.save(); ctx.translate(ox,oy);
-  ctx.strokeStyle='rgba(210,58,47,.3)'; ctx.setLineDash([10,8]); ctx.lineWidth=2;
-  ctx.beginPath(); ctx.moveTo(A.margin*.5,A.lineY); ctx.lineTo(W-A.margin*.5,A.lineY); ctx.stroke(); ctx.setLineDash([]);
+  // (몬스터가 멈추는 선은 화면에 그리지 않음 — 캐릭터 뒤로 희미한 줄이 보여서)
   for(const e of [...G.enemies].sort((a,b)=>a.p-b.p)){
     const r=enemyRect(e); let al=1,dy=0,lit=0;
     if(e.state==='flinch'){const k=1-e.t/.3; dy=-r.h*.06*k; lit=.7*k;}
@@ -1881,14 +1888,14 @@ function misState(){const m=save.daily||(save.daily={day:'',c:{},got:{}}); if(m.
 function mis(k,n=1){if(k!=='play'){const T=save.tot||(save.tot={}); T[k]=(T[k]||0)+n; if(achReadyN()!==ach.ready) updateDots();}
   const m=misState(), M=MISSIONS.find(x=>x.k===k); if(!M||m.got[k]) return;
   const was=(m.c[k]||0)>=M.need; m.c[k]=(m.c[k]||0)+n;
-  if(!was&&m.c[k]>=M.need){ updateDots(); if(panel==='content'&&view.ct==='mis') renderMissions(); else if(k!=='play') feed(`[미션 완료] <b>${M.n}</b> · 컨텐츠 탭에서 보상을 받으세요`); }
+  if(!was&&m.c[k]>=M.need){ updateDots(); if(!$('mpM').hidden&&view.ct==='mis') renderMissions(); else if(k!=='play') feed(`[미션 완료] <b>${M.n}</b> · 오른쪽 미션 버튼에서 보상을 받으세요`); }
   if(k!=='play') persistSoon();}
 const misDone=M=>(misState().c[M.k]||0)>=M.need;
 function misReady(){const m=misState(); return MISSIONS.some(M=>misDone(M)&&!m.got[M.k])||(MISSIONS.every(M=>m.got[M.k])&&!m.got.all);}
 const gemI='<i style="background-image:var(--ico-gem)"></i>', coinI='<i style="background-image:var(--ico-coin)"></i>';
 function renderMissions(){
   const m=misState(), gotN=MISSIONS.filter(M=>m.got[M.k]).length, allOk=gotN===MISSIONS.length;
-  $('pbody').innerHTML=`<div class="pscroll">
+  $('mpBody').innerHTML=`<div class="pscroll">
     <div class="ms-all"><div>오늘의 미션 <b class="num">${gotN} / ${MISSIONS.length}</b><br><small style="color:var(--muted)">모두 완료하면 보너스 보석 ${MIS_ALL}</small></div>
       <button class="obtn" id="msAll" ${allOk&&!m.got.all?'':'disabled'}>${m.got.all?'받음':`<span class="ms-rw">${gemI}${MIS_ALL}</span>`}</button></div>
     ${MISSIONS.map(M=>{const c=Math.min(M.need,Math.floor(m.c[M.k]||0)), ok=c>=M.need, got=m.got[M.k];
@@ -1897,9 +1904,9 @@ function renderMissions(){
         <div class="uinfo"><b>${M.n}</b><span class="uval num" style="font-size:12px">${cur}</span><div class="ms-prog"><i style="width:${c/M.need*100}%"></i></div></div>
         <div class="uright"><button class="obtn" ${ok&&!got?'':'disabled'}>${got?'완료':`<span class="ms-rw">${gemI}${M.gem}</span>`}</button></div></div>`;}).join('')}
     <p class="note">미션은 매일 밤 12시(폰 시간)에 새로 바뀌어요.</p></div>`;
-  $('pbody').querySelectorAll('[data-m] .obtn').forEach(b=>b.onclick=()=>{const k=b.closest('[data-m]').dataset.m, M=MISSIONS.find(x=>x.k===k);
-    if(!misDone(M)||m.got[k]) return; m.got[k]=1; save.gems+=M.gem; SFX.buy(); toast(`보석 +${M.gem}`); persist(); updateTop(); updateDots(); renderContent();});
-  $('msAll').onclick=()=>{if(!allOk||m.got.all) return; m.got.all=1; save.gems+=MIS_ALL; (save.tot||(save.tot={})).mAll=(save.tot.mAll||0)+1; SFX.buy(); toast(`미션 보너스! 보석 +${MIS_ALL}`); persist(); updateTop(); updateDots(); renderContent();};
+  $('mpBody').querySelectorAll('[data-m] .obtn').forEach(b=>b.onclick=()=>{const k=b.closest('[data-m]').dataset.m, M=MISSIONS.find(x=>x.k===k);
+    if(!misDone(M)||m.got[k]) return; m.got[k]=1; save.gems+=M.gem; SFX.buy(); toast(`보석 +${M.gem}`); persist(); updateTop(); updateDots(); renderPop();});
+  $('msAll').onclick=()=>{if(!allOk||m.got.all) return; m.got.all=1; save.gems+=MIS_ALL; (save.tot||(save.tot={})).mAll=(save.tot.mAll||0)+1; SFX.buy(); toast(`미션 보너스! 보석 +${MIS_ALL}`); persist(); updateTop(); updateDots(); renderPop();};
 }
 
 /* ---- 출석 보상: 하루 한 번, 7일마다 한 바퀴 (연속이 아니어도 됨) ---- */
@@ -1922,16 +1929,16 @@ function attClaim(){
 }
 function renderAttend(){
   const a=attState(), ready=attReady();
-  $('pbody').innerHTML=`<div class="pscroll"><div class="ms-all"><div>출석 <b class="num">${a.n}일째</b><br><small style="color:var(--muted)">하루 한 번 · 7일마다 처음부터 다시</small></div>
+  $('mpBody').innerHTML=`<div class="pscroll"><div class="ms-all"><div>출석 <b class="num">${a.n}일째</b><br><small style="color:var(--muted)">하루 한 번 · 7일마다 처음부터 다시</small></div>
     <button class="obtn" id="attGo" ${ready?'':'disabled'}>${ready?'오늘 보상 받기':'내일 또 만나요'}</button></div>${attHtml()}
     <p class="note" style="margin-top:8px">매일 이어서 오지 않아도 괜찮아요. 들어온 날만큼 한 칸씩 채워져요. 보너스 입장권은 다음 날까지 남아요.</p></div>`;
-  $('attGo').onclick=()=>{attClaim(); renderContent();};
+  $('attGo').onclick=()=>{attClaim(); renderPop();};
 }
 function attPopup(){
   if(AUTO||!attReady()||!save.name||save.tut!=='done') return;
   const a=attState();
   $('attBody').innerHTML=`<h2>출석 보상</h2><p class="note" style="text-align:center">${a.n+1}번째 출석! 오늘의 보상을 받아 가세요.</p>${attHtml()}<button class="obtn big" id="attOk">받기</button>`;
-  $('attM').hidden=false; $('attOk').onclick=()=>{attClaim(); $('attM').hidden=true; if(panel==='content') renderContent();};
+  $('attM').hidden=false; $('attOk').onclick=()=>{attClaim(); $('attM').hidden=true; if(!$('mpM').hidden) renderPop();};
 }
 
 /* ---- 업적: 쌓아 가는 목표 · 단계마다 보석 ---- */
@@ -1959,7 +1966,7 @@ function achReadyN(){return ACH.filter(achOk).length;}
 function renderAch(){
   const done=ACH.reduce((a,A)=>a+achTier(A),0), all=ACH.reduce((a,A)=>a+A.t.length,0);
   const rows=ACH.map(A=>({A,i:achTier(A),ok:achOk(A)})).sort((a,b)=>(b.ok-a.ok)||((a.i>=a.A.t.length)-(b.i>=b.A.t.length)));
-  $('pbody').innerHTML=`<div class="pscroll">
+  $('mpBody').innerHTML=`<div class="pscroll">
     <div class="ms-all"><div>업적 달성 <b class="num">${done} / ${all}</b><br><small style="color:var(--muted)">단계를 넘을 때마다 보석을 받아요</small></div>
       <button class="obtn" id="achAll" ${achReadyN()?'':'disabled'}>모두 받기</button></div>
     ${rows.map(({A,i,ok})=>{const fin=i>=A.t.length, need=A.t[Math.min(i,A.t.length-1)], c=Math.min(A.cur(),need);
@@ -1968,10 +1975,21 @@ function renderAch(){
         <div class="uright"><button class="obtn" ${ok?'':'disabled'}>${fin?'완료':`<span class="ms-rw">${gemI}${ACH_GEM[Math.min(i,ACH_GEM.length-1)]}</span>`}</button></div></div>`;}).join('')}
     <p class="note">업적은 없어지지 않고 계속 쌓여요. 한 단계를 받으면 다음 목표가 열려요.</p></div>`;
   const claim=A=>{if(!achOk(A)) return 0; const i=achTier(A), g=ACH_GEM[Math.min(i,ACH_GEM.length-1)]; (save.ach||(save.ach={}))[A.k]=i+1; save.gems+=g; return g;};
-  const after=g=>{SFX.buy(); toast(`보석 +${fmtKo(g)}`); persist(); updateTop(); updateDots(); renderContent();};
-  $('pbody').querySelectorAll('[data-a] .obtn').forEach(b=>b.onclick=()=>{const g=claim(ACH.find(x=>x.k===b.closest('[data-a]').dataset.a)); if(g) after(g);});
+  const after=g=>{SFX.buy(); toast(`보석 +${fmtKo(g)}`); persist(); updateTop(); updateDots(); renderPop();};
+  $('mpBody').querySelectorAll('[data-a] .obtn').forEach(b=>b.onclick=()=>{const g=claim(ACH.find(x=>x.k===b.closest('[data-a]').dataset.a)); if(g) after(g);});
   $('achAll').onclick=()=>{let g=0, more=true; while(more){more=false; for(const A of ACH){const x=claim(A); if(x){g+=x; more=true;}}} if(g) after(g);};
 }
+
+/* ---- 미션 · 출석 · 업적 팝업 ---- */
+function renderPop(){
+  const TB=[['mis','미션',misReady()],['att','출석',attReady()],['ach','업적',achReadyN()>0]];
+  $('mpTabs').innerHTML=TB.map(([k,n,dot])=>`<button data-k="${k}" class="${k===view.ct?'on':''}">${n}${dot?'<span class="dot" style="right:6px;top:-4px">!</span>':''}</button>`).join('');
+  $('mpTabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{SFX.tap(); view.ct=b.dataset.k; renderPop();});
+  ({mis:renderMissions,att:renderAttend,ach:renderAch})[view.ct]();
+}
+function openPop(k){ if(G&&G.dun) return; view.ct=k; $('mpM').hidden=false; renderPop(); }
+$('mpClose').onclick=()=>{SFX.tap(); $('mpM').hidden=true;};
+$('mpM').onclick=e=>{if(e.target===$('mpM')) $('mpM').hidden=true;};
 
 const CONTENTS=[
   {im:'equip',k:'equip',n:'장비 던전',d:'쿠나이·방어구·장신구를 한꺼번에! 단계가 오를수록 더 많이, 더 높은 세트로',ic:'burst',c:'t-crit'},
@@ -1980,10 +1998,7 @@ const CONTENTS=[
   {im:'tower',k:'tower',n:'수련의 탑',d:'한 층씩 올라 보석과 10층마다 영구 능력치를 얻어요',ic:'bolt',c:'t-bolt'}
 ];
 function renderContent(){
-  tabs([['dun','던전'],['mis','미션',misReady()],['att','출석',attReady()],['ach','업적',achReadyN()>0]],view.ct,k=>{view.ct=k;renderContent();});
-  if(view.ct==='mis') return renderMissions();
-  if(view.ct==='ach') return renderAch();
-  if(view.ct==='att') return renderAttend();
+  tabs([['dun','던전']],'dun',()=>{});
   const d=dunState();
   $('pbody').innerHTML=`<div class="pscroll">${CONTENTS.map(x=>{
     if(x.k&&DUN[x.k]){const D=DUN[x.k], locked=!TEST_OPEN&&save.bestStage<D.open, best=d.best[x.k]||0;
@@ -2109,7 +2124,8 @@ addEventListener('pagehide',()=>{if(save.picked){save.seen=Date.now();persist();
 
 /* ================= 입력 ================= */
 document.querySelectorAll('#nav [data-p]').forEach(b=>b.onclick=()=>{ac();SFX.tap();openPanel(b.dataset.p);});
-const openCt=k=>{ac();SFX.tap(); view.ct=k; if(panel!=='content') openPanel('content'); else renderContent();};
+$('nav').addEventListener('click',e=>{ if(G&&G.dun&&e.target.closest('button')){ e.stopPropagation(); e.preventDefault(); toast('던전 진행 중에는 다른 메뉴를 쓸 수 없어요'); } },true);   // 던전 중엔 아래 메뉴 잠금
+const openCt=k=>{ac();SFX.tap(); if(G&&G.dun){toast('던전 진행 중에는 이용할 수 없어요'); return;} openPop(k);};
 $('sbMis').onclick=()=>openCt('mis'); $('sbAtt').onclick=()=>openCt('att'); $('sbAch').onclick=()=>openCt('ach');
 $('navMid').onclick=()=>{ac();SFX.tap(); openPanel(panel||'lobby');};
 $('bossBtn').onclick=()=>{ac();SFX.tap();startBoss();};
