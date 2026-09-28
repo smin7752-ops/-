@@ -1020,8 +1020,8 @@ function makeBus(){ {
       const master=AC.createGain(); master.gain.value=.9; master.connect(comp);
       const sfx=AC.createGain(), bgm=AC.createGain(); sfx.connect(master); bgm.connect(master);
       // 은은한 울림(리버브): 잡음으로 만든 짧은 잔향
-      const len=Math.floor(AC.sampleRate*2.2), ir=AC.createBuffer(2,len,AC.sampleRate);
-      for(let c=0;c<2;c++){const d=ir.getChannelData(c); for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2.6);}
+      const len=Math.floor(AC.sampleRate*1.2), ir=AC.createBuffer(2,len,AC.sampleRate);
+      for(let c=0;c<2;c++){const d=ir.getChannelData(c); for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/len,3);}
       const rev=AC.createConvolver(); rev.buffer=ir; const rg=AC.createGain(); rg.gain.value=.32; rev.connect(rg).connect(master);
       BUS={master,sfx,bgm,rev}; NZ=null; sndApply(); } }
 const BGM_V=()=>save.bgmOff?0:.6*(save.bgmVol??.7), SFX_V=()=>save.sfxOff?0:1.05*(save.sfxVol??.8);
@@ -1040,12 +1040,12 @@ function nz(t,dur,type,f,q,peak,out,a=.002,f2=0,wet=0){
   if(f2) fl.frequency.exponentialRampToValueAtTime(f2,t+dur); const g=A.createGain(); env(g,t,a,peak,dur);
   s.connect(fl).connect(g).connect(out); if(wet){const w=A.createGain(); w.gain.value=wet; g.connect(w).connect(BUS.rev);} s.start(t,Math.random()*.5); s.stop(t+a+dur+.05); }
 const INS={
-  koto:(f,t,v=.18,out)=>{ osc('triangle',f,t,1.4,v,out,.003,0,1.4,.35); osc('sine',f*2,t,.5,v*.35,out,.002,0,.5,.2); osc('square',f,t,.06,v*.08,out,.001,0,.06); },
+  koto:(f,t,v=.18,out)=>{ osc('triangle',f,t,1.1,v,out,.003,0,1.1,.3); osc('sine',f*2,t,.35,v*.35,out,.002,0,.35); },
   shaku:(f,t,d,v=.09,out)=>{ const A=ac(); if(!A) return; const o=A.createOscillator(), g=A.createGain(), l=A.createOscillator(), lg=A.createGain();
     o.type='sine'; o.frequency.setValueAtTime(f*.985,t); o.frequency.linearRampToValueAtTime(f,t+.12); l.frequency.value=5.2; lg.gain.value=f*.012; l.connect(lg).connect(o.frequency);
     g.gain.setValueAtTime(.0001,t); g.gain.linearRampToValueAtTime(v,t+.1); g.gain.setValueAtTime(v,t+d*.7); g.gain.exponentialRampToValueAtTime(.0001,t+d);
     const w=A.createGain(); w.gain.value=.5; o.connect(g).connect(out); g.connect(w).connect(BUS.rev); o.start(t); l.start(t); o.stop(t+d+.05); l.stop(t+d+.05);
-    nz(t,d*.8,'bandpass',f*2,6,v*.25,out,.08); },
+  },
   taiko:(t,v=.5,out,low=1)=>{ osc('sine',110*low,t,.35,v,out,.002,.4,.35,.15); nz(t,.12,'lowpass',900,1,v*.35,out); },
   rim:(t,v=.12,out)=>{ nz(t,.04,'bandpass',2200,4,v,out,.001); osc('square',1400,t,.02,v*.3,out,.001); },
   bell:(f,t,v=.08,out)=>{ osc('sine',f,t,2.2,v,out,.002,0,2.2,.5); osc('sine',f*2.76,t,.9,v*.4,out,.002,0,.9,.4); },
@@ -1053,19 +1053,19 @@ const INS={
     g.gain.setValueAtTime(.0001,t); g.gain.linearRampToValueAtTime(v/m,t+1.2); g.gain.setValueAtTime(v/m,t+d-1); g.gain.linearRampToValueAtTime(.0001,t+d); o.connect(lp).connect(g).connect(out); o.start(t); o.stop(t+d+.05);} }
 };
 // 효과음 -------------------------------------------------------------------
-let lastThrow=0;
-const SX=f=>{ const A=ac(); if(!A) return; f(A.currentTime,BUS.sfx); };
+let lastThrow=0; const LAST={};
+const SX=(f,key,gap=0)=>{ if(key){const n=performance.now(); if(n-(LAST[key]||0)<gap) return; LAST[key]=n;} const A=ac(); if(!A||save.sfxOff) return; f(A.currentTime,BUS.sfx); };
 const SFX={
   throw:()=>{ const n=performance.now(); if(n-lastThrow<70) return; lastThrow=n; SX((t,o)=>{ nz(t,.09,'highpass',2500,.8,.05,o,.002,6000); }); },   // 쿠나이 휙
-  hit:()=>SX((t,o)=>{ osc('triangle',1600,t,.05,.05,o,.001,.5); nz(t,.05,'bandpass',3500,3,.06,o); }),                          // 챙
-  kill:()=>SX((t,o)=>{ nz(t,.22,'lowpass',1200,.7,.1,o,.003,300); osc('sine',1320,t+.05,.25,.035,o,.002,0,.25,.3); osc('sine',1760,t+.1,.3,.03,o,.002,0,.3,.3); }),  // 펑 + 엽전 딸랑
+  hit:()=>SX((t,o)=>{ osc('triangle',1600,t,.05,.05,o,.001,.5); nz(t,.05,'bandpass',3500,3,.06,o); },'hit',55),                          // 챙
+  kill:()=>SX((t,o)=>{ nz(t,.22,'lowpass',1200,.7,.1,o,.003,300); osc('sine',1320,t+.05,.25,.035,o,.002,0,.25,.3); osc('sine',1760,t+.1,.3,.03,o,.002,0,.3,.3); },'kill',70),  // 펑 + 엽전 딸랑
   hurt:()=>SX((t,o)=>{ osc('sine',150,t,.22,.2,o,.002,.45); nz(t,.1,'lowpass',600,1,.08,o); }),
-  enemy:()=>SX((t,o)=>{ nz(t,.14,'bandpass',1400,2,.05,o,.01,3500); }),
-  up:()=>SX((t,o)=>{ INS.koto(784,t,.09,o); INS.koto(1175,t+.05,.07,o); }),
+  enemy:()=>SX((t,o)=>{ nz(t,.14,'bandpass',1400,2,.05,o,.01,3500); },'enemy',90),
+  up:()=>SX((t,o)=>{ INS.koto(784,t,.09,o); INS.koto(1175,t+.05,.07,o); },'up',60),
   buy:()=>SX((t,o)=>{ [587,698,880,1047,1397].forEach((f,i)=>INS.koto(f,t+i*.055,.09,o)); INS.bell(2093,t+.28,.05,o); }),
   equip:()=>SX((t,o)=>{ nz(t,.35,'bandpass',4200,8,.07,o,.005,7000,.3); osc('sine',2600,t,.4,.03,o,.002,0,.4,.4); }),              // 칼 뽑는 소리
   wave:()=>SX((t,o)=>{ INS.taiko(t,.45,o); INS.taiko(t+.18,.35,o); INS.bell(523,t+.18,.05,o); }),
-  tap:()=>SX((t,o)=>{ nz(t,.03,'bandpass',1800,5,.07,o,.001); osc('sine',1100,t,.04,.025,o,.001); }),                          // 나무 딸깍
+  tap:()=>SX((t,o)=>{ nz(t,.03,'bandpass',1800,5,.07,o,.001); osc('sine',1100,t,.04,.025,o,.001); },'tap',40),                          // 나무 딸깍
   fail:()=>SX((t,o)=>{ [494,440,392,294].forEach((f,i)=>INS.koto(f,t+i*.12,.08,o)); INS.taiko(t,.3,o,.8); })
 };
 // 배경음악 -----------------------------------------------------------------
@@ -1080,8 +1080,9 @@ const TRACK={
   lobby:{bpm:72,roots:[50,53,48,51],drum:'x...............',perc:'........r.......',arp:[0,4,2,5,2,4,1,4],mel:[[5,6],null,[4,2],[2,4],null,[3,4],null,[1,4]],pad:1}
 };
 const BGM={cur:null,step:0,next:0,timer:null,bar:0};
-function bgmTick(horizon=.25){ const A=AC; if(!A||!BUS||save.mute||save.bgmOff||!BGM.cur){return;}
+function bgmTick(horizon=1){ const A=AC; if(!A||!BUS||save.mute||save.bgmOff||!BGM.cur||A.state!=='running'&&!(window.OfflineAudioContext&&A instanceof OfflineAudioContext)){return;}
   const T=TRACK[BGM.cur], spb=60/T.bpm/4, o=BUS.bgm;
+  if(BGM.next<A.currentTime-.05){ const lag=Math.ceil((A.currentTime-BGM.next)/spb); BGM.step+=lag; BGM.next+=lag*spb; }   // 밀렸으면 건너뛰기 (한꺼번에 몰아 치지 않음)
   while(BGM.next<A.currentTime+horizon){ const st=BGM.step%16, bar=Math.floor(BGM.step/16), root=T.roots[bar%T.roots.length]+(BGM.mapShift||0), t=BGM.next;
     if(T.drum[st]==='x') INS.taiko(t,st===0?.42:.3,o,T.low||1);
     if(T.perc[st]==='r') INS.rim(t,.07,o);
@@ -1091,12 +1092,16 @@ function bgmTick(horizon=.25){ const A=AC; if(!A||!BUS||save.mute||save.bgmOff||
     if(st===0&&bar%4===0) INS.bell(hz(root+36),t,.03,o);
     BGM.step++; BGM.next+=spb; }
 }
-function bgmPlay(name){ if(BGM.cur===name) return; BGM.cur=name; if(!AC) return; BGM.step=0; BGM.next=AC.currentTime+.1;
-  if(BUS){ const g=BUS.bgm.gain; g.cancelScheduledValues(AC.currentTime); g.setValueAtTime(0,AC.currentTime); g.linearRampToValueAtTime(BGM_V(),AC.currentTime+1.2); } }
-function bgmUpdate(){ if(!AC||save.mute) return; if(!BGM.timer) BGM.timer=setInterval(bgmTick,60);
+function bgmPlay(name){ if(BGM.cur===name) return; const first=!BGM.cur; BGM.cur=name; if(!AC) return;
+  if(first||BGM.next<AC.currentTime){ BGM.step=0; BGM.next=AC.currentTime+.1; }
+  else { const st=BGM.step%16; if(st){ BGM.next+=(16-st)*60/TRACK[name].bpm/4; BGM.step+=16-st; } }   // 다음 마디부터 새 곡으로 자연스럽게
+  if(BUS&&first){ const g=BUS.bgm.gain; g.cancelScheduledValues(AC.currentTime); g.setValueAtTime(0,AC.currentTime); g.linearRampToValueAtTime(BGM_V(),AC.currentTime+1.2); } }
+function bgmUpdate(){ if(!AC||save.mute) return; if(!BGM.timer) BGM.timer=setInterval(()=>bgmTick(),120);
   const want=typeof G!=='undefined'&&G?(G.dun?'dun':(G.boss?'boss':(panel==='lobby'?'lobby':'field'))):'lobby';
   BGM.mapShift=[0,2,-2,-4][mapIdx(save.stage)]||0;
-  if(want!==BGM.cur){ BGM.cur=null; bgmPlay(want); } }
+  // 보스 도전·실패가 반복될 때 곡이 계속 바뀌지 않게, 2초 넘게 유지될 때만 바꾼다
+  if(want!==BGM.cur){ if(BGM.want!==want){BGM.want=want; BGM.since=performance.now();} if(!BGM.cur||performance.now()-BGM.since>2000) bgmPlay(want); } else BGM.want=null;
+  bgmTick(); }
 
 /* ================= 전투 배경 ================= */
 let floorTile=null;
@@ -2449,6 +2454,7 @@ function askName(first){
   $('nmOk').onclick=()=>{const e=nameErr(inp.value); if(e){$('nmErr').textContent=e; return;}
     save.name=cleanName(inp.value); persist(); SFX.buy(); $('infoM').hidden=true; updateTop(); if(panel==='lobby') renderLobby(); toast(`${save.name} 닌자, 잘 부탁해요!`); setTimeout(attPopup,600);};
 }
+if(AUTO) window.__bgm=()=>({step:BGM.step,next:BGM.next,now:AC?AC.currentTime:-1,cur:BGM.cur,state:AC&&AC.state});
 if(AUTO) window.__snd={ async render(name,sec){ const off=new OfflineAudioContext(2,44100*sec,44100), keep=AC; AC=off; makeBus(); BUS.bgm.gain.value=.42; BGM.cur=name; BGM.step=0; BGM.next=.05; bgmTick(sec-.5);
     const buf=await off.startRendering(); AC=keep; if(keep) makeBus(); BGM.cur=null; const L=buf.getChannelData(0), R=buf.getChannelData(1); let pk=0,ss=0; for(let i=0;i<L.length;i++){const v=Math.abs(L[i]); if(v>pk) pk=v; ss+=L[i]*L[i];}
     const n=L.length, out=new Int16Array(n*2); for(let i=0;i<n;i++){out[2*i]=Math.max(-1,Math.min(1,L[i]))*32767; out[2*i+1]=Math.max(-1,Math.min(1,R[i]))*32767;}
@@ -2535,7 +2541,7 @@ let last=performance.now(), bgmT=0;
 function frame(now){
   requestAnimationFrame(frame);
   const dt=Math.min(.05,(now-last)/1000); last=now; T+=dt;
-  try{ if(G&&$('pickM').hidden&&!TR.busy) update(dt); render(dt); if(panel==='grow'&&view.grow==='rank') drawRankChar(); if(panel==='lobby') drawLobbyChar(); if(panel==='gear'&&view.gear==='skin') drawSkins(); drawPick(); tutTick(); if((bgmT+=dt)>.5){bgmT=0; bgmUpdate();} }catch(err){console.error(err);}
+  try{ if(G&&$('pickM').hidden&&!TR.busy) update(dt); render(dt); if(panel==='grow'&&view.grow==='rank') drawRankChar(); if(panel==='lobby') drawLobbyChar(); if(panel==='gear'&&view.gear==='skin') drawSkins(); drawPick(); tutTick(); if((bgmT+=dt)>.25){bgmT=0; bgmUpdate();} }catch(err){console.error(err);}
 }
 
 /* ================= 시작 ================= */
