@@ -151,6 +151,12 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
 .stone{display:inline-block;width:18px;height:18px;background:var(--ico-stone) center/contain no-repeat;vertical-align:-4px}
 .rb-top{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center;background:linear-gradient(180deg,#2c1a3e,#1c1128);border:2px solid #9a6ad6;border-radius:12px;padding:10px 12px;color:#f3ecdf}
 .rb-top .big{width:64px;height:64px;background:var(--ico-stone) center/contain no-repeat;filter:drop-shadow(0 0 8px rgba(170,110,255,.7))}
+#rbFx{position:absolute;inset:0;z-index:70;display:grid;place-items:center;background:radial-gradient(circle at 50% 55%,rgba(40,10,60,.55) 0%,rgba(6,2,12,.94) 45%,#000 80%);opacity:0;transition:opacity .6s ease}
+#rbFx.on{opacity:1}
+#rbFx canvas{width:min(92vw,440px);height:auto;aspect-ratio:1;mix-blend-mode:screen;margin-top:-6%;-webkit-mask:radial-gradient(circle,#000 52%,transparent 71%);mask:radial-gradient(circle,#000 52%,transparent 71%)}
+#rbFx .rbT{position:absolute;left:0;right:0;top:66%;text-align:center;font-family:var(--display);font-size:34px;color:#f1dcff;text-shadow:0 0 14px #a86cff,0 0 30px #7a3cff;opacity:0;transform:translateY(10px);transition:opacity .6s,transform .6s}
+#rbFx .rbT.on{opacity:1;transform:none}
+#rbFx .rbT small{display:block;font-family:var(--body);font-size:14px;color:#e8d8ff;margin-top:6px}
 .rb-top b{color:#d9b8ff;font-family:var(--display);font-weight:400;font-size:20px}
 .sideb .dot{top:-6px;right:-6px}
 .feed{position:absolute;right:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;pointer-events:none}
@@ -505,6 +511,10 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
   </section>
   <section class="modal" id="infoM" hidden><div class="sheet info" id="infoBody"></div></section>
   <section class="modal" id="rbM" hidden><div class="sheet mp"><h2 style="margin:0">환생</h2><div class="mpbody" id="rbBody"></div><button class="obtn big" id="rbClose">닫기</button></div></section>
+  <section class="modal" id="rbC" hidden><div class="sheet info"><h2>환생할까요?</h2><div class="rb-top"><i class="big"></i><div>받는 환생석 <b class="num" id="rbCn">0</b></div></div>
+    <p class="note" style="text-align:center">스테이지 · 엽전 · 골드 강화가 처음으로 돌아가요.<br>레벨 · 장비 · 스킨 · 유물 · 보석은 그대로예요.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button class="obtn brown" id="rbCno">취소</button><button class="obtn" id="rbCyes">환생하기</button></div></div></section>
+  <div id="rbFx" hidden><canvas id="rbCv" width="400" height="400"></canvas><div class="rbT" id="rbT"></div></div>
   <section class="modal" id="mpM" hidden><div class="sheet mp"><div class="mptabs ptabs" id="mpTabs"></div><div class="mpbody" id="mpBody"></div><button class="obtn big" id="mpClose">닫기</button></div></section>
   <section class="modal" id="attM" hidden><div class="sheet info" id="attBody"></div></section>
   <section class="modal" id="offM" hidden><div class="sheet info off" id="offBody"></div></section>
@@ -2115,20 +2125,35 @@ function renderReb(){
     <p class="note">환생석은 이번 환생에서 멀리 갈수록 많이 받아요 (스테이지 50: ${rebStones(50)}개 · 100: ${rebStones(100)}개 · 200: ${rebStones(200)}개).</p>`;
   $('rbBody').querySelectorAll('[data-r] .obtn').forEach(b=>b.onclick=()=>{const k=b.closest('[data-r]').dataset.r, lv=rebLv(k), c=rebCost(lv);
     if(lv>=REB_MAX||rebStone()<c) return; const R=save.reb||(save.reb={}); R.st-=c; (R.lv||(R.lv={}))[k]=lv+1; persist(); SFX.up(); refreshStats(); updateDots(); renderReb();});
-  let armed=false;
   $('rbGo').onclick=()=>{ if(!rebReady()||(G&&G.dun)) return; SFX.tap();
-    if(!armed){armed=true; $('rbGo').textContent='한 번 더 누르면 환생'; toast(`스테이지 1로 돌아가고 환생석 ${fmtKo(got)}개를 받아요`); return;}
-    doRebirth(); };
+    $('rbCn').textContent=fmtKo(got); $('rbC').hidden=false; };
+  $('rbCno').onclick=()=>{SFX.tap(); $('rbC').hidden=true;};
+  $('rbCyes').onclick=()=>{ $('rbC').hidden=true; $('rbM').hidden=true; rebFx(); };
 }
-function doRebirth(){
+// 환생 연출: 화면이 그라데이션으로 어두워짐 → 보라 불꽃 이펙트(23장면) → 폭발 순간 실제 환생 → 밝아지며 스테이지 1
+let rebImg=null; const rebPre=()=>{ if(!rebImg){rebImg=new Image(); rebImg.src=aurl('rebfx.webp');} return rebImg; };
+function rebFx(){
+  const el=$('rbFx'), cv=$('rbCv'), x=cv.getContext('2d'), img=rebPre(), N=23, FPS=13, got=rebStones(rebRun());
+  TR.busy=true; el.hidden=false; $('rbT').className='rbT'; $('rbT').innerHTML=''; void el.offsetWidth; el.classList.add('on'); SFX.wave&&SFX.wave();
+  let t0=null, done=false;
+  const step=ts=>{ if(t0===null) t0=ts+500; const f=Math.floor((ts-t0)/1000*FPS);
+    x.clearRect(0,0,400,400);
+    if(f>=0&&img.complete&&img.naturalWidth){ const i=Math.min(N-1,f), a=f>=N?Math.max(0,1-(f-N)/6):1; x.globalAlpha=a; x.drawImage(img,i*200,0,200,200,0,0,400,400); x.globalAlpha=1; }
+    if(f>=12&&!done){ done=true; doRebirth(true); SFX.buy(); $('rbT').innerHTML=`환생!<small>환생석 +${fmtKo(got)}</small>`; $('rbT').classList.add('on'); }
+    if(f<N+10) requestAnimationFrame(step);
+    else { el.classList.remove('on'); TR.busy=false; setTimeout(()=>{el.hidden=true;},650); }
+  };
+  requestAnimationFrame(step);
+}
+function doRebirth(quiet){
   const got=rebStones(rebRun()), R=save.reb||(save.reb={});
   R.st=(R.st||0)+got; R.n=(R.n||0)+1;
   save.stage=1; save.runBest=1; save.gold=0; save.up={}; persist();
   initBattle(); refreshStats(); updateTop(); updateDots(); prefetchMon(); mapImg(mapIdx(1));
-  G.banner={txt:'환생!',sub:`환생석 +${fmtKo(got)} · 스테이지 1부터 다시`,t:0}; SFX.buy();
-  renderReb(); toast(`환생 완료! 환생석 +${fmtKo(got)}`);
+  G.banner={txt:'환생!',sub:`환생석 +${fmtKo(got)} · 스테이지 1부터 다시`,t:quiet?99:0}; if(!quiet){SFX.buy(); toast(`환생 완료! 환생석 +${fmtKo(got)}`);}
+  if(!$('rbM').hidden) renderReb();
 }
-function openReb(){ if(G&&G.dun){toast('던전 진행 중에는 이용할 수 없어요'); return;} ac(); SFX.tap(); $('rbM').hidden=false; renderReb(); }
+function openReb(){ if(G&&G.dun){toast('던전 진행 중에는 이용할 수 없어요'); return;} ac(); SFX.tap(); rebPre(); $('rbM').hidden=false; renderReb(); }
 $('rbClose').onclick=()=>{SFX.tap(); $('rbM').hidden=true;};
 $('rbM').onclick=e=>{if(e.target===$('rbM')) $('rbM').hidden=true;};
 
