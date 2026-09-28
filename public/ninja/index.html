@@ -829,9 +829,9 @@ const relicSum=()=>RELICS.reduce((a,r)=>a+rel(r.k).lv,0);
 // 닌자 승급: 미션을 모두 달성하면 다음 계급으로
 const RANKS=[
   {n:'수련생',fx:{}},
-  {n:'하닌',fx:{atkP:.3,gold:.2,xp:.2},req:[['stage',10],['lv',8],['upatk',20]]},
-  {n:'중닌',fx:{atkP:.5,hpP:.5,extra:1},req:[['stage',25],['lv',20],['grade',2],['relic',10]]},
-  {n:'상닌',fx:{atkP:1,gold:.3,xp:.3},req:[['stage',50],['lv',40],['grade',3],['pulls',150],['relic',30]]},
+  {n:'하급 닌자',fx:{atkP:.3,gold:.2,xp:.2},req:[['stage',10],['lv',8],['upatk',20]]},
+  {n:'중급 닌자',fx:{atkP:.5,hpP:.5,extra:1},req:[['stage',25],['lv',20],['grade',2],['relic',10]]},
+  {n:'상급 닌자',fx:{atkP:1,gold:.3,xp:.3},req:[['stage',50],['lv',40],['grade',3],['pulls',150],['relic',30]]},
   {n:'암부',fx:{atkP:1.5,hpP:1,aspd:.2},req:[['stage',80],['lv',65],['grade',5],['upatk',300],['relic',80]]},
   {n:'카게',fx:{atkP:2.5,gold:.5,xp:.5,extra:1},req:[['stage',120],['lv',90],['grade',7],['pulls',800],['relic',200]]}
 ];
