@@ -879,10 +879,14 @@ function buildFloor(){
 // 스테이지 맵: 100 스테이지마다 바뀌고, 4번째 맵 다음엔 처음 맵으로
 const MAPS=['map1.webp','map2.webp','map3.webp','map4.webp'], mapImgs={};
 const mapIdx=s=>Math.floor((s-1)/100)%MAPS.length;
+// 던전 맵: 던전 플레이 중에는 던전 전용 배경
+const DMAPS={equip:'dmap_equip.webp',gold:'dmap_gold.webp',rush:'dmap_rush.webp',tower:'dmap_tower.webp'};
 function mapImg(i){const v=mapImgs[i]; if(v instanceof HTMLImageElement) return v;
-  if(!v){mapImgs[i]='loading'; loadImg(aurl(MAPS[i])).then(im=>{mapImgs[i]=im;}).catch(()=>{mapImgs[i]='fail';});} return null;}
+  const f=typeof i==='string'?DMAPS[i]:MAPS[i];
+  if(!v&&f){mapImgs[i]='loading'; loadImg(aurl(f)).then(im=>{mapImgs[i]=im;}).catch(()=>{mapImgs[i]='fail';});} return null;}
 function drawFloor(scroll){
-  const mi=mapImg(mapIdx(save.stage)); mapImg((mapIdx(save.stage)+1)%MAPS.length);
+  const dk=(typeof G!=='undefined'&&G&&G.dun&&DMAPS[G.dun.k])?G.dun.k:null;
+  const mi=(dk&&mapImg(dk))||mapImg(mapIdx(save.stage)); mapImg((mapIdx(save.stage)+1)%MAPS.length);
   if(mi){ // 전투 화면(위~하단 메뉴)을 꽉 채우게, 위쪽(성문·하늘)이 보이도록
     const vh=L.view||H, sc=Math.max(W/mi.width,vh/mi.height), w=mi.width*sc, h=mi.height*sc;
     ctx.fillStyle='#14111b'; ctx.fillRect(0,0,W,H); ctx.drawImage(mi,(W-w)/2,Math.min(0,vh-h)*.35,w,h); return; }
@@ -1001,7 +1005,7 @@ function spawnGold(D){
   G.enemies.push({g:'m',eq:Array(8).fill(0),type:'grunt',kind:0,ranged:false,golden:true,atk:-1,fired:false,rest:0,meleeT:0,hitFx:0,
     hp:Math.round(14*hs),maxHp:Math.round(14*hs),u:rnd(.05,.95),p:0,speed:1/rnd(3.2,4.4),stopAt:1,sway:rnd(0,6),state:'live',t:0,at:Math.random()*8,fireT:1e9,warn:0,big:1});
 }
-function dunStart(k,L){
+function dunStart(k,L){ mapImg(k);
   const d=dunState(); if(k!=='tower'){ if(!(d.n[k]>0)) return; d.n[k]--; } persist();
   if(panel) openPanel(panel);
   G.enemies=[]; G.shots=[]; G.kunais=[]; G.boss=null; G.bossDelay=0; G.dead=false; G.hp=G.st.hp;
