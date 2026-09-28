@@ -420,6 +420,7 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
     <div class="sideb pe" id="sideb">
       <button id="sbMis" aria-label="일일 미션"><svg viewBox="0 0 32 32"><rect x="6" y="4" width="20" height="25" rx="3" fill="#f3e2b8" stroke="#7a4a22" stroke-width="2"/><rect x="11" y="2" width="10" height="5" rx="2" fill="#c8323a" stroke="#6a1a1a" stroke-width="1.5"/><path d="M10 13l2.5 2.5L17 11M10 21l2.5 2.5L17 19" fill="none" stroke="#2f9a4a" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 14h4M19 22h4" stroke="#7a4a22" stroke-width="2" stroke-linecap="round"/></svg>미션<span class="dot" id="dotMis" hidden>!</span></button>
       <button id="sbAtt" aria-label="출석 보상"><svg viewBox="0 0 32 32"><rect x="4" y="7" width="24" height="21" rx="3" fill="#f3e2b8" stroke="#7a4a22" stroke-width="2"/><path d="M4 10a3 3 0 0 1 3-3h18a3 3 0 0 1 3 3v3H4z" fill="#c8323a" stroke="#7a4a22" stroke-width="2"/><path d="M10 4v5M22 4v5" stroke="#7a4a22" stroke-width="2.4" stroke-linecap="round"/><path d="M16 16l1.6 3.2 3.5.5-2.5 2.5.6 3.5-3.2-1.7-3.2 1.7.6-3.5-2.5-2.5 3.5-.5z" fill="#f2c14e" stroke="#9a6a1a" stroke-width="1"/></svg>출석<span class="dot" id="dotAtt" hidden>!</span></button>
+      <button id="sbAch" aria-label="업적"><svg viewBox="0 0 32 32"><path d="M9 4h14v6a7 7 0 0 1-14 0z" fill="#f2c14e" stroke="#9a6a1a" stroke-width="2"/><path d="M9 6H5v2a5 5 0 0 0 5 5M23 6h4v2a5 5 0 0 1-5 5" fill="none" stroke="#9a6a1a" stroke-width="2"/><path d="M14 17h4v5h-4z" fill="#d69a2a" stroke="#9a6a1a" stroke-width="1.5"/><rect x="9" y="22" width="14" height="6" rx="1.5" fill="#7a4a22" stroke="#4a2a12" stroke-width="1.5"/><path d="M16 6.5l1 2 2.2.3-1.6 1.5.4 2.2-2-1-2 1 .4-2.2-1.6-1.5 2.2-.3z" fill="#fff6d0"/></svg>업적<span class="dot" id="dotAch" hidden>!</span></button>
     </div>
     <div class="feed" id="feed"></div>
 
@@ -1271,7 +1272,7 @@ function update(dt){
   G.banner.t+=dt; G.rearT+=dt; mis('play',dt); if(!G.dead) G.scroll+=H*.05*dt;
   if(!G.dead&&G.hp<st.hp) G.hp=Math.min(st.hp,G.hp+st.regen*dt);
   // 골드 획득 알림은 모아서
-  G.goldT+=dt; if(G.goldT>2.5){G.goldT=0; if(G.goldAcc>0){feed(`[골드] <b>${fmtKo(G.goldAcc)}</b> 획득`); G.goldAcc=0;}}
+  G.goldT+=dt; if(G.goldT>2.5){G.goldT=0; if(achReadyN()!==ach.ready) updateDots(); if(G.goldAcc>0){feed(`[골드] <b>${fmtKo(G.goldAcc)}</b> 획득`); G.goldAcc=0;}}
   if(G.bossDelay>0){G.bossDelay-=dt; if(G.bossDelay<=0) startBoss();}
   // 자동 공격
   if(!G.dead){
@@ -1521,7 +1522,8 @@ function updateDots(){
   if(!sp&&rankReady()){$('dotGrow').hidden=false;$('dotGrow').textContent='!';}
   const fr=freeLeft(); $('dotSum').hidden=!fr; $('dotSum').textContent=fr;
   const mr=misReady(), ar=attReady(); $('dotCt').hidden=!(mr||ar); $('dotCt').textContent='!';
-  $('dotMis').hidden=!mr; $('dotAtt').hidden=!ar;
+  const hr=achReadyN(); ach.ready=hr; $('dotMis').hidden=!mr; $('dotAtt').hidden=!ar; $('dotAch').hidden=!hr; $('dotAch').textContent=hr>9?'9+':hr;
+  if(hr){$('dotCt').hidden=false;}
 }
 function drawAvatar(){
   const c=$('av'), x=sharp(c,120,120); x.clearRect(0,0,120,120);
@@ -1539,7 +1541,7 @@ function setMid(){
 function openPanel(p){
   panel=panel===p?null:p;
   document.querySelectorAll('#nav [data-p]').forEach(b=>b.classList.toggle('on',b.dataset.p===panel));
-  setMid(); $('panel').hidden=!panel; $('panel').classList.toggle('full',!!panel);
+  setMid(); $('panel').hidden=!panel; $('panel').classList.toggle('full',!!panel); $('sideb').hidden=!!panel;
   if(panel){if(panel==='gear'){view.sel=save.eq[view.slot];} renderPanel();}
   requestAnimationFrame(layout);
 }
@@ -1770,7 +1772,8 @@ const MISSIONS=[
 ];
 const MIS_ALL=200;   // 전부 완료 보너스
 function misState(){const m=save.daily||(save.daily={day:'',c:{},got:{}}); if(m.day!==today()){m.day=today(); m.c={}; m.got={};} return m;}
-function mis(k,n=1){const m=misState(), M=MISSIONS.find(x=>x.k===k); if(!M||m.got[k]) return;
+function mis(k,n=1){if(k!=='play'){const T=save.tot||(save.tot={}); T[k]=(T[k]||0)+n; if(achReadyN()!==ach.ready) updateDots();}
+  const m=misState(), M=MISSIONS.find(x=>x.k===k); if(!M||m.got[k]) return;
   const was=(m.c[k]||0)>=M.need; m.c[k]=(m.c[k]||0)+n;
   if(!was&&m.c[k]>=M.need){ updateDots(); if(panel==='content'&&view.ct==='mis') renderMissions(); else if(k!=='play') feed(`[미션 완료] <b>${M.n}</b> · 컨텐츠 탭에서 보상을 받으세요`); }
   if(k!=='play') persistSoon();}
@@ -1790,7 +1793,7 @@ function renderMissions(){
     <p class="note">미션은 매일 밤 12시(폰 시간)에 새로 바뀌어요.</p></div>`;
   $('pbody').querySelectorAll('[data-m] .obtn').forEach(b=>b.onclick=()=>{const k=b.closest('[data-m]').dataset.m, M=MISSIONS.find(x=>x.k===k);
     if(!misDone(M)||m.got[k]) return; m.got[k]=1; save.gems+=M.gem; SFX.buy(); toast(`보석 +${M.gem}`); persist(); updateTop(); updateDots(); renderContent();});
-  $('msAll').onclick=()=>{if(!allOk||m.got.all) return; m.got.all=1; save.gems+=MIS_ALL; SFX.buy(); toast(`미션 보너스! 보석 +${MIS_ALL}`); persist(); updateTop(); updateDots(); renderContent();};
+  $('msAll').onclick=()=>{if(!allOk||m.got.all) return; m.got.all=1; save.gems+=MIS_ALL; (save.tot||(save.tot={})).mAll=(save.tot.mAll||0)+1; SFX.buy(); toast(`미션 보너스! 보석 +${MIS_ALL}`); persist(); updateTop(); updateDots(); renderContent();};
 }
 
 /* ---- 출석 보상: 하루 한 번, 7일마다 한 바퀴 (연속이 아니어도 됨) ---- */
@@ -1825,6 +1828,45 @@ function attPopup(){
   $('attM').hidden=false; $('attOk').onclick=()=>{attClaim(); $('attM').hidden=true; if(panel==='content') renderContent();};
 }
 
+/* ---- 업적: 쌓아 가는 목표 · 단계마다 보석 ---- */
+const tot=k=>(save.tot&&save.tot[k])||0;
+const ACH=[
+  {k:'stage',n:v=>`스테이지 ${v} 돌파`,cur:()=>save.bestStage||0,t:[10,25,50,100,150,200,300,500,1000],im:'--ct-tower'},
+  {k:'lv',n:v=>`레벨 ${v} 달성`,cur:()=>save.lv,t:[10,20,50,100,150,200,300,500],im:'--st-xp'},
+  {k:'kill',n:v=>`몬스터 ${fmtKo(v)}마리 처치`,cur:()=>tot('kill'),t:[100,1000,5000,20000,50000,100000,300000,1000000],im:'--st-atk'},
+  {k:'boss',n:v=>`보스 ${fmtKo(v)}마리 처치`,cur:()=>tot('boss'),t:[10,50,200,500,1000,3000,10000],im:'--ct-boss'},
+  {k:'up',n:v=>`골드 강화 ${fmtKo(v)}회`,cur:()=>tot('up'),t:[50,200,1000,5000,20000,100000,500000],im:'--st-gold'},
+  {k:'enh',n:v=>`장비 강화·합성 ${fmtKo(v)}회`,cur:()=>tot('enh'),t:[10,50,200,500,1000,3000],im:'--tab-gear'},
+  {k:'sum',n:v=>`소환 ${fmtKo(v)}회`,cur:()=>save.pulls||0,t:[10,50,150,500,1500,5000],im:'--tab-summon'},
+  {k:'relic',n:v=>`유물 레벨 합계 ${v}`,cur:()=>relicSum(),t:[10,40,120,300,600,1000],im:'--ct-boss'},
+  {k:'rank',n:v=>`${RANKS[v].n} 승급`,cur:()=>save.rank||0,t:RANKS.map((_,i)=>i).slice(1),im:'--tab-grow'},
+  {k:'tower',n:v=>`수련의 탑 ${v}층`,cur:()=>(save.dun&&save.dun.best&&save.dun.best.tower)||0,t:[10,30,50,100,200,300],im:'--ct-tower'},
+  {k:'dun',n:v=>`던전 ${fmtKo(v)}회 도전`,cur:()=>tot('dun'),t:[10,50,200,500,1000],im:'--ct-gold'},
+  {k:'att',n:v=>`출석 ${v}일`,cur:()=>(save.att&&save.att.n)||0,t:[7,14,30,60,100,200,365],im:'--ct-equip'},
+  {k:'mAll',n:v=>`일일 미션 모두 완료 ${v}번`,cur:()=>tot('mAll'),t:[1,7,30,100,200],im:'--ico-gem'},
+];
+const ACH_GEM=[30,50,100,200,300,500,800,1200,2000];
+const ach={ready:0};
+const achTier=A=>(save.ach&&save.ach[A.k])||0;
+const achOk=A=>{const i=achTier(A); return i<A.t.length&&A.cur()>=A.t[i];};
+function achReadyN(){return ACH.filter(achOk).length;}
+function renderAch(){
+  const done=ACH.reduce((a,A)=>a+achTier(A),0), all=ACH.reduce((a,A)=>a+A.t.length,0);
+  const rows=ACH.map(A=>({A,i:achTier(A),ok:achOk(A)})).sort((a,b)=>(b.ok-a.ok)||((a.i>=a.A.t.length)-(b.i>=b.A.t.length)));
+  $('pbody').innerHTML=`<div class="pscroll">
+    <div class="ms-all"><div>업적 달성 <b class="num">${done} / ${all}</b><br><small style="color:var(--muted)">단계를 넘을 때마다 보석을 받아요</small></div>
+      <button class="obtn" id="achAll" ${achReadyN()?'':'disabled'}>모두 받기</button></div>
+    ${rows.map(({A,i,ok})=>{const fin=i>=A.t.length, need=A.t[Math.min(i,A.t.length-1)], c=Math.min(A.cur(),need);
+      return `<div class="urow${fin?' ms-done':''}" data-a="${A.k}"><div class="itile relic"><i style="background-image:var(${A.im})"></i></div>
+        <div class="uinfo"><b>${A.n(need)}</b><span class="uval num" style="font-size:12px">${fin?'모든 단계 달성!':`${fmtKo(c)} / ${fmtKo(need)} · ${i+1}단계`}</span><div class="ms-prog"><i style="width:${fin?100:c/need*100}%"></i></div></div>
+        <div class="uright"><button class="obtn" ${ok?'':'disabled'}>${fin?'완료':`<span class="ms-rw">${gemI}${ACH_GEM[Math.min(i,ACH_GEM.length-1)]}</span>`}</button></div></div>`;}).join('')}
+    <p class="note">업적은 없어지지 않고 계속 쌓여요. 한 단계를 받으면 다음 목표가 열려요.</p></div>`;
+  const claim=A=>{if(!achOk(A)) return 0; const i=achTier(A), g=ACH_GEM[Math.min(i,ACH_GEM.length-1)]; (save.ach||(save.ach={}))[A.k]=i+1; save.gems+=g; return g;};
+  const after=g=>{SFX.buy(); toast(`보석 +${fmtKo(g)}`); persist(); updateTop(); updateDots(); renderContent();};
+  $('pbody').querySelectorAll('[data-a] .obtn').forEach(b=>b.onclick=()=>{const g=claim(ACH.find(x=>x.k===b.closest('[data-a]').dataset.a)); if(g) after(g);});
+  $('achAll').onclick=()=>{let g=0, more=true; while(more){more=false; for(const A of ACH){const x=claim(A); if(x){g+=x; more=true;}}} if(g) after(g);};
+}
+
 const CONTENTS=[
   {im:'equip',k:'equip',n:'장비 던전',d:'쿠나이·방어구·장신구를 한꺼번에! 단계가 오를수록 더 많이, 더 높은 세트로',ic:'burst',c:'t-crit'},
   {im:'gold',k:'gold',n:'골드 던전',d:'30초 동안 황금 산적을 잡아 엽전을 쓸어 담아요',ic:'coin',c:'t-coin'},
@@ -1832,8 +1874,9 @@ const CONTENTS=[
   {im:'tower',k:'tower',n:'수련의 탑',d:'한 층씩 올라 보석과 10층마다 영구 능력치를 얻어요',ic:'bolt',c:'t-bolt'}
 ];
 function renderContent(){
-  tabs([['dun','던전'],['mis','일일 미션',misReady()],['att','출석',attReady()]],view.ct,k=>{view.ct=k;renderContent();});
+  tabs([['dun','던전'],['mis','미션',misReady()],['att','출석',attReady()],['ach','업적',achReadyN()>0]],view.ct,k=>{view.ct=k;renderContent();});
   if(view.ct==='mis') return renderMissions();
+  if(view.ct==='ach') return renderAch();
   if(view.ct==='att') return renderAttend();
   const d=dunState();
   $('pbody').innerHTML=`<div class="pscroll">${CONTENTS.map(x=>{
@@ -1961,7 +2004,7 @@ addEventListener('pagehide',()=>{if(save.picked){save.seen=Date.now();persist();
 /* ================= 입력 ================= */
 document.querySelectorAll('#nav [data-p]').forEach(b=>b.onclick=()=>{ac();SFX.tap();openPanel(b.dataset.p);});
 const openCt=k=>{ac();SFX.tap(); view.ct=k; if(panel!=='content') openPanel('content'); else renderContent();};
-$('sbMis').onclick=()=>openCt('mis'); $('sbAtt').onclick=()=>openCt('att');
+$('sbMis').onclick=()=>openCt('mis'); $('sbAtt').onclick=()=>openCt('att'); $('sbAch').onclick=()=>openCt('ach');
 $('navMid').onclick=()=>{ac();SFX.tap(); openPanel(panel||'lobby');};
 $('bossBtn').onclick=()=>{ac();SFX.tap();startBoss();};
 $('infoM').onclick=e=>{if(e.target.id==='infoM') $('infoM').hidden=true;};
