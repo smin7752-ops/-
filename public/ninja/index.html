@@ -586,7 +586,7 @@ const UPG=[
   {k:'aspd',n:'공격 속도',ic:'bolt',base:15,gr:1.018,max:100,val:l=>.01*l,show:v=>'+'+fmtPct(v)},
   {k:'hp',n:'최대 HP',ic:'heart',base:4,gr:1.018,max:1e6,val:l=>100+20*l+.2*l*l,show:v=>fmtKo(v)},
   {k:'regen',n:'HP 회복량',ic:'regen',base:5,gr:1.018,max:1e6,val:l=>1+.5*l+.005*l*l,show:v=>`${+v.toFixed(1)}/초`},
-  {k:'crit',n:'크리티컬 확률',ic:'crit',base:10,gr:1.018,max:450,val:l=>.05+.001*l,show:fmtPct},
+  {k:'crit',n:'크리티컬 확률',ic:'crit',base:10,gr:1.018,max:950,val:l=>.05+.001*l,show:fmtPct},
   {k:'cdmg',n:'크리티컬 데미지',ic:'burst',base:10,gr:1.018,max:1e6,val:l=>1.5+.01*l,show:fmtPct},
   {k:'gold',n:'골드 획득량',ic:'coin',base:12,gr:1.018,max:1e6,val:l=>.02*l,show:v=>'+'+fmtPct(v)},
   {k:'xp',n:'경험치 획득량',ic:'exp',base:12,gr:1.018,max:1e6,val:l=>.02*l,show:v=>'+'+fmtPct(v)}
@@ -893,7 +893,7 @@ function arena(){
   const vh=L.view, ph=Math.min(vh*.3,W*.36,210), py=vh-12, eh=Math.min(vh*.22,W*.26,170);
   return {vh,ph,px:W/2,py,lineY:py-ph*.62,eh,margin:eh*.35+10};
 }
-const sScale=s=>Math.pow(1.10,s-1), dScale=s=>Math.pow(1.08,s-1), gScale=s=>Math.pow(1.1,s-1), xScale=s=>Math.pow(1.08,s-1);   // 적 체력 증가 1.12→1.10, 공격 1.085→1.08
+const sScale=s=>Math.pow(1.10,s-1), dScale=s=>Math.pow(1.07,s-1), gScale=s=>Math.pow(1.1,s-1), xScale=s=>Math.pow(1.08,s-1);   // 적 체력 증가 1.12→1.10, 공격 1.085→1.08
 function spawnEnemy(type){
   const s=save.stage, other=save.g==='f'?'m':'f', g=Math.random()<.6?other:save.g, hs=sScale(s);
   let set,hp,travel;
@@ -949,10 +949,10 @@ function playerText(txt,col,size){const A=arena();floatText(A.px,A.py-A.ph*1.15,
 function enemyStrike(e){
   const r=enemyRect(e), A=arena();
   if(!e.ranged){ // 근접 공격
-    hurtPlayer(({grunt:6,elite:10})[e.type]*dScale(save.stage)); sparks(A.px,A.py-A.ph*.5,'#ff8a6a'); SFX.enemy(); return;
+    hurtPlayer(({grunt:4,elite:6})[e.type]*dScale(save.stage)); sparks(A.px,A.py-A.ph*.5,'#ff8a6a'); SFX.enemy(); return;
   }
   const bossy=e.type==='boss'||e.type==='mboss';
-  const n=e.type==='boss'?3:e.type==='mboss'?2:1, dmg=(e.type==='boss'?14:e.type==='mboss'?11:7)*dScale(save.stage);
+  const n=e.type==='boss'?3:e.type==='mboss'?2:1, dmg=(e.type==='boss'?9:e.type==='mboss'?7:4)*dScale(save.stage);
   for(let k=0;k<n;k++) G.shots.push({dmg,x0:r.x,y0:bossy?r.y+r.h*.18:r.cy,t:-k*.18,dur:bossy?.8:.9,spin:rnd(0,6),kind:bossy?'slash':'kunai',mid:e.type==='mboss'}); // 참격은 몸 앞(발 아래쪽)에서 시작
   SFX.enemy();
 }
