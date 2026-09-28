@@ -1542,9 +1542,10 @@ function render(dt){
   const bset=skinSet();
   if(hasP(save.g,bset)){ // 실제 옷 그림: 0번 = 서 있기, 0~7번 = 던지기
     const bob=Math.sin(G.rearT*3)*A.ph*.006;
-    if(G.dead){ if(!drawReal('r',ctx,save.g,bset,0,A.px,A.py,A.ph,Math.max(0,1-G.deathT/.4))) drawRealBack(ctx,save.g,bset,0,A.px,A.py,A.ph,Math.max(0,1-G.deathT/.4)); }
+    // 서 있을 때도 던지기 그림의 첫 장면을 쓴다 → 던질 때와 쉴 때 옷 모양이 항상 같다 (뒷모습 대기 그림은 세트마다 옷이 조금씩 달라서 쓰지 않음)
+    if(G.dead) drawRealBack(ctx,save.g,bset,0,A.px,A.py,A.ph,Math.max(0,1-G.deathT/.4));
     else if(G.throwT>=0) drawRealBack(ctx,save.g,bset,Math.min(7,Math.floor(G.throwT*G.tfps)),A.px,A.py,A.ph,blink?.4:1);
-    else if(!drawReal('r',ctx,save.g,bset,Math.floor(G.rearT*8),A.px,A.py,A.ph,blink?.4:1)) drawRealBack(ctx,save.g,bset,0,A.px,A.py+bob,A.ph,blink?.4:1);
+    else drawRealBack(ctx,save.g,bset,0,A.px,A.py+bob,A.ph,blink?.4:1);
   }
   else if(G.dead) drawNinja(ctx,save.g,pEq(),'rear',0,A.px,A.py,A.ph,Math.max(0,1-G.deathT/.4));
   else if(G.throwT>=0) drawNinja(ctx,save.g,pEq(),'throw',Math.floor(G.throwT*G.tfps),A.px,A.py,A.ph,blink?.4:1);
