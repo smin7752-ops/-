@@ -12,7 +12,7 @@ open('app_index.html','w',encoding='utf-8').write(html)
 # 켜자마자 보이는 첫 화면: 게임 로딩 화면과 똑같은 그림이라 최신 버전을 받는 동안에도 자연스럽게 이어진다
 sp='data:image/webp;base64,'+base64.b64encode(open('splash.webp','rb').read()).decode()
 open('splash.html','w',encoding='utf-8').write('''<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<style>html,body{margin:0;height:100%;background:#0b0a17}
+<style>html,body{margin:0;height:100%%;background:#0b0a17}
 .s{position:fixed;inset:0;background:#0b0a17 url(%s) center top/cover no-repeat}
 @media (min-aspect-ratio:941/1672){.s{background-size:auto 100%%}.b{bottom:3%%!important}}
 .b{position:absolute;left:50%%;bottom:max(7%%,24px);transform:translateX(-50%%);width:min(74%%,420px);text-align:center;font:15px sans-serif;color:#f3e4c4;text-shadow:0 2px 4px #000}

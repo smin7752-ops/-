@@ -1809,7 +1809,7 @@ function renderAttend(){
   $('attGo').onclick=()=>{attClaim(); renderContent();};
 }
 function attPopup(){
-  if(!attReady()||!save.name||save.tut!=='done') return;
+  if(AUTO||!attReady()||!save.name||save.tut!=='done') return;
   const a=attState();
   $('attBody').innerHTML=`<h2>출석 보상</h2><p class="note" style="text-align:center">${a.n+1}번째 출석! 오늘의 보상을 받아 가세요.</p>${attHtml()}<button class="obtn big" id="attOk">받기</button>`;
   $('attM').hidden=false; $('attOk').onclick=()=>{attClaim(); $('attM').hidden=true; if(panel==='content') renderContent();};
