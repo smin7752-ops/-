@@ -160,6 +160,9 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
 .t-burst{background:linear-gradient(160deg,#ffc04a,#d06a10)}
 .t-bolt{background:linear-gradient(160deg,#ffe07a,#c8901a)}
 .t-exp{background:linear-gradient(160deg,#7ad0ff,#2a6ab8)}
+.dsel{display:flex;align-items:center;justify-content:center;gap:18px}.dsel button{width:40px;height:34px;border-radius:8px;background:#5a3e2a;color:#fff;font-size:15px}.dsel button[disabled]{opacity:.35}.dsel b{font-family:var(--display);font-weight:400;font-size:24px;color:#ffe6b0;min-width:90px;text-align:center}
+.dsub{margin:-6px 0 0;text-align:center;font-size:13px}
+.dbtns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}.dbtns .obtn{font-size:16px;padding:10px 4px}
 .dlv{display:flex;align-items:center;gap:8px;margin-top:4px}.dlv button{width:26px;height:22px;border-radius:6px;background:#5a3e2a;color:#fff;font-size:11px}.dlv button[disabled]{opacity:.35}.dlv b{font-family:var(--display);font-weight:400;font-size:14px}
 .t-coin{background:linear-gradient(160deg,#ffe29a,#b8841c)}
 .t-relic{background:linear-gradient(160deg,#c07bff,#5a2a9a)}
@@ -965,6 +968,24 @@ function dunResult(D,clear,sweep){
   $('infoM').hidden=false; $('infoOk').onclick=()=>{SFX.tap();$('infoM').hidden=true;};
   SFX.buy();
 }
+// 던전 입장 창: 단계 고르기 → 입장 / 소탕
+function dunPopup(k,L){
+  const D=DUN[k], d=dunState(), best=d.best[k]||0, n=d.n[k]||0;
+  L=Math.max(1,Math.min(best+1,L||best+1||1));
+  const per=dunGoldPer(L,calc());
+  $('infoBody').innerHTML=`<h2>${D.n}</h2>
+    <div class="dsel"><button id="dlm" ${L<=1?'disabled':''}>◀</button><b>${L}단계</b><button id="dlp" ${L>best?'disabled':''}>▶</button></div>
+    <p class="dsub">${L>best?'<span style="color:#ffb04a">도전 단계</span>':'<span style="color:#8ae070">클리어한 단계 · 소탕 가능</span>'}</p>
+    <div class="kv"><span>제한 시간</span><b class="num">${D.time}초</b><span>클리어 조건</span><b class="num">황금 산적 ${D.need}마리</b>
+      <span>1마리당 엽전</span><b class="num">${fmtKo(per)}</b><span>소탕 보상</span><b class="num">${L>best?'-':fmtKo(per*D.need)}</b>
+      <span>입장권</span><b class="num">${n} / ${D.tickets}</b></div>
+    <div class="dbtns"><button class="obtn big brown" id="dClose">닫기</button><button class="obtn big green" id="dSw" ${n>0&&best>=L?'':'disabled'}>소탕</button><button class="obtn big" id="dGo" ${n>0?'':'disabled'}>입장</button></div>`;
+  $('infoM').hidden=false;
+  $('dlm').onclick=()=>{SFX.tap();dunPopup(k,L-1);}; $('dlp').onclick=()=>{SFX.tap();dunPopup(k,L+1);};
+  $('dClose').onclick=()=>{SFX.tap();$('infoM').hidden=true;};
+  $('dGo').onclick=()=>{ac();SFX.tap();$('infoM').hidden=true;dunStart(k,L);};
+  $('dSw').onclick=()=>{ac();$('infoM').hidden=true;dunSweep(k,L);};
+}
 function dunSweep(k,L){
   const d=dunState(); if(!(d.n[k]>0)||(d.best[k]||0)<L) return;
   d.n[k]--; const kills=DUN[k].need, gold=dunGoldPer(L,calc())*kills;
@@ -1560,22 +1581,16 @@ function renderContent(){
   tabs([['content','컨텐츠']],'content',()=>{});
   const d=dunState();
   $('pbody').innerHTML=`<div class="pscroll">${CONTENTS.map(x=>{
-    if(x.k&&DUN[x.k]){const D=DUN[x.k], locked=save.bestStage<D.open, best=d.best[x.k]||0; view.dl=view.dl||{}; const L=Math.min(best+1,Math.max(1,view.dl[x.k]||best+1));
+    if(x.k&&DUN[x.k]){const D=DUN[x.k], locked=save.bestStage<D.open, best=d.best[x.k]||0;
       return `<div class="urow ct-row dun" data-k="${x.k}"><div class="itile relic"><i style="background-image:var(--ct-${x.im})"></i></div>
-      <div class="uinfo"><b>${x.n} <small style="color:#b98a3a">입장권 ${d.n[x.k]||0}/${D.tickets}</small></b>
-        <span class="uval" style="font-family:var(--body);font-size:12px;white-space:normal">${locked?`스테이지 ${D.open} 클리어 후 열려요`:`${x.d} · 최고 ${best}단계<br>1마리당 엽전 <b>${fmtKo(dunGoldPer(L,calc()))}</b>`}</span>
-        ${locked?'':`<span class="dlv"><button class="dlm" ${L<=1?'disabled':''}>◀</button><b>${L}단계</b><button class="dlp" ${L>best?'disabled':''}>▶</button></span>`}</div>
-      <div class="uright" style="display:flex;flex-direction:column;gap:4px">${locked?'<button class="obtn" disabled>잠김</button>':`<button class="obtn dgo" ${(d.n[x.k]||0)>0?'':'disabled'}>입장</button><button class="obtn green dsw" ${(d.n[x.k]||0)>0&&best>=L?'':'disabled'}>소탕</button>`}</div></div>`;}
+      <div class="uinfo"><b>${x.n}</b>
+        <span class="uval" style="font-family:var(--body);font-size:12px;white-space:normal">${locked?`스테이지 ${D.open} 클리어 후 열려요`:`${x.d}<br>최고 <b>${best}단계</b> · 입장권 <b>${d.n[x.k]||0}/${D.tickets}</b>`}</span></div>
+      <div class="uright">${locked?'<button class="obtn" disabled>잠김</button>':'<button class="obtn dgo">입장</button>'}</div></div>`;}
     return `<div class="urow ct-row"><div class="itile relic"><i style="background-image:var(--ct-${x.im})"></i></div>
     <div class="uinfo"><b>${x.n}</b><span class="uval" style="font-family:var(--body);font-size:12px;white-space:normal">${x.d}</span></div>
     <div class="uright"><button class="obtn" disabled>준비 중</button></div></div>`;}).join('')}
     <p class="note">입장권은 매일 다시 채워져요. 한 번 클리어한 단계는 소탕으로 바로 보상을 받을 수 있어요.</p></div>`;
-  document.querySelectorAll('.ct-row.dun').forEach(row=>{const k=row.dataset.k, best=d.best[k]||0, cur=()=>Math.min(best+1,Math.max(1,view.dl[k]||best+1));
-    const q=c=>row.querySelector(c);
-    if(q('.dlm')) q('.dlm').onclick=()=>{SFX.tap();view.dl[k]=cur()-1;renderContent();};
-    if(q('.dlp')) q('.dlp').onclick=()=>{SFX.tap();view.dl[k]=cur()+1;renderContent();};
-    if(q('.dgo')) q('.dgo').onclick=()=>{ac();SFX.tap();dunStart(k,cur());};
-    if(q('.dsw')) q('.dsw').onclick=()=>{ac();dunSweep(k,cur());};});
+  document.querySelectorAll('.ct-row.dun .dgo').forEach(bt=>bt.onclick=()=>{ac();SFX.tap();dunPopup(bt.closest('.ct-row').dataset.k);});
 }
 
 /* ---- 로비: 정면 대기 모습 · 닌자 선택 · 능력치 · 설정 ---- */
