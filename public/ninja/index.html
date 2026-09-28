@@ -105,6 +105,25 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
 /* ---------- 오른쪽 버튼 / 획득 알림 ---------- */
 .sbtn{width:48px;display:flex;flex-direction:column;align-items:center;gap:2px;font-family:var(--display);font-size:11px;color:#fff;text-shadow:0 1px 1px #000}
 .sbtn b{width:44px;height:44px;border-radius:10px;display:grid;place-items:center;background:linear-gradient(180deg,#4a372c,#2a201c);border:2px solid #7a5838;font-size:22px;color:#f2c14e}
+#dunT{position:absolute;inset:0;z-index:60;background:#050308;opacity:0;transition:opacity .35s;overflow:hidden}
+#dunT.in{opacity:1}
+#dunT.out{opacity:0;transition:opacity .5s}
+#dunT .bg{position:absolute;inset:0;background:center top/cover no-repeat;opacity:0;transform:scale(1.14);filter:brightness(.5) saturate(1.1);transition:opacity .6s,transform 2s cubic-bezier(.2,.7,.2,1)}
+#dunT.show .bg{opacity:1;transform:scale(1)}
+#dunT .vg{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 45%,rgba(0,0,0,0) 30%,rgba(0,0,0,.75) 100%)}
+#dunT .tt{position:absolute;left:16px;right:16px;top:36%;text-align:center;opacity:0;transform:translateY(16px) scale(.96);transition:opacity .5s .2s,transform .6s .2s cubic-bezier(.2,.8,.2,1.2)}
+#dunT.show .tt{opacity:1;transform:none}
+#dunT .tt small{display:block;font-family:var(--body);font-size:13px;letter-spacing:.3em;color:#e9c98a;margin-bottom:6px}
+#dunT .tt h3{margin:0;font-family:var(--display);font-weight:400;font-size:42px;line-height:1.1;color:#ffe6b0;text-shadow:0 3px 0 #5a2a10,0 0 18px rgba(255,160,60,.75),0 0 40px rgba(255,90,40,.45)}
+#dunT .tt b{display:inline-block;margin-top:10px;padding:3px 14px;border-radius:999px;background:rgba(0,0,0,.55);border:1px solid #c89a5a;font-family:var(--display);font-weight:400;font-size:17px;color:#fff}
+#dunT .tt p{margin:12px 0 0;font-size:13px;color:#e6d6bb;text-shadow:0 1px 3px #000}
+#dunT .ln{height:2px;margin:12px auto 0;width:0;background:linear-gradient(90deg,transparent,#ffcf7a,transparent);transition:width .7s .35s}
+#dunT.show .ln{width:80%}
+#dunT .lb{position:absolute;left:50%;bottom:16%;transform:translateX(-50%);width:min(60%,300px);text-align:center;font-size:12px;color:#d8c7a8;opacity:0;transition:opacity .4s .3s}
+#dunT.show .lb{opacity:1}
+#dunT .lb div{height:6px;margin-top:6px;border-radius:4px;background:rgba(255,255,255,.1);overflow:hidden;border:1px solid rgba(214,168,90,.5)}
+#dunT .lb i{display:block;height:100%;width:0;background:linear-gradient(90deg,#b8322a,#f0b44a);transition:width 1.2s .3s linear}
+#dunT.show .lb i{width:100%}
 .sideb{position:absolute;right:8px;top:198px;display:flex;flex-direction:column;gap:10px;z-index:2}
 .sideb button{position:relative;width:54px;height:58px;padding:0;border-radius:14px;border:2px solid #d6a85a;background:linear-gradient(180deg,#4a3222,#2a1b12);box-shadow:0 3px 0 #1a100a,0 0 0 1px #000,inset 0 1px 0 rgba(255,230,170,.35);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;color:#ffe6b0;font-family:var(--display);font-size:11px;text-shadow:0 1px 0 #000;cursor:pointer}
 .sideb button:active{transform:translateY(2px);box-shadow:0 1px 0 #1a100a}
@@ -454,6 +473,7 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
   <section class="modal" id="attM" hidden><div class="sheet info" id="attBody"></div></section>
   <section class="modal" id="offM" hidden><div class="sheet info off" id="offBody"></div></section>
   <section class="modal" id="sumM" hidden><div class="sheet" id="sumBody"></div></section>
+  <div id="dunT" hidden><div class="bg" id="dtBg"></div><div class="vg"></div><div class="tt"><small id="dtSm"></small><h3 id="dtH"></h3><b id="dtLv"></b><div class="ln"></div><p id="dtP"></p></div><div class="lb">던전 입장 중…<div><i></i></div></div></div>
   <div id="tut" hidden><div class="tdim" id="tDim"></div><div class="tring" id="tRing"></div><div class="tbub" id="tBub"></div></div>
   <div class="toast" id="toast" style="opacity:0"></div>
 </div>
@@ -1067,6 +1087,22 @@ function spawnGold(D){
   G.enemies.push({g:'m',eq:Array(8).fill(0),type:'grunt',kind:0,ranged:false,golden:true,atk:-1,fired:false,rest:0,meleeT:0,hitFx:0,
     hp:Math.round(14*hs),maxHp:Math.round(14*hs),u:rnd(.05,.95),p:0,speed:1/rnd(3.2,4.4),stopAt:1,sway:rnd(0,6),state:'live',t:0,at:Math.random()*8,fireT:1e9,warn:0,big:1});
 }
+// 던전 입장 연출: 화면이 어두워짐 → 던전 그림이 다가오며 이름 등장 → 밝아지며 전투 시작 (연출 동안 전투는 멈춤)
+const TR={busy:false};
+const DUN_SUB={gold:'황금 산적을 잡아 엽전을 쓸어 담아라',equip:'웨이브를 넘고 수호자를 쓰러뜨려라',rush:'끝없이 몰려오는 보스를 쓰러뜨려라',tower:'한 층씩, 더 높이 올라라'};
+function dunEnter(k,L){
+  const d=dunState(); if(TR.busy||(k!=='tower'&&!(d.n[k]>0))) return;
+  TR.busy=true; mapImg(k); const el=$('dunT');
+  $('dtBg').style.backgroundImage=`url("${aurl(DMAPS[k])}")`; $('dtSm').textContent='DUNGEON';
+  $('dtH').textContent=DUN[k].n; $('dtLv').textContent=`${L}${dunUnit(k)}`; $('dtP').textContent=DUN_SUB[k]||'';
+  el.className=''; el.hidden=false; void el.offsetWidth; el.classList.add('in'); SFX.tap();
+  const t0=performance.now();
+  setTimeout(()=>{ dunStart(k,L); if(G.banner&&G.banner.sub) $('dtP').textContent=G.banner.sub; G.banner.t=99; el.classList.add('show');   // 안내 문구는 입장 화면에서 보여 주고, 전투 화면 배너는 생략
+    const wait=()=>{ const ready=mapImg(k)||performance.now()-t0>4000;
+      if(!ready||performance.now()-t0<1900){ setTimeout(wait,80); return; }
+      el.classList.add('out'); TR.busy=false; setTimeout(()=>{el.hidden=true; el.className='';},520); };
+    wait(); },380);
+}
 function dunStart(k,L){ mapImg(k);
   const d=dunState(); if(k!=='tower'){ if(!(d.n[k]>0)) return; d.n[k]--; } mis('dun'); persist();
   if(panel) openPanel(panel);
@@ -1129,7 +1165,7 @@ function towerPopup(){
     <div class="dbtns" style="grid-template-columns:1fr 1fr"><button class="obtn big brown" id="dClose">닫기</button><button class="obtn big" id="dGo">도전</button></div>`;
   $('infoM').hidden=false;
   $('dClose').onclick=()=>{SFX.tap();$('infoM').hidden=true;};
-  $('dGo').onclick=()=>{ac();SFX.tap();$('infoM').hidden=true;dunStart('tower',F);};
+  $('dGo').onclick=()=>{ac();SFX.tap();$('infoM').hidden=true;dunEnter('tower',F);};
 }
 // 던전 입장 창: 단계 고르기 → 입장 / 소탕
 function dunPopup(k,L){
@@ -1152,7 +1188,7 @@ function dunPopup(k,L){
   document.querySelectorAll('.dcat [data-c]').forEach(b=>b.onclick=()=>{SFX.tap();view.dcat=b.dataset.c;dunPopup(k,L);});
   $('dlm').onclick=()=>{SFX.tap();dunPopup(k,L-1);}; $('dlp').onclick=()=>{SFX.tap();dunPopup(k,L+1);};
   $('dClose').onclick=()=>{SFX.tap();$('infoM').hidden=true;};
-  $('dGo').onclick=()=>{ac();SFX.tap();$('infoM').hidden=true;dunStart(k,L);};
+  $('dGo').onclick=()=>{ac();SFX.tap();$('infoM').hidden=true;dunEnter(k,L);};
   $('dSw').onclick=()=>{ac();$('infoM').hidden=true;dunSweep(k,L);};
 }
 function dunSweep(k,L){
@@ -2110,7 +2146,7 @@ let last=performance.now();
 function frame(now){
   requestAnimationFrame(frame);
   const dt=Math.min(.05,(now-last)/1000); last=now; T+=dt;
-  try{ if(G&&$('pickM').hidden) update(dt); render(dt); if(panel==='grow'&&view.grow==='rank') drawRankChar(); if(panel==='lobby') drawLobbyChar(); drawPick(); tutTick(); }catch(err){console.error(err);}
+  try{ if(G&&$('pickM').hidden&&!TR.busy) update(dt); render(dt); if(panel==='grow'&&view.grow==='rank') drawRankChar(); if(panel==='lobby') drawLobbyChar(); drawPick(); tutTick(); }catch(err){console.error(err);}
 }
 
 /* ================= 시작 ================= */
