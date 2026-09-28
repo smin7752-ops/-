@@ -777,18 +777,18 @@ const ICONS={
 const svgI=k=>`<svg class="i" viewBox="0 0 24 24">${ICONS[k]}</svg>`;
 const BASE_APS=1.8;
 const UPG=[
-  {k:'atk',n:'기본 공격력',ic:'sword',base:4,gr:1.011,max:1e6,val:l=>10+2*l+.02*l*l,show:v=>fmtKo(v)},
-  {k:'aspd',n:'공격 속도',ic:'bolt',base:15,gr:1.011,max:200,val:l=>.025*l,show:v=>'+'+fmtPct(v)},
-  {k:'hp',n:'최대 HP',ic:'heart',base:4,gr:1.011,max:1e6,val:l=>100+20*l+.2*l*l,show:v=>fmtKo(v)},
-  {k:'regen',n:'HP 회복량',ic:'regen',base:5,gr:1.011,max:1e6,val:l=>1+.5*l+.005*l*l,show:v=>`${+v.toFixed(1)}/초`},
-  {k:'crit',n:'크리티컬 확률',ic:'crit',base:10,gr:1.011,max:950,val:l=>.05+.001*l,show:fmtPct},
-  {k:'cdmg',n:'크리티컬 데미지',ic:'burst',base:10,gr:1.011,max:1e6,val:l=>1.5+.01*l,show:fmtPct},
-  {k:'gold',n:'골드 획득량',ic:'coin',base:12,gr:1.011,max:1e6,val:l=>.02*l,show:v=>'+'+fmtPct(v)},
-  {k:'xp',n:'경험치 획득량',ic:'exp',base:12,gr:1.011,max:1e6,val:l=>.02*l,show:v=>'+'+fmtPct(v)}
+  {k:'atk',n:'기본 공격력',ic:'sword',base:4,gr:1.013,max:1e6,val:l=>10+2*l+.02*l*l,show:v=>fmtKo(v)},
+  {k:'aspd',n:'공격 속도',ic:'bolt',base:15,gr:1.013,max:200,val:l=>.012*l,show:v=>'+'+fmtPct(v)},
+  {k:'hp',n:'최대 HP',ic:'heart',base:4,gr:1.013,max:1e6,val:l=>100+20*l+.2*l*l,show:v=>fmtKo(v)},
+  {k:'regen',n:'HP 회복량',ic:'regen',base:5,gr:1.013,max:1e6,val:l=>1+.5*l+.005*l*l,show:v=>`${+v.toFixed(1)}/초`},
+  {k:'crit',n:'크리티컬 확률',ic:'crit',base:10,gr:1.013,max:950,val:l=>.05+.0005*l,show:fmtPct},
+  {k:'cdmg',n:'크리티컬 데미지',ic:'burst',base:10,gr:1.013,max:1e6,val:l=>1.5+.01*l,show:fmtPct},
+  {k:'gold',n:'골드 획득량',ic:'coin',base:12,gr:1.013,max:1e6,val:l=>.02*l,show:v=>'+'+fmtPct(v)},
+  {k:'xp',n:'경험치 획득량',ic:'exp',base:12,gr:1.013,max:1e6,val:l=>.02*l,show:v=>'+'+fmtPct(v)}
 ];
 const upLv=k=>save.up[k]||0;
 // 비용: 레벨에 따라 완만하게 (다항식 × 약한 지수). 예전 1.07~1.12배씩 오르던 것을 1.03배로
-const upCost=(u,lv)=>Math.max(1,Math.round(u.base*.4*Math.pow(1+.1*lv,1.05)*Math.pow(u.gr,lv)));   // 골드 강화 비용 크게 낮춤
+const upCost=(u,lv)=>Math.max(1,Math.round(u.base*.7*Math.pow(1+.1*lv,1.05)*Math.pow(u.gr,lv)));   // 골드 강화 비용 크게 낮춤
 // 배수 구매: 가진 골드로 살 수 있는 만큼(최대 배수까지)
 // x1·x10·x100: 그 횟수 전체 비용이 있어야만 강화 (ok=false 면 버튼 꺼짐)
 // MAX: 가진 골드로 할 수 있는 만큼 (최대 5,000회)
@@ -815,13 +815,13 @@ const SP=[
 const spSpent=()=>SP.reduce((a,p)=>a+(save.sp[p.k]||0),0);
 const spLeft=()=>Math.max(0,SP_PER_LV*(save.lv-1)-spSpent());
 const RELICS=[
-  {k:'atk',n:'공격력 증가',ic:'sword',fx:'atkP',per:.25},
+  {k:'atk',n:'공격력 증가',ic:'sword',fx:'atkP',per:.05},
   {k:'aspd',n:'공격 속도 증가',ic:'bolt',fx:'aspd',per:.005},
-  {k:'hp',n:'최대 HP 증가',ic:'heart',fx:'hpP',per:.1},
-  {k:'regen',n:'HP 회복량 증가',ic:'regen',fx:'regP',per:.1},
+  {k:'hp',n:'최대 HP 증가',ic:'heart',fx:'hpP',per:.05},
+  {k:'regen',n:'HP 회복량 증가',ic:'regen',fx:'regP',per:.05},
   {k:'cdmg',n:'크리티컬 데미지 증가',ic:'burst',fx:'cdmg',per:.01},
-  {k:'gold',n:'골드 획득량 증가',ic:'coin',fx:'gold',per:.04},
-  {k:'xp',n:'경험치 획득량 증가',ic:'exp',fx:'xp',per:.04}
+  {k:'gold',n:'골드 획득량 증가',ic:'coin',fx:'gold',per:.02},
+  {k:'xp',n:'경험치 획득량 증가',ic:'exp',fx:'xp',per:.02}
 ];
 const RELIC_MAX=400, RELIC_RATE=.5;
 const rel=k=>save.relic[k]||(save.relic[k]={lv:0,n:0});
@@ -829,11 +829,11 @@ const relicSum=()=>RELICS.reduce((a,r)=>a+rel(r.k).lv,0);
 // 닌자 승급: 미션을 모두 달성하면 다음 계급으로
 const RANKS=[
   {n:'수련생',fx:{}},
-  {n:'하닌',fx:{atkP:1,gold:.5,xp:.5},req:[['stage',10],['lv',8],['upatk',20]]},
-  {n:'중닌',fx:{atkP:3,hpP:1,extra:1},req:[['stage',25],['lv',20],['grade',3],['relic',10]]},
-  {n:'상닌',fx:{atkP:10,gold:1,xp:1},req:[['stage',50],['lv',40],['grade',5],['pulls',150],['relic',40]]},
-  {n:'암부',fx:{atkP:30,hpP:3,aspd:.2},req:[['stage',80],['lv',65],['grade',7],['upatk',300],['relic',120]]},
-  {n:'카게',fx:{atkP:100,gold:3,xp:3,extra:1},req:[['stage',120],['lv',90],['grade',9],['pulls',1500],['relic',300]]}
+  {n:'하닌',fx:{atkP:.3,gold:.2,xp:.2},req:[['stage',10],['lv',8],['upatk',20]]},
+  {n:'중닌',fx:{atkP:.5,hpP:.5,extra:1},req:[['stage',25],['lv',20],['grade',2],['relic',10]]},
+  {n:'상닌',fx:{atkP:1,gold:.3,xp:.3},req:[['stage',50],['lv',40],['grade',3],['pulls',150],['relic',30]]},
+  {n:'암부',fx:{atkP:1.5,hpP:1,aspd:.2},req:[['stage',80],['lv',65],['grade',5],['upatk',300],['relic',80]]},
+  {n:'카게',fx:{atkP:2.5,gold:.5,xp:.5,extra:1},req:[['stage',120],['lv',90],['grade',7],['pulls',800],['relic',200]]}
 ];
 const maxGrade=()=>{let m=0;for(const k in save.inv){if(save.inv[k].lv>0) m=Math.max(m,setOf(+k.split('-')[1]));}return m;};
 function reqInfo([type,v]){
@@ -853,7 +853,10 @@ const scaleFx=(fx,m)=>{const o={};for(const k in fx) o[k]=fx[k]*m;return o;};
 const fxLine=fx=>Object.keys(fx).map(k=>`${FXN[k]} +${fmtPct(fx[k])}`).join(' · ');
 function calc(eq=save.eq){
   const s={atkF:10,atkP:0,hpF:100,hpP:0,regF:1,regP:0,aspd:0,crit:.05,cdmg:1.5,gold:0,xp:0,shield:0,multi:1,extra:0,pierce:0,poison:0,shadow:0,blast:0};
-  const add=o=>{for(const k in o){if(k==='multi') s.multi=Math.max(s.multi,o[k]); else s[k]=(s[k]||0)+o[k];}};
+  // 그룹별 곱연산: 공격력·HP·회복 %는 같은 그룹끼리 더하고, 그룹끼리는 곱한다 (base 스텟·장비·세트·탑 / 유물 / 환생 / 승급 / 스킨)
+  const GP=['atkP','hpP','regP','gold','xp'], grp={}; let cur='base';
+  const add=o=>{for(const k in o){if(k==='multi') s.multi=Math.max(s.multi,o[k]); else if(cur!=='base'&&GP.includes(k)){(grp[cur]||(grp[cur]={}))[k]=(grp[cur][k]||0)+o[k];} else s[k]=(s[k]||0)+o[k];}};
+  const gm=k=>Object.values(grp).reduce((m,g)=>m*(1+(g[k]||0)),1);
   // 골드 강화
   const uv=k=>UPG.find(u=>u.k===k).val(upLv(k));   // 목록 순서와 상관없이 이름으로 찾는다
   s.atkF=uv('atk'); s.hpF=uv('hp'); s.regF=uv('regen');
@@ -865,8 +868,8 @@ function calc(eq=save.eq){
   eq.forEach((t,sl)=>{const it=inv(sl,t); add(equipFx(sl,t,it&&it.lv?it.lv:1));});
   // 보유 효과
   for(const key in save.inv){const it=save.inv[key]; if(!it.lv) continue; const [sl,t]=key.split('-').map(Number); add(ownFx(sl,t,it.lv));}
-  // 유물
-  for(const r of RELICS) s[r.fx]+=rel(r.k).lv*r.per;
+  // 유물 (그룹)
+  cur='relic'; for(const r of RELICS) add({[r.fx]:rel(r.k).lv*r.per}); cur='base';
   // 세트 효과
   // 세트 효과: 같은 세트 2·4부위. 그 부위들 중 가장 낮은 등급(F·D·A·S)만큼 효과가 커진다
   const active=[];
@@ -875,18 +878,20 @@ function calc(eq=save.eq){
     if(best>=0){const f=scaleFx(fx,GRMUL[best]); add(f); active.push({t:k,g:best,need,txt:fxLine(f)});} }
   const minT=Math.min(...eq.map(setOf));
   for(let k=1;k<=minT;k++){const u=SETFX[k][2]; add(u[2]); active.push({t:k,need:8,txt:u[1]});}
-  // 환생 능력치
-  for(const R of REB) add({[R.fx]:rebLv(R.k)*R.per});
-  // 스킨
-  for(let k=0;k<SETS.length;k++) if(skinOpen(k)) add(skinFx(k,'own'));
-  add(skinFx(skinSet(),'eq'));
-  // 승급
-  for(let i=1;i<=save.rank;i++) add(RANKS[i].fx);
+  // 환생 능력치 (그룹)
+  cur='reb'; for(const R of REB) add({[R.fx]:rebLv(R.k)*R.per}); cur='base';
+  // 스킨 (그룹)
+  cur='skin'; for(let k=0;k<SETS.length;k++) if(skinOpen(k)) add(skinFx(k,'own'));
+  add(skinFx(skinSet(),'eq')); cur='base';
+  // 승급 (그룹)
+  cur='rank'; for(let i=1;i<=save.rank;i++) add(RANKS[i].fx); cur='base';
   const tb=(save.dun&&save.dun.best&&save.dun.best.tower)||0; for(let f=10;f<=tb;f+=10) add(towerFx(f));
   s.crit=Math.min(1,s.crit);
-  s.atk=Math.max(1,Math.round(s.atkF*(1+s.atkP)));
-  s.hp=Math.max(1,Math.round(s.hpF*(1+s.hpP)));
-  s.regen=s.regF*(1+s.regP);
+  s.atkMul=(1+s.atkP)*gm('atkP'); s.hpMul=(1+s.hpP)*gm('hpP');
+  s.atk=Math.max(1,Math.round(s.atkF*s.atkMul));
+  s.hp=Math.max(1,Math.round(s.hpF*s.hpMul));
+  s.regen=s.regF*(1+s.regP)*gm('regP');
+  s.gold=(1+s.gold)*gm('gold')-1; s.xp=(1+s.xp)*gm('xp')-1;
   s.aps=Math.min(10,BASE_APS*(1+s.aspd));
   s.shots=s.multi+s.extra;
   s.cp=Math.round(s.atk*s.aps*(1+s.crit*(s.cdmg-1))*s.shots*4+s.hp*.5);
@@ -1109,7 +1114,7 @@ function arena(){
   const vh=L.view, ph=Math.min(vh*.3,W*.36,210), py=vh-12, eh=Math.min(vh*.22,W*.26,170);
   return {vh,ph,px:W/2,py,lineY:py-ph*.62,eh,margin:eh*.35+10};
 }
-const sScale=s=>Math.pow(1.11,s-1), dScale=s=>Math.pow(1.07,s-1), gScale=s=>Math.pow(1.1,s-1), xScale=s=>Math.pow(1.08,s-1);   // 적 체력 증가 1.12→1.10, 공격 1.085→1.08
+const sScale=s=>s<=100?Math.pow(1.11,s-1):Math.pow(1.11,99)*Math.pow(1.085,s-100), dScale=s=>Math.pow(1.07,s-1), gScale=s=>Math.pow(1.1,s-1), xScale=s=>Math.pow(1.08,s-1);   // 적 체력 증가 1.12→1.10, 공격 1.085→1.08
 function spawnEnemy(type){
   const s=curStage(), other=save.g==='f'?'m':'f', g=Math.random()<.6?other:save.g, hs=sScale(s);
   let set,hp,travel;
@@ -1403,7 +1408,7 @@ function startBoss(){
   SFX.wave(); updateTop();
 }
 function bossCleared(){
-  const gems=50+save.stage*2;
+  const gems=80+save.stage*4;
   save.gems+=gems; G.boss=null; G.timeMax=0;
   const hp=Math.round(G.st.hp*.3); G.hp=Math.min(G.st.hp,G.hp+hp);
   feed(`스테이지 ${save.stage} 클리어 · <b>보석 +${gems}</b>`); pop('gemPill');
@@ -2099,17 +2104,17 @@ function renderAch(){
 /* ---- 환생: 스테이지 50부터. 스테이지·엽전·골드 강화를 처음으로 돌리고 환생석을 받는다 ---- */
 const REB_MIN=50, REB_MAX=100;
 const REB=[
-  {k:'atk',n:'공격력',fx:'atkP',per:.2,im:'--st-atk'},
+  {k:'atk',n:'공격력',fx:'atkP',per:.25,im:'--st-atk'},
   {k:'aspd',n:'공격 속도',fx:'aspd',per:.01,im:'--st-aspd'},
-  {k:'hp',n:'최대 HP',fx:'hpP',per:.2,im:'--st-hp'},
-  {k:'regen',n:'HP 회복량',fx:'regP',per:.2,im:'--st-regen'},
+  {k:'hp',n:'최대 HP',fx:'hpP',per:.25,im:'--st-hp'},
+  {k:'regen',n:'HP 회복량',fx:'regP',per:.1,im:'--st-regen'},
   {k:'cdmg',n:'크리티컬 데미지',fx:'cdmg',per:.1,im:'--st-cdmg'},
-  {k:'gold',n:'골드 획득량',fx:'gold',per:.1,im:'--st-gold'},
-  {k:'xp',n:'경험치 획득량',fx:'xp',per:.1,im:'--st-xp'}];
+  {k:'gold',n:'골드 획득량',fx:'gold',per:.15,im:'--st-gold'},
+  {k:'xp',n:'경험치 획득량',fx:'xp',per:.05,im:'--st-xp'}];
 const rebLv=k=>(save.reb&&save.reb.lv&&save.reb.lv[k])||0;
 const rebCost=lv=>1+Math.floor(lv*.5);                       // 환생석: 1,1,2,2,3,3…
 const rebRun=()=>Math.max(save.stage||1,save.runBest||0);   // 이번 환생 뒤 가장 멀리 간 스테이지
-const rebStones=st=>st<REB_MIN?0:Math.floor(2*Math.pow(st/10,1.5));
+const rebStones=st=>st<REB_MIN?0:Math.floor(4*Math.pow(st/10,1.6));
 const rebStone=()=>(save.reb&&save.reb.st)||0;
 const rebReady=()=>rebRun()>=REB_MIN;
 const rebCanUp=()=>REB.some(R=>rebLv(R.k)<REB_MAX&&rebStone()>=rebCost(rebLv(R.k)));
@@ -2271,7 +2276,7 @@ function openInfo(){
 }
 
 /* ---- 오프라인 보상: 꺼져 있던 시간만큼, 지금 스테이지 기준으로 엽전·경험치 ---- */
-const OFF_MIN=60, OFF_MAX=12*3600, OFF_RATE=.75, OFF_KPM_MIN=3, OFF_KPM_MAX=60; // 1분 이상부터, 최대 12시간
+const OFF_MIN=60, OFF_MAX=12*3600, OFF_RATE=.75, OFF_KPM_MIN=3, OFF_KPM_MAX=25; // 1분 이상부터, 최대 12시간
 // 오프라인 1분 처치 수: 실제 전투력(초당 피해 ÷ 지금 스테이지 졸개 체력)의 75%, 3~60마리
 function offlineKpm(st,s){
   const dps=st.atk*st.aps*(1+Math.min(1,st.crit)*(st.cdmg-1))*st.shots, hp=14*sScale(s);
@@ -2368,9 +2373,13 @@ if(AUTO) window.__sim={
     for(const r of RELICS){const R=rel(r.k); while(R.n>0&&R.lv<RELIC_MAX){R.n--; if(Math.random()<RELIC_RATE) R.lv++;}}
     // 장비 강화: 입은 장비를 엽전 남는 만큼
     for(let sl=0;sl<8;sl++){const t=save.eq[sl], it=inv(sl,t); let g=0; while(it&&it.lv<itemMax(it)&&g++<50){const c=enhCost(t,it.lv); if(c>save.gold*.3) break; save.gold-=c; it.lv++;}}
+    // 환생: 20분(게임 시간) 동안 최고 기록이 안 오르면 환생 → 환생석은 가장 싼 능력치부터
+    this.tt=(this.tt||0)+10; if((save.runBest||0)>(this.lb||0)){this.lb=save.runBest; this.lt=this.tt;}
+    if(this.autoReb&&rebReady()&&this.tt-(this.lt||0)>=900){ doRebirth(true); this.rebs=(this.rebs||0)+1; this.lt=this.tt; this.lb=0; }
+    let g2=0; while(g2++<500){ let b=null,bc=1e9; for(const R of REB){const lv=rebLv(R.k); if(lv<REB_MAX&&rebCost(lv)<bc){bc=rebCost(lv);b=R;}} if(!b||rebStone()<bc) break; const RR=save.reb||(save.reb={}); RR.st-=bc; (RR.lv||(RR.lv={}))[b.k]=rebLv(b.k)+1; }
     refreshStats();
   },
-  info(){ const st=calc(); return {stage:save.stage,best:save.bestStage,lv:save.lv,rank:save.rank,gold:Math.round(save.gold),gems:save.gems,cp:st.cp,atk:st.atk,hp:st.hp,aps:+st.aps.toFixed(2),crit:+st.crit.toFixed(2),pulls:save.pulls,eqSet:save.eq.map(setOf).join(''),relic:relicSum(),up:JSON.stringify(save.up)}; },
+  info(){ const st=calc(); return {stage:save.stage,best:save.bestStage,lv:save.lv,rank:save.rank,gold:Math.round(save.gold),gems:save.gems,cp:st.cp,atk:st.atk,hp:st.hp,aps:+st.aps.toFixed(2),crit:+st.crit.toFixed(2),pulls:save.pulls,eqSet:save.eq.map(setOf).join(''),relic:relicSum(),rebs:this.rebs||0,run:save.runBest||0,stone:rebStone(),rebLv:rebLv('atk'),atkMul:+st.atkMul.toFixed(1)}; },
   offline(sec){ return offlineCalc(sec); },
   reb(){ return {ready:rebReady(),stones:rebStones(rebRun())}; }
 };
