@@ -272,6 +272,14 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
 .att .ad.big{grid-column:span 2;background:linear-gradient(180deg,#ffe7a8,#f2c14e)}
 .att .ad.now{border-color:#ff6a3a;box-shadow:0 0 0 2px #ffb86a,0 0 12px #ff9a4a}
 .att .ad.got::after{content:'✔';position:absolute;inset:0;display:grid;place-items:center;font-size:34px;color:#2f9a4a;background:rgba(255,255,255,.55);border-radius:8px}
+.skgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.skc{position:relative;background:var(--card);border:2px solid var(--card-edge);border-radius:12px;padding:4px 2px 8px;display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--ink);font-family:var(--body);cursor:pointer}
+.skc canvas{width:100%;height:auto;aspect-ratio:150/170;background:radial-gradient(circle at 50% 60%,rgba(255,220,160,.35),rgba(0,0,0,0) 70%);border-radius:8px}
+.skc b{font-family:var(--display);font-weight:400;font-size:15px;color:var(--ink);padding:0 4px 1px;line-height:1.2}
+.skc span{font-size:11px;font-weight:700;padding:2px 10px;border-radius:999px;background:linear-gradient(180deg,var(--orange-hi),var(--orange));color:#fff}
+.skc.on{border-color:#ffb84a;box-shadow:0 0 0 2px #ffd36a,0 0 12px rgba(255,190,80,.6)}
+.skc.on span{background:#2f9a4a}
+.skc.lock{opacity:.8;cursor:default}.skc.lock span{background:#6a5a4a}
 .lb-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}.lb-btns .obtn{font-size:13px;padding:7px 6px}
 .bk textarea{width:100%;box-sizing:border-box;height:74px;resize:none;border-radius:8px;border:2px solid #7a5838;background:#1c1512;color:#f3ecdf;font-size:11px;padding:6px;word-break:break-all;font-family:monospace}
 .bk .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
@@ -593,7 +601,10 @@ const TIERS=40;
 const MERGE=2; // 같은 장비 2개 → 한 등급 위
 const setOf=t=>t>>2, grOf=t=>t&3;
 const setNo=t=>String(setOf(t)+1).padStart(2,'0');
-const pEq=(eq=save.eq)=>eq.map(setOf); // 캐릭터 옷 색·쿠나이 모양은 세트 기준
+// 스킨: 캐릭터 모습(옷·쿠나이)은 장비와 따로, 고른 세트 스킨으로 입는다. 그 세트 장비를 하나라도 얻으면 스킨이 열린다
+const skinOpen=k=>k===0||Object.keys(save.inv).some(key=>save.inv[key].lv>0&&setOf(+key.split('-')[1])===k);
+const skinSet=()=>{const k=save.skin|0; return skinOpen(k)?k:0;};
+const pEq=()=>Array(8).fill(skinSet()); // 예전 색 바꾸기 그림도 스킨 기준
 
 /* ================= 숫자 표기 (만 · 억 · 조 · 경) ================= */
 function fmtKo(n){
@@ -645,6 +656,7 @@ let saveT=0;
 // 🧪 테스트용: 켤 때마다 엽전 1조 · 보석 1000만 까지 채워 줌. 정식 배포 때 false 로
 const TEST_RICH=true;
 if(TEST_RICH&&save.picked){save.gold=Math.max(save.gold||0,1e12); save.gems=Math.max(save.gems||0,1e7);}
+if(save.skin===undefined) save.skin=setOf((save.eq||[])[2]||0);   // 처음엔 지금 입은 옷 모습 그대로
 function persist(){try{localStorage.setItem(SKEY,JSON.stringify(save))}catch(e){}}
 function persistSoon(){clearTimeout(saveT);saveT=setTimeout(persist,400);}
 const slotName=s=>{const n=SLOTS[s].n;return typeof n==='string'?n:n[save.g];};
@@ -1349,7 +1361,7 @@ function update(dt){
   if(G.bossDelay>0){G.bossDelay-=dt; if(G.bossDelay<=0) startBoss();}
   // 자동 공격
   if(!G.dead){
-    const m=hasP(save.g,setOf(save.eq[2]))?MOTION.p[save.g][setOf(save.eq[2])]:META[save.g].throw, interval=1/st.aps;
+    const m=hasP(save.g,skinSet())?MOTION.p[save.g][skinSet()]:META[save.g].throw, interval=1/st.aps;
     if(G.throwT<0){G.cool-=dt; if(G.cool<=0){const t=autoTargets(1,null); if(t.length){G.throwT=0;G.released=false;G.aim=t[0];G.tfps=Math.max(22,m.n/(interval*.8));}}}
     else{
       G.throwT+=dt; const f=Math.floor(G.throwT*G.tfps);
@@ -1430,7 +1442,7 @@ function update(dt){
       if(e.state==='die'||k.hit.has(e)) continue;
       const r=enemyRect(e);
       if(Math.abs(k.x-r.x)<r.hw&&k.y<r.y&&k.y>r.y-r.h*.95){
-        k.hit.add(e); sparks(k.x,k.y,SETS[setOf(save.eq[7])].glow); SFX.hit();
+        k.hit.add(e); sparks(k.x,k.y,SETS[skinSet()].glow); SFX.hit();
         damageEnemy(e,G.st.atk,{ghost:k.ghost});
         if(!G.st.pierce){k.dead=true;break;}
         k.target=autoTargets(3,null).find(o=>!k.hit.has(o))||null;
@@ -1516,15 +1528,15 @@ function render(dt){
       else{ctx.fillStyle='rgba(255,200,150,.9)'; ctx.beginPath(); ctx.ellipse(0,0,ww*.4,hh*.15,0,0,7); ctx.fill();}
       ctx.restore();}
     else drawShuriken(sx,sy,A.eh*.1*(1+u*.6),s.t*18+s.spin);}
-  const kc=SETS[setOf(save.eq[7])].glow;
+  const kc=SETS[skinSet()].glow;
   for(const k of G.kunais){
-    ctx.save(); if(k.ghost) ctx.globalAlpha=.6; if(!drawRealKunai(ctx,setOf(save.eq[7]),k.x,k.y,A.ph*.5,Math.atan2(k.vy,k.vx),k.t)) drawKunaiIcon(ctx,save.g,setOf(save.eq[7]),k.x,k.y,A.ph*.3,Math.atan2(k.vy,k.vx)); ctx.restore();
+    ctx.save(); if(k.ghost) ctx.globalAlpha=.6; if(!drawRealKunai(ctx,skinSet(),k.x,k.y,A.ph*.5,Math.atan2(k.vy,k.vx),k.t)) drawKunaiIcon(ctx,save.g,skinSet(),k.x,k.y,A.ph*.3,Math.atan2(k.vy,k.vx)); ctx.restore();
   }
   // 플레이어 (뒷모습)
   shadow(A.px,A.py,A.ph*.25);
   if(G.st.minT>0) aura(ctx,A.px,A.py,A.ph,SETS[G.st.minT].glow,T);
   const blink=G.inv>0&&!G.dead&&Math.floor(G.inv*20)%2===0;
-  const bset=setOf(save.eq[2]);
+  const bset=skinSet();
   if(hasP(save.g,bset)){ // 실제 옷 그림: 0번 = 서 있기, 0~7번 = 던지기
     const bob=Math.sin(G.rearT*3)*A.ph*.006;
     if(G.dead){ if(!drawReal('r',ctx,save.g,bset,0,A.px,A.py,A.ph,Math.max(0,1-G.deathT/.4))) drawRealBack(ctx,save.g,bset,0,A.px,A.py,A.ph,Math.max(0,1-G.deathT/.4)); }
@@ -1597,7 +1609,7 @@ function updateDots(){
 function drawAvatar(){
   const c=$('av'), x=sharp(c,120,120); x.clearRect(0,0,120,120);
   const g=x.createRadialGradient(60,50,5,60,60,70); g.addColorStop(0,'#6a5040'); g.addColorStop(1,'#2a201c'); x.fillStyle=g; x.fillRect(0,0,120,120);
-  if(!drawReal('i',x,save.g,setOf(save.eq[2]),0,63,176,168)&&base[save.g].idle) drawNinja(x,save.g,pEq(),'idle',0,63,176,168); // 머리 윗부분까지 원 안에 들어오게
+  if(!drawReal('i',x,save.g,skinSet(),0,63,176,168)&&base[save.g].idle) drawNinja(x,save.g,pEq(),'idle',0,63,176,168); // 머리 윗부분까지 원 안에 들어오게
 }
 
 /* ================= 패널 ================= */
@@ -1672,8 +1684,9 @@ function refreshGrow(){
 
 /* ---- 장비: 합성 · 강화 · 장착 / 유물 ---- */
 function renderGear(){
-  tabs([['equip','장비'],['relic','유물']],view.gear,k=>{view.gear=k;renderGear();});
+  tabs([['equip','장비'],['skin','스킨'],['relic','유물']],view.gear,k=>{view.gear=k;renderGear();});
   if(view.gear==='relic') return renderRelic();
+  if(view.gear==='skin') return renderSkin();
   const s=view.slot, t=view.sel, it=inv(s,t), own=!!(it&&it.lv>0), lv=own?it.lv:1, n=it?it.n:0, isEq=save.eq[s]===t;
   const cur=equipFx(s,t,lv), nxt=equipFx(s,t,Math.min(ITEM_MAX,lv+1)), oc=ownFx(s,t,lv), on=ownFx(s,t,Math.min(ITEM_MAX,lv+1));
   const rows=(a,b)=>Object.keys(a).map(k=>`<div class="fxr"><span>${FXN[k]} 증가</span><span class="num">${fmtPct(a[k])}${own&&lv<ITEM_MAX?` › <em>${fmtPct(b[k])}</em>`:''}</span></div>`).join('');
@@ -1729,6 +1742,25 @@ function refreshGearBtns(){
   if(own&&lv>=ITEM_MAX){b.className='obtn green';b.innerHTML='최대레벨';b.disabled=true;return;}
   const c=enhCost(t,lv); b.className='obtn'; b.disabled=!own||save.gold<c;
   b.innerHTML=`강화하기<span class="cost"><i class="coin"></i>${fmtKo(c)}</span>`;
+}
+/* ---- 스킨: 세트별 모습 한 번에 갈아입기 ---- */
+function renderSkin(){
+  const cur=skinSet();
+  $('pbody').innerHTML=`<div class="pscroll"><p class="note" style="margin:0 0 8px">스킨은 모습만 바꿔요. 능력치는 장비 그대로예요. 그 세트 장비를 하나라도 얻으면 스킨이 열려요.</p>
+    <div class="skgrid">${SETS.map((S,k)=>{const open=skinOpen(k), on=k===cur;
+      return `<button class="skc${on?' on':''}${open?'':' lock'}" data-k="${k}" ${open?'':'disabled'}><canvas width="150" height="170"></canvas>
+        <b style="border-bottom:3px solid ${S.glow}">${S.n}</b><span>${on?'착용 중':open?'입기':'🔒 잠김'}</span></button>`;}).join('')}</div></div>`;
+  $('pbody').querySelectorAll('.skc').forEach(b=>b.onclick=()=>{const k=+b.dataset.k; if(!skinOpen(k)||k===cur) return;
+    save.skin=k; persist(); SFX.buy(); for(const c of ['I','r','p','i']) realImg(c,save.g,k); realImg('k','',k);
+    drawAvatar(); toast(`${SETS[k].n} 스킨으로 갈아입었어요`); renderSkin();});
+  for(let k=0;k<SETS.length;k++) realImg('i',save.g,k);
+}
+function drawSkins(){
+  document.querySelectorAll('.skc canvas').forEach(c=>{const k=+c.parentNode.dataset.k, x=sharp(c,150,170); x.clearRect(0,0,150,170);
+    x.fillStyle='rgba(0,0,0,.28)'; x.beginPath(); x.ellipse(75,160,40,8,0,0,7); x.fill();
+    if(!skinOpen(k)) x.globalAlpha=.35;
+    const m=realImg('i',save.g,k); if(m){const n=mMeta('i',save.g,k).n, q=Math.floor((T+k*.37)*6)%(n*2-2), f=q<n?q:n*2-2-q; drawReal('i',x,save.g,k,f,75,160,138,skinOpen(k)?1:.35);}
+    x.globalAlpha=1;});
 }
 function renderRelic(){
   $('pbody').innerHTML=`<div class="pscroll">${RELICS.map(r=>{const R=rel(r.k), mx=R.lv>=RELIC_MAX;
@@ -1825,7 +1857,7 @@ function drawRankChar(){
   const g=x.createRadialGradient(110,200,10,110,200,110); g.addColorStop(0,'rgba(255,200,120,.35)'); g.addColorStop(1,'rgba(255,200,120,0)'); x.fillStyle=g; x.fillRect(0,0,220,260);
   x.fillStyle='#6a4a30'; x.beginPath(); x.ellipse(110,238,70,14,0,0,7); x.fill(); x.fillStyle='#c89a5a'; x.beginPath(); x.ellipse(110,234,64,11,0,0,7); x.fill();
   if(save.rank>0) aura(x,110,234,210,SETS[Math.min(9,save.rank*2)].glow,T);
-  if(!drawIdle(x,save.g,setOf(save.eq[2]),110,234,210)) drawNinja(x,save.g,pEq(),'idle',Math.floor(T*8),110,234,210);
+  if(!drawIdle(x,save.g,skinSet(),110,234,210)) drawNinja(x,save.g,pEq(),'idle',Math.floor(T*8),110,234,210);
 }
 
 /* ---- 컨텐츠: 자리만 먼저 (구상 후 하나씩 채울 예정) ---- */
@@ -2027,7 +2059,7 @@ function drawLobbyChar(){
   x.fillStyle='#5a3e2a'; x.beginPath(); x.ellipse(180,282,96,16,0,0,7); x.fill(); x.fillStyle='#c89a5a'; x.beginPath(); x.ellipse(180,278,88,13,0,0,7); x.fill();
   const st=G?G.st:calc(); if(st.minT>0) aura(x,180,276,240,SETS[st.minT].glow,T);
   const hop=T-lbTap<.45?Math.sin(Math.PI*(T-lbTap)/.45)*26:0;
-  if(!drawIdle(x,save.g,setOf(save.eq[2]),180,276-hop,240)) drawNinja(x,save.g,pEq(),'idle',Math.floor(T*8),180,276-hop,240);
+  if(!drawIdle(x,save.g,skinSet(),180,276-hop,240)) drawNinja(x,save.g,pEq(),'idle',Math.floor(T*8),180,276-hop,240);
 }
 
 /* ---- 능력치 창 ---- */
@@ -2131,7 +2163,7 @@ const TUT=[
     el:()=>panel!=='grow'?navB('grow'):view.grow!=='gold'?document.querySelector('#ptabs [data-k="gold"]'):document.querySelector('#pbody [data-u="atk"] .obtn'),
     done:t=>upLv('atk')>t.a0, init:t=>{t.a0=upLv('atk');}},
   {txt:'잘했어요! 이번엔 <b>[장비]</b> 탭을 눌러 보세요.', el:()=>navB('gear'), done:()=>panel==='gear'},
-  {txt:'장비는 <b>같은 것을 모아 합성</b>하고, <b>엽전으로 강화</b>해요.<br>좋은 장비를 입으면 <b>닌자 모습도 바뀌어요!</b>', el:()=>$('pbody')},
+  {txt:'장비는 <b>같은 것을 모아 합성</b>하고, <b>엽전으로 강화</b>해요.<br>닌자 모습은 <b>[스킨]</b> 탭에서 세트별로 갈아입어요!', el:()=>$('pbody')},
   {txt:'<b>[컨텐츠]</b> 탭도 눌러 볼까요?', el:()=>navB('content'), done:()=>panel==='content'},
   {txt:'여기엔 <b>던전</b>이 있어요. 스테이지를 넘을수록 하나씩 열리고,<br>입장권은 <b>매일 다시 채워져요.</b>', el:()=>$('pbody')},
   {txt:'적을 쓰러뜨리다 보면 <b>보스</b>가 나타나요.<br>보스를 잡으면 <b>다음 스테이지</b>로 넘어가요!', el:()=>$('stagebox'), enter:()=>{if(panel) openPanel(panel);}},
@@ -2172,7 +2204,7 @@ let last=performance.now();
 function frame(now){
   requestAnimationFrame(frame);
   const dt=Math.min(.05,(now-last)/1000); last=now; T+=dt;
-  try{ if(G&&$('pickM').hidden&&!TR.busy) update(dt); render(dt); if(panel==='grow'&&view.grow==='rank') drawRankChar(); if(panel==='lobby') drawLobbyChar(); drawPick(); tutTick(); }catch(err){console.error(err);}
+  try{ if(G&&$('pickM').hidden&&!TR.busy) update(dt); render(dt); if(panel==='grow'&&view.grow==='rank') drawRankChar(); if(panel==='lobby') drawLobbyChar(); if(panel==='gear'&&view.gear==='skin') drawSkins(); drawPick(); tutTick(); }catch(err){console.error(err);}
 }
 
 /* ================= 시작 ================= */
@@ -2186,7 +2218,7 @@ setMid(); resize(); requestAnimationFrame(frame);
     }
     // 무거운 세트 그림은 지금 입은 것만 먼저 받고, 나머지는 필요할 때 받는다
     for(const k of monPool(save.stage).slice(0,2)) jobs.push(preloadMon(k));
-    if(save.picked){const st=setOf(save.eq[2]); for(const c of ['I','r','p']) jobs.push(preloadReal(c,save.g,st)); jobs.push(preloadReal('k','',setOf(save.eq[7])));}
+    if(save.picked){const st=skinSet(); for(const c of ['I','r','p']) jobs.push(preloadReal(c,save.g,st)); jobs.push(preloadReal('k','',skinSet()));}
     else for(const g of ['f','m']) jobs.push(preloadReal('i',g,0));
     const TIPS=['팁: 컨텐츠 탭의 던전에서 골드와 장비를 모을 수 있어요','팁: 수련의 탑 10층마다 영구 능력치가 올라가요','팁: 게임을 꺼 두어도 오프라인 보상이 쌓여요','팁: 보스 러시에서 유물 조각을 모아 유물을 키워요'];
     $('ltip').textContent=TIPS[Math.floor(Math.random()*TIPS.length)];
