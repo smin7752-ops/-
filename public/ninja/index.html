@@ -46,8 +46,10 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
 .avatar canvas{width:100%;height:100%;border-radius:50%;display:block}
 .lvb{position:absolute;left:50%;bottom:-9px;transform:translateX(-50%);background:#2a201c;border:2px solid #c89a5a;color:#fff;font-family:var(--display);font-size:11px;padding:1px 7px;border-radius:999px;white-space:nowrap}
 .pinfo{display:flex;flex-direction:column;gap:3px;min-width:0}
-.nick{display:flex;align-items:center;gap:6px;font-family:var(--display);font-size:16px;color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.5);white-space:nowrap}
-.rtag{font-family:var(--body);font-size:11px;font-weight:700;color:#241a08;background:var(--gold);border-radius:999px;padding:2px 8px;text-shadow:none;line-height:1.3;letter-spacing:.02em}
+.nick{display:flex;align-items:center;gap:6px;min-width:0;font-family:var(--display);font-size:16px;color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.5);white-space:nowrap}
+#nickG{overflow:hidden;text-overflow:ellipsis;min-width:0}
+.nick.long{font-size:13px}
+.rtag{flex-shrink:0;font-family:var(--body);font-size:11px;font-weight:700;color:#241a08;background:var(--gold);border-radius:999px;padding:2px 8px;text-shadow:none;line-height:1.3;letter-spacing:.02em}
 .cp{display:flex;align-items:center;gap:5px;font-family:var(--display);font-size:14px;color:#ffe6b0;text-shadow:0 2px 0 rgba(0,0,0,.5)}
 .cp svg{color:#d9d4cc;font-size:15px}
 .xp{width:112px;height:7px;border-radius:999px;background:#1a1210;border:1px solid #4a3a30;overflow:hidden}
@@ -419,7 +421,7 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
       <button class="pcard2" data-pick="f" aria-pressed="false"><canvas width="170" height="212"></canvas><b>여닌자</b></button>
       <button class="pcard2" data-pick="m" aria-pressed="false"><canvas width="170" height="212"></canvas><b>남닌자</b></button>
     </div>
-    <input class="nm" id="pickName" maxlength="8" placeholder="닌자 이름 (2~8자)" autocomplete="off">
+    <input class="nm" id="pickName" maxlength="6" placeholder="닌자 이름 (2~6자)" autocomplete="off">
     <div class="nmerr" id="pickErr"></div>
     <button class="obtn big" id="pickGo" disabled>닌자를 골라 주세요</button>
   </section>
@@ -1463,7 +1465,7 @@ function render(dt){
 function updateTop(){
   const st=G?G.st:calc();
   $('lvG').textContent=save.lv; $('xpG').style.width=Math.min(100,save.xp/xpNeed(save.lv)*100)+'%';
-  $('cpG').textContent=fmtKo(st.cp); $('rankG').textContent=RANKS[save.rank].n; $('nickG').textContent=myName();
+  $('cpG').textContent=fmtKo(st.cp); $('rankG').textContent=RANKS[save.rank].n; $('nickG').textContent=myName(); $('nickG').parentNode.classList.toggle('long',myName().length>4);
   $('goldG').textContent=fmtShort(save.gold); $('gemG').textContent=fmtShort(save.gems); $('goldG').title=fmtKo(save.gold); $('gemG').title=fmtKo(save.gems); fitText($('goldG')); fitText($('gemG'));
   if(G&&G.dun) $('stageL').textContent=`${DUN[G.dun.k].n} ${G.dun.lv}${dunUnit(G.dun.k)}`; else $('stageL').innerHTML=`스테이지 <span class="num" id="stageG">${save.stage}</span>`;
   $('phGold').textContent=fmtShort(save.gold); $('phGem').textContent=fmtShort(save.gems);
@@ -1880,7 +1882,7 @@ function drawPick(){
 }
 // 닌자 이름: 2~8자, 앞뒤 공백·꺾쇠 제거
 function cleanName(v){return (v||'').replace(/[<>&"'`\\]/g,'').replace(/\s+/g,' ').trim();}
-function nameErr(v){const n=cleanName(v); return n.length<2?'이름은 2글자 이상이에요':n.length>8?'이름은 8글자까지예요':'';}
+function nameErr(v){const n=cleanName(v); return n.length<2?'이름은 2글자 이상이에요':n.length>6?'이름은 6글자까지예요':'';}
 const myName=()=>save.name||'그림자 닌자';
 function showPick(){
   $('pickM').hidden=false;
@@ -1896,8 +1898,8 @@ function showPick(){
 // 이름 짓기 · 바꾸기 창 (기존 닌자는 처음 한 번, 로비에서 언제든)
 function askName(first){
   $('infoBody').innerHTML=`<h2>${first?'닌자 이름 짓기':'이름 바꾸기'}</h2>
-    <p class="note" style="text-align:center">${first?'함께할 닌자의 이름을 지어 주세요.':'새 이름을 적어 주세요.'} (2~8자)</p>
-    <input class="nm" id="nmIn" maxlength="8" placeholder="닌자 이름" autocomplete="off">
+    <p class="note" style="text-align:center">${first?'함께할 닌자의 이름을 지어 주세요.':'새 이름을 적어 주세요.'} (2~6자)</p>
+    <input class="nm" id="nmIn" maxlength="6" placeholder="닌자 이름" autocomplete="off">
     <div class="nmerr" id="nmErr"></div>
     ${first?'':'<div class="row2" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button class="obtn brown" id="nmNo">취소</button>'}
     <button class="obtn big" id="nmOk">정했어요</button>${first?'':'</div>'}`;
