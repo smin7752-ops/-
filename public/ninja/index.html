@@ -2498,7 +2498,7 @@ const TUT=[
   {txt:'<b>[컨텐츠]</b> 탭도 눌러 볼까요?', el:()=>navB('content'), done:()=>panel==='content'},
   {txt:'여기엔 <b>던전</b>이 있어요. 스테이지를 넘을수록 하나씩 열리고,<br>입장권은 <b>매일 다시 채워져요.</b>', el:()=>$('pbody')},
   {txt:'적을 쓰러뜨리다 보면 <b>보스</b>가 나타나요.<br>보스를 잡으면 <b>다음 스테이지</b>로 넘어가요!', el:()=>$('stagebox'), enter:()=>{if(panel) openPanel(panel);}},
-  {txt:'가운데 <b>로비</b> 버튼에서 <b>소리 끄기</b>와 <b>기록 백업</b>을 할 수 있어요.<br>기록 백업은 꼭 한 번 해 두세요!', el:()=>$('navMid')},
+  {txt:'가운데 <b>로비</b> 버튼의 <b>⚙ 설정</b>에서 소리 조절과 <b>기록 백업</b>을 할 수 있어요.<br>기록 백업은 꼭 한 번 해 두세요!', el:()=>$('navMid')},
 ];
 const tut={i:-1};
 function tutInit(){
