@@ -963,7 +963,10 @@ function eqReward(L,cat){
 }
 const dunStage=L=>L*10;
 const dunGoldPer=(L,st)=>Math.round(6*3*gScale(dunStage(L))*(1+st.gold));   // 1마리당 (일반의 3배)
-function dunState(){const d=save.dun||(save.dun={day:'',n:{},best:{}}); if(d.day!==today()){d.day=today(); for(const k in DUN) d.n[k]=DUN[k].tickets;} d.best=d.best||{}; return d;}
+function dunState(){const d=save.dun||(save.dun={day:'',n:{},best:{}}); d.n=d.n||{}; d.best=d.best||{};
+  if(d.day!==today()){d.day=today(); for(const k in DUN) if(DUN[k].tickets) d.n[k]=DUN[k].tickets;}
+  for(const k in DUN) if(DUN[k].tickets&&d.n[k]===undefined) d.n[k]=DUN[k].tickets;   // 새로 생긴 던전은 오늘 입장권을 바로 지급
+  return d;}
 function spawnGold(D){
   const s=dunStage(D.lv), hs=sScale(s);
   G.enemies.push({g:'m',eq:Array(8).fill(0),type:'grunt',kind:0,ranged:false,golden:true,atk:-1,fired:false,rest:0,meleeT:0,hitFx:0,
@@ -1600,7 +1603,7 @@ const BANNERS=[
 const COST1=100, COST10=900, FREE_N=3, SUM_MAX=10;
 const sumOf=k=>save.sum[k]||(save.sum[k]={lv:1,xp:0});
 const sumNeed=lv=>20+lv*30;
-const today=()=>new Date().toISOString().slice(0,10);
+const today=()=>{const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};   // 폰 시간 기준 자정에 초기화
 function freeCheck(){if(save.free.day!==today()){save.free={day:today()};for(const b of BANNERS) save.free[b.k]=FREE_N;}}
 const freeLeft=()=>{freeCheck();return BANNERS.reduce((a,b)=>a+(save.free[b.k]||0),0);};
 function gradeRange(lv){return [Math.max(0,Math.floor((lv-1)/3)),Math.min(9,lv+1)];}
