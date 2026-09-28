@@ -1008,6 +1008,8 @@ function spawnEnemy(type){
 }
 /* ================= 컨텐츠: 골드 던전 ================= */
 // 단계 L 의 적은 스테이지 (L×10) 정도 체력. 30초 동안 황금 산적을 잡을수록 엽전
+// 🧪 테스트용: 던전 입장권 99장 유지. 정식 배포 때 0 으로
+const TEST_TICKETS=99;
 const DUN={gold:{n:'골드 던전',open:10,time:30,need:30,tickets:5},
            equip:{n:'장비 던전',open:20,time:60,waves:3,wsize:6,tickets:5},
            rush:{n:'보스 러시',open:30,time:60,need:5,tickets:5},
@@ -1050,7 +1052,8 @@ const dunGoldPer=(L,st)=>Math.round(6*3*gScale(dunStage(L))*(1+st.gold));   // 1
 function dunState(){const d=save.dun||(save.dun={day:'',n:{},best:{}}); d.n=d.n||{}; d.best=d.best||{};
   if(d.day!==today()){d.day=today(); for(const k in DUN) if(DUN[k].tickets) d.n[k]=Math.max(d.n[k]||0,DUN[k].tickets);}   // 남은 입장권(출석 보너스 등)은 지우지 않는다
   if(save.tkV!==5){save.tkV=5; for(const k in DUN) if(DUN[k].tickets) d.n[k]=Math.max(d.n[k]||0,DUN[k].tickets); persistSoon();}   // 하루 입장권 2→5 로 늘린 날 바로 채워 준다
-  for(const k in DUN) if(DUN[k].tickets&&d.n[k]===undefined) d.n[k]=DUN[k].tickets;   // 새로 생긴 던전은 오늘 입장권을 바로 지급
+  for(const k in DUN) if(DUN[k].tickets&&d.n[k]===undefined) d.n[k]=DUN[k].tickets;
+  if(TEST_TICKETS) for(const k in DUN) if(DUN[k].tickets&&d.n[k]<TEST_TICKETS) d.n[k]=TEST_TICKETS;   // 🧪 테스트: 입장권이 계속 99장으로 채워짐   // 새로 생긴 던전은 오늘 입장권을 바로 지급
   return d;}
 function spawnGold(D){
   const s=dunStage(D.lv), hs=sScale(s);
