@@ -626,7 +626,7 @@ const setNo=t=>String(setOf(t)+1).padStart(2,'0');
 const skinParts=k=>{let n=0; for(let sl=0;sl<8;sl++){ for(let t=k*4;t<k*4+4;t++){const it=save.inv[sl+'-'+t]; if(it&&it.lv>0){n++;break;}} } return n;};
 const skinOpen=k=>k===0||skinParts(k)>=8;
 // 스킨 능력치: 착용 효과(입은 스킨만) + 보유 효과(해금한 스킨 모두). 강화할수록 커진다
-const SKIN_MAX=100, SKIN_TR_MAX=5;   // 스킨: 기본 100레벨, 초월할 때마다 +100
+const SKIN_MAX=100, SKIN_TR_MAX=9;   // 스킨: 기본 100레벨, 초월할 때마다 +100
 const skinTr=k=>(save.skinTr&&save.skinTr[k])||0;
 const skinMaxLv=k=>SKIN_MAX*(1+skinTr(k));
 // 스킨 초월 조건: 그 세트 장비가 8부위 모두 (스킨 초월 횟수+1)번 이상 초월돼 있어야 함
@@ -715,7 +715,7 @@ const itemName=(s,t)=>`${SETS[setOf(t)].n} ${GR[grOf(t)]}급 ${slotName(s)}`;
 /* ================= 장비 효과 ================= */
 const inv=(s,t)=>save.inv[s+'-'+t];
 const owned=(s,t)=>{const it=inv(s,t);return !!(it&&it.lv>0);};
-const ITEM_MAX=100, TR_MAX=5;   // 장비: 100레벨마다 초월하면 최대 레벨 +100 (최대 5번 → 600레벨)
+const ITEM_MAX=100, TR_MAX=9;   // 장비: 100레벨마다 초월하면 최대 레벨 +100 (최대 9번 → 1000레벨)
 const itemMax=it=>ITEM_MAX*(1+((it&&it.tr)||0));
 const trNeed=it=>2*(((it&&it.tr)||0)+1);                 // 초월 재료: 같은 장비 여분
 const trGem=(t,it)=>Math.round(200*(1+t/4)*(((it&&it.tr)||0)+1));
