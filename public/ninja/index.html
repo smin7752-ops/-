@@ -297,6 +297,7 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
 .rgrid .new{position:absolute;top:-5px;left:-4px;background:var(--red);color:#fff;font-size:9px;font-weight:700;border-radius:4px;padding:0 4px;z-index:1}
 .info h5{margin:0 0 6px;font-size:13px;color:var(--gold)}
 .info .kv{display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:13px}
+.info .kv span{white-space:nowrap}
 .info .kv b{text-align:right;font-family:var(--display);font-weight:400}
 .off .rw{display:flex;align-items:center;justify-content:space-between;background:rgba(0,0,0,.25);border-radius:10px;padding:10px 14px;font-size:15px}
 .off .rw b{font-family:var(--display);font-weight:400;font-size:20px;color:#ffe6b0}
@@ -949,11 +950,17 @@ function rushReward(L,kills){const got={}; for(let i=0;i<rushPieces(L,kills);i++
 const towerStage=F=>20+2*F, towerCount=F=>8+Math.floor(F/5), towerGems=F=>20+2*F;
 const TOWER_FX=[{atkP:.1},{aspd:.03},{hpP:.1},{cdmg:.1},{gold:.05}];
 const towerFx=f=>TOWER_FX[(f/10-1)%TOWER_FX.length];
-const curStage=()=>!(G&&G.dun)?save.stage:G.dun.k==='tower'?towerStage(G.dun.lv):dunStage(G.dun.lv)+(G.dun.extra||0);
+const curStage=()=>!(G&&G.dun)?save.stage:G.dun.k==='tower'?towerStage(G.dun.lv):G.dun.k==='equip'?eqStage(G.dun.lv):dunStage(G.dun.lv)+(G.dun.extra||0);
 const DUN_CATS=[{k:'wep',n:'쿠나이',slots:[7]},{k:'arm',n:'방어구',slots:[0,1,2,4]},{k:'acc',n:'장신구',slots:[3,5,6]}];
-// 부위별 고정 개수: 1단계 각 1개, 이후 한 단계마다 쿠나이 → 방어구 → 장신구 순서로 1개씩 늘어난다
-const eqCounts=L=>{const x=L-1; return {wep:1+Math.floor((x+2)/3),arm:1+Math.floor((x+1)/3),acc:1+Math.floor(x/3)};};
-const eqDrops=L=>{const c=eqCounts(L); return c.wep+c.arm+c.acc;};
+// 부위마다 같은 개수: 1~10단계는 입문자 세트 1→10개, 그 뒤로는 10개를 유지하면서 한 단계마다 다음 세트가 1개씩 늘고 이전 세트가 1개씩 준다
+// (11단계: 강화 1 + 입문자 9 … 20단계: 강화 10, 21단계: 가죽 1 + 강화 9 …)
+function eqMix(L){ if(L<=10) return [[0,L]];
+  const j=L-10, up=Math.floor((j-1)/10)+1, nu=((j-1)%10)+1;
+  if(up>9) return [[9,10]];
+  return nu>=10?[[up,10]]:[[up,nu],[up-1,10-nu]]; }
+const eqPer=L=>eqMix(L).reduce((a,[,n])=>a+n,0);
+const eqDrops=L=>eqPer(L)*3;
+const eqStage=L=>10+2*L;           // 적 강함
 const eqGrade=L=>Math.min(SUM_MAX,L+1);                    // 소환 레벨처럼 세트 범위 결정
 const eqGems=L=>10*L;
 // 단계마다 정해진 세트: 1단계 입문자 … 10단계 전설 (11단계부터 전설, 좋은 등급이 더 잘 나옴)
@@ -961,9 +968,8 @@ const eqSet=L=>Math.min(9,L-1);
 function eqRollGr(L){const b=Math.max(0,L-10)*.02, x=Math.random(); return x<.55-b?0:x<.83-b/2?1:x<.96-b/4?2:3;}   // F·D·A·S
 const eqGrRate=L=>{const b=Math.max(0,L-10)*.02; const a=[.55-b,.83-b/2,.96-b/4,1]; return a.map((v,i)=>Math.round((v-(i?a[i-1]:0))*100));};
 function eqReward(L){
-  const res=[];
-  const cnt=eqCounts(L), picks=[]; for(const C of DUN_CATS) for(let i=0;i<cnt[C.k];i++) picks.push(C.slots[Math.floor(Math.random()*C.slots.length)]);
-  for(const sl of picks){const t=eqSet(L)*4+eqRollGr(L), key=sl+'-'+t, it=save.inv[key]||(save.inv[key]={n:0,lv:0});
+  const res=[], picks=[]; for(const C of DUN_CATS) for(const [set,n] of eqMix(L)) for(let i=0;i<n;i++) picks.push([C.slots[Math.floor(Math.random()*C.slots.length)],set]);
+  for(const [sl,set] of picks){const t=set*4+eqRollGr(L), key=sl+'-'+t, it=save.inv[key]||(save.inv[key]={n:0,lv:0});
     const isNew=it.lv===0; if(isNew) it.lv=1; else it.n++; res.push({s:sl,t,isNew});}
   const gems=eqGems(L); save.gems+=gems; persist(); refreshStats(); updateDots(); updateTop();
   return {res,gems};
@@ -1016,7 +1022,7 @@ function towerResult(F,clear,gems){
 }
 function eqResult(L,cat,clear,R,sweep){
   $('sumBody').innerHTML=`<h2>장비 던전 ${L}단계</h2><p style="margin:0;text-align:center">${sweep?'소탕 완료':clear?'<b style="color:#8ae070">던전 클리어!</b> 다음 단계가 열렸어요':'<b style="color:#ff7a6a">실패</b> · 시간 안에 수호자를 쓰러뜨려야 해요'}</p>
-    ${R?`<div class="rgrid">${R.res.map(r=>`<div style="position:relative">${gbox(r.s,r.t,{show:true,nolv:true})}${r.isNew?'<span class="new">NEW</span>':''}<div class="gname">${SETS[setOf(r.t)].n} ${GR[grOf(r.t)]}</div></div>`).join('')}</div><p style="margin:0;text-align:center">${SETS[eqSet(L)].n} 세트 장비 ${R.res.length}개 · <i class="gem"></i> +${R.gems}</p>`:''}
+    ${R?`<div class="rgrid">${R.res.map(r=>`<div style="position:relative">${gbox(r.s,r.t,{show:true,nolv:true})}${r.isNew?'<span class="new">NEW</span>':''}<div class="gname">${SETS[setOf(r.t)].n} ${GR[grOf(r.t)]}</div></div>`).join('')}</div><p style="margin:0;text-align:center">${eqMix(L).map(([t,n])=>`${SETS[t].n} ${n*3}`).join(' · ')} · 총 ${R.res.length}개 · <i class="gem"></i> +${R.gems}</p>`:''}
     <div class="gbtns" style="grid-template-columns:1fr"><button class="obtn big" id="sumOk">확인</button></div>`;
   $('sumM').hidden=false; $('sumOk').onclick=()=>{SFX.tap();$('sumM').hidden=true;}; SFX.buy();
 }
@@ -1056,8 +1062,8 @@ function dunPopup(k,L){
       <span>1마리당 엽전</span><b class="num">${fmtKo(per)}</b><span>소탕 보상</span><b class="num">${L>best?'-':fmtKo(per*D.need)}</b>`
       :k==='rush'?`<span>클리어 조건</span><b class="num">보스 ${D.need}마리 격파</b><span>첫 보스 강함</span><b class="num">스테이지 ${dunStage(L)}</b>
       <span>보스 1마리당</span><b class="num">유물 조각 ${1+Math.floor(L/2)} · 보석 ${10*L}</b><span>소탕 보상</span><b class="num">${L>best?'-':`조각 ${rp} · 보석 ${rg}`}</b>`
-      :`<span>클리어 조건</span><b class="num">${D.waves}웨이브 + 수호자</b><span>적 강함</span><b class="num">스테이지 ${dunStage(L)}</b>
-      <span>보상 세트</span><b class="num">${SETS[eqSet(L)].n} 세트 ${eqDrops(L)}개</b><span>구성</span><b class="num">쿠나이 ${eqCounts(L).wep} · 방어구 ${eqCounts(L).arm} · 장신구 ${eqCounts(L).acc}</b><span>등급 확률</span><b class="num">${eqGrRate(L).map((p,i)=>`${GR[i]} ${p}%`).join(' · ')}</b><span>추가 보상</span><b class="num">보석 ${eqGems(L)}</b>`}
+      :`<span>클리어 조건</span><b class="num">${D.waves}웨이브 + 수호자</b><span>적 강함</span><b class="num">스테이지 ${eqStage(L)}</b>
+      <span>부위마다</span><b class="num">${eqMix(L).map(([t,n])=>`${SETS[t].n} ${n}개`).join(' + ')}</b><span>구성</span><b class="num">쿠나이·방어구·장신구 각 ${eqPer(L)}개 (총 ${eqDrops(L)}개)</b><span>등급 확률</span><b class="num">${eqGrRate(L).map((p,i)=>`${GR[i]} ${p}%`).join(' · ')}</b><span>추가 보상</span><b class="num">보석 ${eqGems(L)}</b>`}
       <span>입장권</span><b class="num">${n} / ${D.tickets}</b></div>
     <div class="dbtns"><button class="obtn big brown" id="dClose">닫기</button><button class="obtn big green" id="dSw" ${n>0&&best>=L?'':'disabled'}>소탕</button><button class="obtn big" id="dGo" ${n>0?'':'disabled'}>입장</button></div>`;
   $('infoM').hidden=false;
@@ -1681,7 +1687,7 @@ function drawRankChar(){
 
 /* ---- 컨텐츠: 자리만 먼저 (구상 후 하나씩 채울 예정) ---- */
 const CONTENTS=[
-  {im:'equip',k:'equip',n:'장비 던전',d:'단계마다 정해진 세트의 장비를 얻어요 (1단계 입문자 ~ 10단계 전설)',ic:'burst',c:'t-crit'},
+  {im:'equip',k:'equip',n:'장비 던전',d:'쿠나이·방어구·장신구를 한꺼번에! 단계가 오를수록 더 많이, 더 높은 세트로',ic:'burst',c:'t-crit'},
   {im:'gold',k:'gold',n:'골드 던전',d:'30초 동안 황금 산적을 잡아 엽전을 쓸어 담아요',ic:'coin',c:'t-coin'},
   {im:'boss',k:'rush',n:'보스 러시',d:'60초 동안 강해지는 보스를 연달아 쓰러뜨려 유물 조각을 얻어요',ic:'sword',c:'t-sword'},
   {im:'tower',k:'tower',n:'수련의 탑',d:'한 층씩 올라 보석과 10층마다 영구 능력치를 얻어요',ic:'bolt',c:'t-bolt'}
