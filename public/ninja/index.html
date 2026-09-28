@@ -868,7 +868,16 @@ function buildFloor(){
     x.fillStyle='#ffc46e'; x.fillRect(lx-edge*.22,ly-edge*.22,edge*.44,edge*.44);}}
   floorTile=c;
 }
+// 스테이지 맵: 100 스테이지마다 바뀌고, 4번째 맵 다음엔 처음 맵으로
+const MAPS=['map1.webp','map2.webp','map3.webp','map4.webp'], mapImgs={};
+const mapIdx=s=>Math.floor((s-1)/100)%MAPS.length;
+function mapImg(i){const v=mapImgs[i]; if(v instanceof HTMLImageElement) return v;
+  if(!v){mapImgs[i]='loading'; loadImg(aurl(MAPS[i])).then(im=>{mapImgs[i]=im;}).catch(()=>{mapImgs[i]='fail';});} return null;}
 function drawFloor(scroll){
+  const mi=mapImg(mapIdx(save.stage)); mapImg((mapIdx(save.stage)+1)%MAPS.length);
+  if(mi){ // 전투 화면(위~하단 메뉴)을 꽉 채우게, 위쪽(성문·하늘)이 보이도록
+    const vh=L.view||H, sc=Math.max(W/mi.width,vh/mi.height), w=mi.width*sc, h=mi.height*sc;
+    ctx.fillStyle='#14111b'; ctx.fillRect(0,0,W,H); ctx.drawImage(mi,(W-w)/2,Math.min(0,vh-h)*.35,w,h); return; }
   const off=scroll%H;
   ctx.drawImage(floorTile,0,off-H,W,H); ctx.drawImage(floorTile,0,off,W,H);
   const g=ctx.createRadialGradient(W/2,L.view*.8,10,W/2,L.view*.8,Math.max(W,H)*.7); g.addColorStop(0,'rgba(239,230,210,.07)'); g.addColorStop(1,'rgba(14,11,20,.35)');
