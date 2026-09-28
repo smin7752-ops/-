@@ -1530,10 +1530,16 @@ function openInfo(){
 }
 
 /* ---- 오프라인 보상: 꺼져 있던 시간만큼, 지금 스테이지 기준으로 엽전·경험치 ---- */
-const OFF_MIN=60, OFF_MAX=12*3600, OFF_KPM=10; // 1분 이상부터, 최대 12시간, 1분에 졸개 10마리 잡은 셈
+const OFF_MIN=60, OFF_MAX=12*3600, OFF_RATE=.75, OFF_KPM_MIN=3, OFF_KPM_MAX=60; // 1분 이상부터, 최대 12시간
+// 오프라인 1분 처치 수: 실제 전투력(초당 피해 ÷ 지금 스테이지 졸개 체력)의 75%, 3~60마리
+function offlineKpm(st,s){
+  const dps=st.atk*st.aps*(1+Math.min(1,st.crit)*(st.cdmg-1))*st.shots, hp=14*sScale(s);
+  return Math.max(OFF_KPM_MIN,Math.min(OFF_KPM_MAX,dps/hp*60*OFF_RATE));
+}
 function offlineCalc(sec){
   const st=calc(), s=save.stage, m=Math.min(OFF_MAX,sec)/60;
-  return {gold:Math.round(6*gScale(s)*(1+st.gold)*OFF_KPM*m), xp:Math.round(2*xScale(s)*(1+st.xp)*OFF_KPM*m)};
+  const kpm=offlineKpm(st,s);
+  return {kpm, gold:Math.round(6*gScale(s)*(1+st.gold)*kpm*m), xp:Math.round(2*xScale(s)*(1+st.xp)*kpm*m)};
 }
 function offlineCheck(){
   const now=Date.now(), last=save.seen||0; save.seen=now; persist();
@@ -1541,7 +1547,7 @@ function offlineCheck(){
   const sec=Math.floor((now-last)/1000); if(sec<OFF_MIN) return;
   const t=Math.min(OFF_MAX,sec), h=Math.floor(t/3600), mi=Math.floor(t%3600/60), r=offlineCalc(t);
   $('offBody').innerHTML=`<h2>오프라인 보상</h2>
-    <p class="sub">스테이지 ${save.stage}에서 <b>${h?h+'시간 ':''}${mi}분</b> 동안 모은 보상이에요${sec>OFF_MAX?'<br>(최대 12시간까지 쌓여요)':''}</p>
+    <p class="sub">스테이지 ${save.stage}에서 <b>${h?h+'시간 ':''}${mi}분</b> 동안 모은 보상이에요<br><small>전투력 기준 1분에 약 ${Math.round(r.kpm)}마리 처치</small>${sec>OFF_MAX?'<br>(최대 12시간까지 쌓여요)':''}</p>
     <div class="rw"><span><i class="coin"></i>엽전</span><b class="num">+${fmtKo(r.gold)}</b></div>
     <div class="rw"><span><i class="xpi">EXP</i>경험치</span><b class="num">+${fmtKo(r.xp)}</b></div>
     <button class="obtn big green" id="offOk">받기</button>`;
