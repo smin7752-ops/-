@@ -580,10 +580,10 @@ const ICONS={
   close:'<path d="M5 6.4L6.4 5 12 10.6 17.6 5 19 6.4 13.4 12 19 17.6 17.6 19 12 13.4 6.4 19 5 17.6 10.6 12z"/>'
 };
 const svgI=k=>`<svg class="i" viewBox="0 0 24 24">${ICONS[k]}</svg>`;
-const BASE_APS=1.4;
+const BASE_APS=1.8;
 const UPG=[
   {k:'atk',n:'기본 공격력',ic:'sword',base:4,gr:1.018,max:1e6,val:l=>10+2*l+.02*l*l,show:v=>fmtKo(v)},
-  {k:'aspd',n:'공격 속도',ic:'bolt',base:15,gr:1.018,max:100,val:l=>.01*l,show:v=>'+'+fmtPct(v)},
+  {k:'aspd',n:'공격 속도',ic:'bolt',base:15,gr:1.018,max:200,val:l=>.025*l,show:v=>'+'+fmtPct(v)},
   {k:'hp',n:'최대 HP',ic:'heart',base:4,gr:1.018,max:1e6,val:l=>100+20*l+.2*l*l,show:v=>fmtKo(v)},
   {k:'regen',n:'HP 회복량',ic:'regen',base:5,gr:1.018,max:1e6,val:l=>1+.5*l+.005*l*l,show:v=>`${+v.toFixed(1)}/초`},
   {k:'crit',n:'크리티컬 확률',ic:'crit',base:10,gr:1.018,max:950,val:l=>.05+.001*l,show:fmtPct},
@@ -610,7 +610,7 @@ function spBatch(p,mult){const lv=save.sp[p.k]||0, room=p.max-lv, left=spLeft();
 const SP_PER_LV=5;
 const SP=[
   {k:'atk',n:'공격력 증가',ic:'sword',fx:'atkP',per:.05,max:1e6},
-  {k:'aspd',n:'공격 속도 증가',ic:'bolt',fx:'aspd',per:.005,max:100},
+  {k:'aspd',n:'공격 속도 증가',ic:'bolt',fx:'aspd',per:.015,max:200},
   {k:'hp',n:'최대 HP 증가',ic:'heart',fx:'hpP',per:.05,max:1e6},
   {k:'regen',n:'HP 회복량 증가',ic:'regen',fx:'regP',per:.05,max:1e6},
   {k:'cdmg',n:'크리티컬 데미지 증가',ic:'burst',fx:'cdmg',per:.03,max:1e6},
