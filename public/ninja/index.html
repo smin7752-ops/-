@@ -510,7 +510,7 @@ const MON_SZ=[1,1,.92,.96,1,1.04];   // 종류별 키 보정
 const ATK_T=.6;                      // 공격 동작 시간(초), 절반에서 타격
 function monImg(k,c){
   const key='X'+k+c, v=REAL[key]; if(v instanceof HTMLImageElement) return v;
-  if(!v){REAL[key]='loading'; loadImg(aurl(k==='k'?'xk.webp':`x${k+1}${c}.webp`)).then(img=>{REAL[key]=img;}).catch(()=>{REAL[key]='fail';});}
+  if(!v){REAL[key]='loading'; loadImg(aurl(k==='k'?'xk.webp':`x${k+1}${c}.webp`)).then(img=>{REAL[key]=img;}).catch(()=>{REAL[key]='fail'; setTimeout(()=>{if(REAL[key]==='fail') delete REAL[key];},3000);});}   // 못 받았으면 3초 뒤 다시 시도
   return null;
 }
 const monReady=k=>['w','a','q','h','d'].every(c=>REAL['X'+k+c] instanceof HTMLImageElement);
@@ -1438,14 +1438,7 @@ function render(dt){
       if(done&&e.hitFx>0&&e.atk>=0){ctx.save();ctx.globalCompositeOperation='lighter';drawMon(ctx,k,'a',Math.floor(e.atk/ATK_T*8),r.x,r.y,r.h,e.hitFx*3,true);ctx.restore();}
       if(done&&e.state==='die') done=true;
     }
-    // 몬스터 그림을 받는 중이면 잠깐 그리지 않는다 (예전 닌자 그림이 섞여 보이지 않게). 받기에 실패했을 때만 예전 닌자 그림
-    const monFail=['w','q'].every(c=>REAL['X'+e.kind+c]==='fail');
-    if(!done&&!monFail) done=true;
-    if(!done&&e.state==='die'&&hasD) done=drawReal('d',ctx,e.g,es,Math.floor(e.t/DIE_T*8),r.x,r.y,r.h,al,true);
-    else if(!done&&e.state==='flinch') done=drawReal('h',ctx,e.g,es,Math.floor(e.t/.3*8),r.x,r.y,r.h,al,true);
-    if(!done&&e.state!=='die') done=drawReal('i',ctx,e.g,es,Math.floor(e.at*8),r.x,r.y+(moving?-Math.abs(Math.sin(e.at*9))*r.h*.03:0),r.h,al);
-    if(!done){ drawNinja(ctx,e.g,e.eq,a,f,r.x,r.y+dy,r.h,al);
-      if(lit>0){ctx.save();ctx.globalCompositeOperation='lighter';drawNinja(ctx,e.g,e.eq,a,f,r.x,r.y+dy,r.h,lit);ctx.restore();} }
+    // 적은 언제나 몬스터 그림으로만 그린다 (닌자 그림으로 대신 그리지 않음). 그림을 받는 중이면 그림자만 보인다
     if(e.poisonT>0){ctx.fillStyle='rgba(92,240,138,.5)';for(let i=0;i<3;i++){const p=(T*1.5+i/3)%1;ctx.beginPath();ctx.arc(r.x+Math.sin(i*2+T*3)*r.hw*.6,r.y-r.h*(.3+p*.7),3,0,7);ctx.fill();}}
     if(e.warn&&e.state!=='die'){ctx.fillStyle='#ff5a4a';ctx.font=`${Math.max(16,r.h*.26)}px "Black Han Sans",sans-serif`;ctx.textAlign='center';ctx.fillText('!',r.x,r.y-r.h*1.08);}
     if(e.state!=='die'&&e.type!=='boss'&&e.type!=='mboss'&&(e.type!=='grunt'||e.hp<e.maxHp)){const bw=r.hw*(e.type==='grunt'?1.6:2.2),bh=e.type==='grunt'?4:6;ctx.fillStyle='rgba(0,0,0,.6)';ctx.fillRect(r.x-bw/2,r.y-r.h*1.02,bw,bh);ctx.fillStyle=e.type==='boss'?'#ffc94a':e.type==='mboss'?'#ff9a3a':'#ff5a4a';ctx.fillRect(r.x-bw/2,r.y-r.h*1.02,bw*Math.max(0,e.hp)/e.maxHp,bh);}
