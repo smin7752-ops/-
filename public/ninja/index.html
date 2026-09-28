@@ -284,6 +284,7 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
 .skc canvas{width:100%;height:auto;aspect-ratio:150/170;background:radial-gradient(circle at 50% 60%,rgba(255,220,160,.35),rgba(0,0,0,0) 70%);border-radius:8px}
 .skc b{font-family:var(--display);font-weight:400;font-size:15px;color:var(--ink);padding:0 4px 1px;line-height:1.2}
 .skc span{font-size:11px;font-weight:700;padding:2px 10px;border-radius:999px;background:linear-gradient(180deg,var(--orange-hi),var(--orange));color:#fff}
+.sklv{position:absolute;top:6px;right:8px;font-style:normal;font-family:var(--display);font-size:14px;color:#fff;background:#b8322a;border-radius:6px;padding:0 5px;box-shadow:0 1px 0 #000}
 .skc.on{border-color:#ffb84a;box-shadow:0 0 0 2px #ffd36a,0 0 12px rgba(255,190,80,.6)}
 .skc.on span{background:#2f9a4a}
 .skc.lock{opacity:.8;cursor:default}.skc.lock span{background:#6a5a4a}
@@ -610,7 +611,28 @@ const MERGE=2; // 같은 장비 2개 → 한 등급 위
 const setOf=t=>t>>2, grOf=t=>t&3;
 const setNo=t=>String(setOf(t)+1).padStart(2,'0');
 // 스킨: 캐릭터 모습(옷·쿠나이)은 장비와 따로, 고른 세트 스킨으로 입는다. 그 세트 장비를 하나라도 얻으면 스킨이 열린다
-const skinOpen=k=>k===0||Object.keys(save.inv).some(key=>save.inv[key].lv>0&&setOf(+key.split('-')[1])===k);
+// 스킨 해금: 그 세트 장비 8부위를 모두 모으면 (등급 상관없이). 입문자는 처음부터
+const skinParts=k=>{let n=0; for(let sl=0;sl<8;sl++){ for(let t=k*4;t<k*4+4;t++){const it=save.inv[sl+'-'+t]; if(it&&it.lv>0){n++;break;}} } return n;};
+const skinOpen=k=>k===0||skinParts(k)>=8;
+// 스킨 능력치: 착용 효과(입은 스킨만) + 보유 효과(해금한 스킨 모두). 강화할수록 커진다
+const SKIN_MAX=10;
+const SKIN_FX=[
+  {eq:{atkP:.05},own:{}},
+  {eq:{atkP:.3},own:{atkP:.1}},
+  {eq:{hpP:.4},own:{hpP:.15}},
+  {eq:{hpP:.3,regP:.3},own:{regP:.1}},
+  {eq:{aspd:.06},own:{aspd:.02}},
+  {eq:{crit:.03},own:{crit:.01}},
+  {eq:{cdmg:.3},own:{cdmg:.1}},
+  {eq:{atkP:.6},own:{atkP:.2}},
+  {eq:{gold:.3,xp:.3},own:{gold:.1,xp:.1}},
+  {eq:{atkP:1,cdmg:.5},own:{atkP:.3}}];
+const skinLv=k=>(save.skinLv&&save.skinLv[k])||0;
+const skinMul=lv=>1+.5*lv;
+const skinFx=(k,kind,lv=skinLv(k))=>{const o={},b=SKIN_FX[k][kind]; for(const x in b) o[x]=b[x]*skinMul(lv); return o;};
+const skinGem=(k,lv)=>Math.round(100*(k+1)*(lv+1));
+const SKIN_NEED=5;
+const skinSpare=k=>{let n=0; for(const key in save.inv){const it=save.inv[key]; if(it.lv>0&&setOf(+key.split('-')[1])===k) n+=it.n||0;} return n;};   // 겹친 장비(여분) 수
 const skinSet=()=>{const k=save.skin|0; return skinOpen(k)?k:0;};
 const pEq=()=>Array(8).fill(skinSet()); // 예전 색 바꾸기 그림도 스킨 기준
 
@@ -648,7 +670,7 @@ try{
 }catch(e){}
 for(let s=0;s<8;s++) if(!save.inv[s+'-0']) save.inv[s+'-0']={n:0,lv:1}; // 입문자 장비는 처음부터 보유
 // 🧪 테스트용: 모든 장비(8부위 × 10세트 × 4등급) 지급. 정식 배포 때 false 로
-const TEST_ALL_GEAR=true;
+const TEST_ALL_GEAR=(new URLSearchParams(location.search).get("nogear")!=="1");
 // 전체 초기화(한 번만): 닌자 성별·소리 설정만 남기고 레벨·재화·스테이지·강화·스텟·장비·유물·승급·소환·던전 모두 처음으로
 if(save.picked&&save.resetTag!=='full2'){const keep={g:save.g,mute:save.mute,picked:true};
   for(const k of Object.keys(save)) delete save[k];
@@ -659,7 +681,8 @@ if(save.picked&&save.resetTag!=='full2'){const keep={g:save.g,mute:save.mute,pic
 else if(!save.picked) save.resetTag='full2';
 // 테스트로 받은 장비 정리(한 번만): 장비 창을 입문자 장비만 있는 처음 상태로. 골드·레벨·스테이지는 그대로
 if(!TEST_ALL_GEAR&&!save.testGearCleared){save.testGearCleared=true; save.inv={}; for(let s=0;s<8;s++) save.inv[s+'-0']={n:0,lv:1}; save.eq=[0,0,0,0,0,0,0,0]; try{localStorage.setItem(SKEY,JSON.stringify(save))}catch(e){}}
-if(TEST_ALL_GEAR) for(let s=0;s<8;s++) for(let t=0;t<TIERS;t++){const k=s+'-'+t; if(!save.inv[k]||!save.inv[k].lv) save.inv[k]={n:(save.inv[k]&&save.inv[k].n)||0,lv:1};}
+if(TEST_ALL_GEAR) for(let s=0;s<8;s++) for(let t=0;t<TIERS;t++){const k=s+'-'+t; if(!save.inv[k]||!save.inv[k].lv) save.inv[k]={n:(save.inv[k]&&save.inv[k].n)||0,lv:1}; if(!save.testSpare) save.inv[k].n=Math.max(save.inv[k].n,5);}
+if(TEST_ALL_GEAR) save.testSpare=1;   // 🧪 테스트: 스킨 강화 해 보라고 장비 여분 5개씩 한 번 지급
 let saveT=0;
 // 🧪 테스트용: 켤 때마다 엽전 1조 · 보석 1000만 까지 채워 줌. 정식 배포 때 false 로
 const TEST_RICH=true;
@@ -820,6 +843,9 @@ function calc(eq=save.eq){
     if(best>=0){const f=scaleFx(fx,GRMUL[best]); add(f); active.push({t:k,g:best,need,txt:fxLine(f)});} }
   const minT=Math.min(...eq.map(setOf));
   for(let k=1;k<=minT;k++){const u=SETFX[k][2]; add(u[2]); active.push({t:k,need:8,txt:u[1]});}
+  // 스킨
+  for(let k=0;k<SETS.length;k++) if(skinOpen(k)) add(skinFx(k,'own'));
+  add(skinFx(skinSet(),'eq'));
   // 승급
   for(let i=1;i<=save.rank;i++) add(RANKS[i].fx);
   const tb=(save.dun&&save.dun.best&&save.dun.best.tower)||0; for(let f=10;f<=tb;f+=10) add(towerFx(f));
@@ -1757,14 +1783,33 @@ function refreshGearBtns(){
 /* ---- 스킨: 세트별 모습 한 번에 갈아입기 ---- */
 function renderSkin(){
   const cur=skinSet();
-  $('pbody').innerHTML=`<div class="pscroll"><p class="note" style="margin:0 0 8px">스킨은 모습만 바꿔요. 능력치는 장비 그대로예요. 그 세트 장비를 하나라도 얻으면 스킨이 열려요.</p>
-    <div class="skgrid">${SETS.map((S,k)=>{const open=skinOpen(k), on=k===cur;
-      return `<button class="skc${on?' on':''}${open?'':' lock'}" data-k="${k}" ${open?'':'disabled'}><canvas width="150" height="170"></canvas>
-        <b style="border-bottom:3px solid ${S.glow}">${S.n}</b><span>${on?'착용 중':open?'입기':'🔒 잠김'}</span></button>`;}).join('')}</div></div>`;
-  $('pbody').querySelectorAll('.skc').forEach(b=>b.onclick=()=>{const k=+b.dataset.k; if(!skinOpen(k)||k===cur) return;
-    save.skin=k; persist(); SFX.buy(); for(const c of ['I','r','p','i']) realImg(c,save.g,k); realImg('k','',k);
-    drawAvatar(); toast(`${SETS[k].n} 스킨으로 갈아입었어요`); renderSkin();});
+  $('pbody').innerHTML=`<div class="pscroll"><p class="note" style="margin:0 0 8px">세트 장비 <b>8부위를 모두 모으면</b> 스킨이 열려요. 스킨은 모습과 함께 능력치도 올려 줘요. 카드를 누르면 강화할 수 있어요.</p>
+    <div class="skgrid">${SETS.map((S,k)=>{const open=skinOpen(k), on=k===cur, lv=skinLv(k);
+      return `<button class="skc${on?' on':''}${open?'':' lock'}" data-k="${k}"><canvas width="150" height="170"></canvas>${open&&lv?`<em class="sklv">+${lv}</em>`:''}
+        <b style="border-bottom:3px solid ${S.glow}">${S.n}</b><span>${on?'착용 중':open?'보기':`🔒 ${skinParts(k)}/8`}</span></button>`;}).join('')}</div></div>`;
+  $('pbody').querySelectorAll('.skc').forEach(b=>b.onclick=()=>{SFX.tap(); skinPopup(+b.dataset.k);});
   for(let k=0;k<SETS.length;k++) realImg('i',save.g,k);
+}
+function skinPopup(k){
+  const S=SETS[k], open=skinOpen(k), lv=skinLv(k), on=k===skinSet(), mx=lv>=SKIN_MAX, gem=skinGem(k,lv), sp=skinSpare(k);
+  const row=(kind,t)=>{const a=skinFx(k,kind,lv), b=skinFx(k,kind,Math.min(SKIN_MAX,lv+1)); const ks=Object.keys(a);
+    return ks.length?`<h5 style="margin-top:8px">${t}</h5><div class="kv">${ks.map(x=>`<span>${FXN[x]}</span><b class="num">+${fmtPct(a[x])}${mx?'':` › <em style="color:#8fe38f;font-style:normal">+${fmtPct(b[x])}</em>`}</b>`).join('')}</div>`:'';};
+  $('infoBody').innerHTML=`<h2>${S.n} 스킨 ${open?`<span style="font-size:18px;color:#ffd36a">+${lv}</span>`:''}</h2>
+    <div>${row('eq','착용 효과 (입었을 때)')}${row('own','보유 효과 (해금만 해도)')}</div>
+    ${open?`<div class="kv" style="font-size:13px"><span>강화 재료</span><b class="num" style="color:${sp>=SKIN_NEED?'#8fe38f':'#ff9a8a'}">${S.n} 장비 여분 ${sp}/${SKIN_NEED}</b><span></span><b class="num" style="color:${save.gems>=gem?'#8fe38f':'#ff9a8a'}">보석 ${fmtKo(gem)}</b></div>
+      <p class="note">강화할 때 같은 세트의 겹친 장비(여분) ${SKIN_NEED}개와 보석을 써요. 최대 +${SKIN_MAX}</p>`
+    :`<p class="note" style="text-align:center">${S.n} 세트 장비 8부위를 모두 모으면 열려요 (지금 ${skinParts(k)}/8)</p>`}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <button class="obtn brown" id="skWear" ${open&&!on?'':'disabled'}>${on?'착용 중':'입기'}</button>
+      <button class="obtn" id="skUp" ${open&&!mx&&sp>=SKIN_NEED&&save.gems>=gem?'':'disabled'}>${mx?'최대 강화':'강화하기'}</button></div>
+    <button class="obtn big" id="infoOk">닫기</button>`;
+  $('infoM').hidden=false; $('infoOk').onclick=()=>{SFX.tap();$('infoM').hidden=true;};
+  $('skWear').onclick=()=>{if(!skinOpen(k)) return; save.skin=k; persist(); SFX.buy(); for(const c of ['I','p','i']) realImg(c,save.g,k); realImg('k','',k);
+    refreshStats(); drawAvatar(); toast(`${S.n} 스킨으로 갈아입었어요`); renderSkin(); skinPopup(k);};
+  $('skUp').onclick=()=>{const L=skinLv(k), g=skinGem(k,L); if(!skinOpen(k)||L>=SKIN_MAX||save.gems<g||skinSpare(k)<SKIN_NEED) return;
+    // 여분 장비는 낮은 등급부터 사용
+    let need=SKIN_NEED; for(let t=k*4;t<k*4+4&&need>0;t++) for(let sl=0;sl<8&&need>0;sl++){const it=save.inv[sl+'-'+t]; if(it&&it.lv>0&&it.n>0){const u=Math.min(it.n,need); it.n-=u; need-=u;}}
+    save.gems-=g; (save.skinLv||(save.skinLv={}))[k]=L+1; persist(); SFX.up(); refreshStats(); updateTop(); updateDots(); toast(`${S.n} 스킨 +${L+1} 강화 성공!`); renderSkin(); skinPopup(k);};
 }
 function drawSkins(){
   document.querySelectorAll('.skc canvas').forEach(c=>{const k=+c.parentNode.dataset.k, x=sharp(c,150,170); x.clearRect(0,0,150,170);
