@@ -1010,6 +1010,8 @@ function spawnEnemy(type){
 // 단계 L 의 적은 스테이지 (L×10) 정도 체력. 30초 동안 황금 산적을 잡을수록 엽전
 // 🧪 테스트용: 던전 입장권 99장 유지. 정식 배포 때 0 으로
 const TEST_TICKETS=99;
+// 🧪 테스트용: 스테이지와 상관없이 모든 컨텐츠 열기. 정식 배포 때 false 로
+const TEST_OPEN=true;
 const DUN={gold:{n:'골드 던전',open:10,time:30,need:30,tickets:5},
            equip:{n:'장비 던전',open:20,time:60,waves:3,wsize:6,tickets:5},
            rush:{n:'보스 러시',open:30,time:60,need:5,tickets:5},
@@ -1884,7 +1886,7 @@ function renderContent(){
   if(view.ct==='att') return renderAttend();
   const d=dunState();
   $('pbody').innerHTML=`<div class="pscroll">${CONTENTS.map(x=>{
-    if(x.k&&DUN[x.k]){const D=DUN[x.k], locked=save.bestStage<D.open, best=d.best[x.k]||0;
+    if(x.k&&DUN[x.k]){const D=DUN[x.k], locked=!TEST_OPEN&&save.bestStage<D.open, best=d.best[x.k]||0;
       return `<div class="urow ct-row dun" data-k="${x.k}"><div class="itile relic"><i style="background-image:var(--ct-${x.im})"></i></div>
       <div class="uinfo"><b>${x.n}</b>
         <span class="uval" style="font-family:var(--body);font-size:12px;white-space:normal">${locked?`스테이지 ${D.open} 클리어 후 열려요`:`${x.d}<br>${x.k==='tower'?`최고 <b>${best}층</b> · 입장권 없음`:`최고 <b>${best}단계</b> · 입장권 <b>${d.n[x.k]||0}/${D.tickets}</b>`}`}</span></div>
