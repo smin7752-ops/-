@@ -623,7 +623,10 @@ const RELICS=[
   {k:'atk',n:'공격력 증가',ic:'sword',fx:'atkP',per:.25},
   {k:'hp',n:'최대 HP 증가',ic:'heart',fx:'hpP',per:.1},
   {k:'regen',n:'HP 회복량 증가',ic:'regen',fx:'regP',per:.1},
-  {k:'gold',n:'골드 획득량 증가',ic:'coin',fx:'gold',per:.04}
+  {k:'gold',n:'골드 획득량 증가',ic:'coin',fx:'gold',per:.04},
+  {k:'aspd',n:'공격 속도 증가',ic:'bolt',fx:'aspd',per:.005},
+  {k:'xp',n:'경험치 획득량 증가',ic:'exp',fx:'xp',per:.04},
+  {k:'cdmg',n:'크리티컬 데미지 증가',ic:'burst',fx:'cdmg',per:.01}
 ];
 const RELIC_MAX=400, RELIC_RATE=.5;
 const rel=k=>save.relic[k]||(save.relic[k]={lv:0,n:0});
