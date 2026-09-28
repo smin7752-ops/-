@@ -951,7 +951,9 @@ const TOWER_FX=[{atkP:.1},{aspd:.03},{hpP:.1},{cdmg:.1},{gold:.05}];
 const towerFx=f=>TOWER_FX[(f/10-1)%TOWER_FX.length];
 const curStage=()=>!(G&&G.dun)?save.stage:G.dun.k==='tower'?towerStage(G.dun.lv):dunStage(G.dun.lv)+(G.dun.extra||0);
 const DUN_CATS=[{k:'wep',n:'쿠나이',slots:[7]},{k:'arm',n:'방어구',slots:[0,1,2,4]},{k:'acc',n:'장신구',slots:[3,5,6]}];
-const eqDrops=L=>Math.min(6,3+Math.floor(L/3));          // 장비 개수
+// 부위별 고정 개수: 1단계 각 1개, 이후 한 단계마다 쿠나이 → 방어구 → 장신구 순서로 1개씩 늘어난다
+const eqCounts=L=>{const x=L-1; return {wep:1+Math.floor((x+2)/3),arm:1+Math.floor((x+1)/3),acc:1+Math.floor(x/3)};};
+const eqDrops=L=>{const c=eqCounts(L); return c.wep+c.arm+c.acc;};
 const eqGrade=L=>Math.min(SUM_MAX,L+1);                    // 소환 레벨처럼 세트 범위 결정
 const eqGems=L=>10*L;
 // 단계마다 정해진 세트: 1단계 입문자 … 10단계 전설 (11단계부터 전설, 좋은 등급이 더 잘 나옴)
@@ -960,7 +962,8 @@ function eqRollGr(L){const b=Math.max(0,L-10)*.02, x=Math.random(); return x<.55
 const eqGrRate=L=>{const b=Math.max(0,L-10)*.02; const a=[.55-b,.83-b/2,.96-b/4,1]; return a.map((v,i)=>Math.round((v-(i?a[i-1]:0))*100));};
 function eqReward(L){
   const res=[];
-  for(let i=0;i<eqDrops(L);i++){const sl=Math.floor(Math.random()*8), t=eqSet(L)*4+eqRollGr(L), key=sl+'-'+t, it=save.inv[key]||(save.inv[key]={n:0,lv:0});
+  const cnt=eqCounts(L), picks=[]; for(const C of DUN_CATS) for(let i=0;i<cnt[C.k];i++) picks.push(C.slots[Math.floor(Math.random()*C.slots.length)]);
+  for(const sl of picks){const t=eqSet(L)*4+eqRollGr(L), key=sl+'-'+t, it=save.inv[key]||(save.inv[key]={n:0,lv:0});
     const isNew=it.lv===0; if(isNew) it.lv=1; else it.n++; res.push({s:sl,t,isNew});}
   const gems=eqGems(L); save.gems+=gems; persist(); refreshStats(); updateDots(); updateTop();
   return {res,gems};
@@ -1054,7 +1057,7 @@ function dunPopup(k,L){
       :k==='rush'?`<span>클리어 조건</span><b class="num">보스 ${D.need}마리 격파</b><span>첫 보스 강함</span><b class="num">스테이지 ${dunStage(L)}</b>
       <span>보스 1마리당</span><b class="num">유물 조각 ${1+Math.floor(L/2)} · 보석 ${10*L}</b><span>소탕 보상</span><b class="num">${L>best?'-':`조각 ${rp} · 보석 ${rg}`}</b>`
       :`<span>클리어 조건</span><b class="num">${D.waves}웨이브 + 수호자</b><span>적 강함</span><b class="num">스테이지 ${dunStage(L)}</b>
-      <span>보상 세트</span><b class="num">${SETS[eqSet(L)].n} 세트 장비 ${eqDrops(L)}개</b><span>등급 확률</span><b class="num">${eqGrRate(L).map((p,i)=>`${GR[i]} ${p}%`).join(' · ')}</b><span>부위</span><b class="num">8부위 중 무작위</b><span>추가 보상</span><b class="num">보석 ${eqGems(L)}</b>`}
+      <span>보상 세트</span><b class="num">${SETS[eqSet(L)].n} 세트 ${eqDrops(L)}개</b><span>구성</span><b class="num">쿠나이 ${eqCounts(L).wep} · 방어구 ${eqCounts(L).arm} · 장신구 ${eqCounts(L).acc}</b><span>등급 확률</span><b class="num">${eqGrRate(L).map((p,i)=>`${GR[i]} ${p}%`).join(' · ')}</b><span>추가 보상</span><b class="num">보석 ${eqGems(L)}</b>`}
       <span>입장권</span><b class="num">${n} / ${D.tickets}</b></div>
     <div class="dbtns"><button class="obtn big brown" id="dClose">닫기</button><button class="obtn big green" id="dSw" ${n>0&&best>=L?'':'disabled'}>소탕</button><button class="obtn big" id="dGo" ${n>0?'':'disabled'}>입장</button></div>`;
   $('infoM').hidden=false;
