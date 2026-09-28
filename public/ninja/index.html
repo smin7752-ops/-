@@ -698,22 +698,22 @@ try{
 }catch(e){}
 for(let s=0;s<8;s++) if(!save.inv[s+'-0']) save.inv[s+'-0']={n:0,lv:1}; // 입문자 장비는 처음부터 보유
 // 🧪 테스트용: 모든 장비(8부위 × 10세트 × 4등급) 지급. 정식 배포 때 false 로
-const TEST_ALL_GEAR=(new URLSearchParams(location.search).get("nogear")!=="1");
-// 전체 초기화(한 번만): 닌자 성별·소리 설정만 남기고 레벨·재화·스테이지·강화·스텟·장비·유물·승급·소환·던전 모두 처음으로
-if(save.picked&&save.resetTag!=='full2'){const keep={g:save.g,mute:save.mute,picked:true};
+const TEST_ALL_GEAR=false;
+// 전체 초기화(한 번만, 'full3' = 테스트 설정 끄면서): 닌자 성별·이름·소리 설정만 남기고 레벨·재화·스테이지·강화·스텟·장비·유물·승급·소환·던전 모두 처음으로
+if(save.picked&&save.resetTag!=='full3'){const keep={g:save.g,mute:save.mute,picked:true,name:save.name,skinV:2,testSpare:1};
   for(const k of Object.keys(save)) delete save[k];
   Object.assign(save,{picked:false,gold:0,gems:3000,g:'f',mute:false,lv:1,xp:0,stage:1,kills:0,bestStage:0,autoBoss:true,
     up:{},sp:{},inv:{},eq:[0,0,0,0,0,0,0,0],relic:{},sum:{},free:{day:''},rank:0,pulls:0,dun:{day:'',n:{},best:{}}},keep);
   for(let s=0;s<8;s++) save.inv[s+'-0']={n:0,lv:1};
-  save.resetTag='full2'; save.testGearCleared=true; save.seen=Date.now(); try{localStorage.setItem(SKEY,JSON.stringify(save))}catch(e){}}
-else if(!save.picked) save.resetTag='full2';
+  save.resetTag='full3'; save.testGearCleared=true; save.seen=Date.now(); try{localStorage.setItem(SKEY,JSON.stringify(save))}catch(e){}}
+else if(!save.picked) save.resetTag='full3';
 // 테스트로 받은 장비 정리(한 번만): 장비 창을 입문자 장비만 있는 처음 상태로. 골드·레벨·스테이지는 그대로
 if(!TEST_ALL_GEAR&&!save.testGearCleared){save.testGearCleared=true; save.inv={}; for(let s=0;s<8;s++) save.inv[s+'-0']={n:0,lv:1}; save.eq=[0,0,0,0,0,0,0,0]; try{localStorage.setItem(SKEY,JSON.stringify(save))}catch(e){}}
 if(TEST_ALL_GEAR) for(let s=0;s<8;s++) for(let t=0;t<TIERS;t++){const k=s+'-'+t; if(!save.inv[k]||!save.inv[k].lv) save.inv[k]={n:(save.inv[k]&&save.inv[k].n)||0,lv:1}; if(!save.testSpare) save.inv[k].n=Math.max(save.inv[k].n,5);}
 if(TEST_ALL_GEAR) save.testSpare=1;   // 🧪 테스트: 스킨 강화 해 보라고 장비 여분 5개씩 한 번 지급
 let saveT=0;
 // 🧪 테스트용: 켤 때마다 엽전 1조 · 보석 1000만 까지 채워 줌. 정식 배포 때 false 로
-const TEST_RICH=true;
+const TEST_RICH=false;
 if(TEST_RICH&&save.picked){save.gold=Math.max(save.gold||0,1e12); save.gems=Math.max(save.gems||0,1e7);}
 if(save.skinV!==2){ if(save.skinLv) for(const k in save.skinLv) save.skinLv[k]*=10; save.skinV=2; }   // 스킨 최대 10→100 으로 바뀌어 예전 강화 단계를 10배로
 if(save.skin===undefined) save.skin=setOf((save.eq||[])[2]||0);   // 처음엔 지금 입은 옷 모습 그대로
@@ -1127,9 +1127,9 @@ function spawnEnemy(type){
 /* ================= 컨텐츠: 골드 던전 ================= */
 // 단계 L 의 적은 스테이지 (L×10) 정도 체력. 30초 동안 황금 산적을 잡을수록 엽전
 // 🧪 테스트용: 던전 입장권 99장 유지. 정식 배포 때 0 으로
-const TEST_TICKETS=99;
+const TEST_TICKETS=0;
 // 🧪 테스트용: 스테이지와 상관없이 모든 컨텐츠 열기. 정식 배포 때 false 로
-const TEST_OPEN=true;
+const TEST_OPEN=false;
 const DUN={gold:{n:'골드 던전',open:10,time:30,need:30,tickets:5},
            equip:{n:'장비 던전',open:20,time:60,waves:3,wsize:6,tickets:5},
            rush:{n:'보스 러시',open:30,time:60,need:5,tickets:5},
@@ -2133,14 +2133,14 @@ function renderReb(){
 // 환생 연출: 화면이 그라데이션으로 어두워짐 → 보라 불꽃 이펙트(23장면) → 폭발 순간 실제 환생 → 밝아지며 스테이지 1
 let rebImg=null; const rebPre=()=>{ if(!rebImg){rebImg=new Image(); rebImg.src=aurl('rebfx.webp');} return rebImg; };
 function rebFx(){
-  const el=$('rbFx'), cv=$('rbCv'), x=cv.getContext('2d'), img=rebPre(), N=23, FPS=13, got=rebStones(rebRun());
+  const el=$('rbFx'), cv=$('rbCv'), x=cv.getContext('2d'), img=rebPre(), N=55, FPS=22, got=rebStones(rebRun());
   TR.busy=true; el.hidden=false; $('rbT').className='rbT'; $('rbT').innerHTML=''; void el.offsetWidth; el.classList.add('on'); SFX.wave&&SFX.wave();
   let t0=null, done=false;
   const step=ts=>{ if(t0===null) t0=ts+500; const f=Math.floor((ts-t0)/1000*FPS);
     x.clearRect(0,0,400,400);
-    if(f>=0&&img.complete&&img.naturalWidth){ const i=Math.min(N-1,f), a=f>=N?Math.max(0,1-(f-N)/6):1; x.globalAlpha=a; x.drawImage(img,i*200,0,200,200,0,0,400,400); x.globalAlpha=1; }
-    if(f>=12&&!done){ done=true; doRebirth(true); SFX.buy(); $('rbT').innerHTML=`환생!<small>환생석 +${fmtKo(got)}</small>`; $('rbT').classList.add('on'); }
-    if(f<N+10) requestAnimationFrame(step);
+    if(f>=0&&img.complete&&img.naturalWidth){ const i=Math.min(N-1,f), a=f>=N?Math.max(0,1-(f-N)/10):1; x.globalAlpha=a; x.drawImage(img,i*200,0,200,200,0,0,400,400); x.globalAlpha=1; }
+    if(f>=36&&!done){ done=true; doRebirth(true); SFX.buy(); $('rbT').innerHTML=`환생!<small>환생석 +${fmtKo(got)}</small>`; $('rbT').classList.add('on'); }
+    if(f<N+14) requestAnimationFrame(step);
     else { el.classList.remove('on'); TR.busy=false; setTimeout(()=>{el.hidden=true;},650); }
   };
   requestAnimationFrame(step);
@@ -2169,8 +2169,8 @@ $('mpClose').onclick=()=>{SFX.tap(); $('mpM').hidden=true;};
 $('mpM').onclick=e=>{if(e.target===$('mpM')) $('mpM').hidden=true;};
 
 const CONTENTS=[
-  {im:'equip',k:'equip',n:'장비 던전',d:'쿠나이·방어구·장신구를 한꺼번에! 단계가 오를수록 더 많이, 더 높은 세트로',ic:'burst',c:'t-crit'},
   {im:'gold',k:'gold',n:'골드 던전',d:'30초 동안 황금 산적을 잡아 엽전을 쓸어 담아요',ic:'coin',c:'t-coin'},
+  {im:'equip',k:'equip',n:'장비 던전',d:'쿠나이·방어구·장신구를 한꺼번에! 단계가 오를수록 더 많이, 더 높은 세트로',ic:'burst',c:'t-crit'},
   {im:'boss',k:'rush',n:'보스 러시',d:'60초 동안 강해지는 보스를 연달아 쓰러뜨려 유물 조각을 얻어요',ic:'sword',c:'t-sword'},
   {im:'tower',k:'tower',n:'수련의 탑',d:'한 층씩 올라 보석과 10층마다 영구 능력치를 얻어요',ic:'bolt',c:'t-bolt'}
 ];
@@ -2244,7 +2244,7 @@ function openBackup(){
   $('bkLoad').onclick=()=>{SFX.tap();
     const o=readBackup($('bkIn').value); if(!o){toast('올바른 백업 코드가 아니에요'); return;}
     if(!armed){armed=true; $('bkLoad').textContent='한 번 더 눌러 확정'; toast(`LV.${o.lv} · 스테이지 ${o.stage} 기록이에요`); return;}
-    o.resetTag='full2'; o.testGearCleared=true; o.picked=true; o.seen=Date.now(); o.tut='done';
+    o.resetTag='full3'; o.testGearCleared=true; o.picked=true; o.seen=Date.now(); o.tut='done';
     try{localStorage.setItem(SKEY,JSON.stringify(o));}catch(e){toast('저장 공간 오류로 불러오지 못했어요'); return;}
     window.onbeforeunload=null; location.reload();};
 }
@@ -2350,6 +2350,30 @@ function askName(first){
     save.name=cleanName(inp.value); persist(); SFX.buy(); $('infoM').hidden=true; updateTop(); if(panel==='lobby') renderLobby(); toast(`${save.name} 닌자, 잘 부탁해요!`); setTimeout(attPopup,600);};
 }
 if(AUTO) window.__t={spawn:t=>spawnEnemy(t),g:()=>G};   // 자동 테스트 전용
+// 자동 밸런스 점검(백테스트) 전용: 사람처럼 강화·소환·합성·장착·승급을 하며 시간을 빠르게 돌린다
+if(AUTO) window.__sim={
+  play(sec,dt=1/15){ const n=Math.round(sec/dt); for(let i=0;i<n;i++){ update(dt); if(G.dead){G.deathT=(G.deathT||0)+dt; if(G.deathT>1.2){G.deathT=0; revive();}} if(i%Math.round(10/dt)===0) this.act(); } },
+  act(){
+    // 엽전: 가장 싼 골드 강화부터
+    let guard=0; while(guard++<4000){ let best=null,bc=1e300; for(const u of UPG){ if(upLv(u.k)>=u.max) continue; const c=upCost(u,upLv(u.k)); if(c<bc){bc=c;best=u;} } if(!best||bc>save.gold) break; save.gold-=bc; save.up[best.k]=upLv(best.k)+1; mis('up'); }
+    // 스텟 포인트: 공격력·HP·공속 번갈아
+    const ord=SP.map(x=>x.k); let i=0; while(spLeft()>0&&i<5000){const k=ord[i%ord.length]; const p=SP.find(x=>x.k===k); if((save.sp[k]||0)<p.max) save.sp[k]=(save.sp[k]||0)+1; i++;}
+    // 승급
+    while(save.rank<RANKS.length-1&&rankReady()){save.rank++; save.gems+=1000;}
+    // 보석: 10회 소환 (장비 3종 + 유물 돌아가며)
+    this.bi=this.bi||0; while(save.gems>=COST10+500){ const b=BANNERS[this.bi++%BANNERS.length]; summon(b,10,false); }
+    // 합성 · 자동 장착 · 유물 제작
+    for(let sl=0;sl<8;sl++) for(let k=0;k<TIERS-1;k++) while(combine(sl,k));
+    for(let sl=0;sl<8;sl++){let best=0; for(let k=0;k<TIERS;k++) if(owned(sl,k)) best=k; save.eq[sl]=best;}
+    for(const r of RELICS){const R=rel(r.k); while(R.n>0&&R.lv<RELIC_MAX){R.n--; if(Math.random()<RELIC_RATE) R.lv++;}}
+    // 장비 강화: 입은 장비를 엽전 남는 만큼
+    for(let sl=0;sl<8;sl++){const t=save.eq[sl], it=inv(sl,t); let g=0; while(it&&it.lv<itemMax(it)&&g++<50){const c=enhCost(t,it.lv); if(c>save.gold*.3) break; save.gold-=c; it.lv++;}}
+    refreshStats();
+  },
+  info(){ const st=calc(); return {stage:save.stage,best:save.bestStage,lv:save.lv,rank:save.rank,gold:Math.round(save.gold),gems:save.gems,cp:st.cp,atk:st.atk,hp:st.hp,aps:+st.aps.toFixed(2),crit:+st.crit.toFixed(2),pulls:save.pulls,eqSet:save.eq.map(setOf).join(''),relic:relicSum(),up:JSON.stringify(save.up)}; },
+  offline(sec){ return offlineCalc(sec); },
+  reb(){ return {ready:rebReady(),stones:rebStones(rebRun())}; }
+};
 function startGame(){ setTimeout(()=>{const b=monBase(save.stage); for(let k=b;k<b+6;k++) for(const c of 'waqhd') monImg(k,c);},1500);   // 던전에서 나오는 몬스터까지 미리 받아 둔다
   $('ui').hidden=false; initBattle(); layout(); drawAvatar(); updateTop(); updateDots(); openPanel('lobby'); offlineCheck(); if(AUTO&&!save.name) save.name='테스트'; if(!save.name) askName(true); tutInit(); attPopup(); } // 시작은 로비부터
 
