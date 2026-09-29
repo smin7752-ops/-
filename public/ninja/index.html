@@ -159,6 +159,7 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
 #rbFx .rbT small{display:block;font-family:var(--body);font-size:14px;color:#e8d8ff;margin-top:6px}
 .rb-top b{color:#d9b8ff;font-family:var(--display);font-weight:400;font-size:20px}
 .sideb .dot{top:-6px;right:-6px}
+.sideb button[hidden]{display:none}
 .feed{position:absolute;right:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;pointer-events:none}
 .feed div{background:linear-gradient(90deg,rgba(20,15,12,0),rgba(20,15,12,.85) 25%);padding:4px 12px 4px 36px;font-size:12px;font-weight:700;color:#f2e3c6;transition:opacity .5s}
 .feed div b{color:var(--gold);font-weight:700}
@@ -489,7 +490,7 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
       <button id="sbMis" aria-label="일일 미션"><svg viewBox="0 0 32 32"><rect x="6" y="4" width="20" height="25" rx="3" fill="#f3e2b8" stroke="#7a4a22" stroke-width="2"/><rect x="11" y="2" width="10" height="5" rx="2" fill="#c8323a" stroke="#6a1a1a" stroke-width="1.5"/><path d="M10 13l2.5 2.5L17 11M10 21l2.5 2.5L17 19" fill="none" stroke="#2f9a4a" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 14h4M19 22h4" stroke="#7a4a22" stroke-width="2" stroke-linecap="round"/></svg>미션<span class="dot" id="dotMis" hidden>!</span></button>
       <button id="sbAtt" aria-label="출석 보상"><svg viewBox="0 0 32 32"><rect x="4" y="7" width="24" height="21" rx="3" fill="#f3e2b8" stroke="#7a4a22" stroke-width="2"/><path d="M4 10a3 3 0 0 1 3-3h18a3 3 0 0 1 3 3v3H4z" fill="#c8323a" stroke="#7a4a22" stroke-width="2"/><path d="M10 4v5M22 4v5" stroke="#7a4a22" stroke-width="2.4" stroke-linecap="round"/><path d="M16 16l1.6 3.2 3.5.5-2.5 2.5.6 3.5-3.2-1.7-3.2 1.7.6-3.5-2.5-2.5 3.5-.5z" fill="#f2c14e" stroke="#9a6a1a" stroke-width="1"/></svg>출석<span class="dot" id="dotAtt" hidden>!</span></button>
       <button id="sbAch" aria-label="업적"><svg viewBox="0 0 32 32"><path d="M9 4h14v6a7 7 0 0 1-14 0z" fill="#f2c14e" stroke="#9a6a1a" stroke-width="2"/><path d="M9 6H5v2a5 5 0 0 0 5 5M23 6h4v2a5 5 0 0 1-5 5" fill="none" stroke="#9a6a1a" stroke-width="2"/><path d="M14 17h4v5h-4z" fill="#d69a2a" stroke="#9a6a1a" stroke-width="1.5"/><rect x="9" y="22" width="14" height="6" rx="1.5" fill="#7a4a22" stroke="#4a2a12" stroke-width="1.5"/><path d="M16 6.5l1 2 2.2.3-1.6 1.5.4 2.2-2-1-2 1 .4-2.2-1.6-1.5 2.2-.3z" fill="#fff6d0"/></svg>업적<span class="dot" id="dotAch" hidden>!</span></button>
-      <button id="sbReb" aria-label="환생"><i class="rbico"></i>환생<span class="dot" id="dotReb" hidden>!</span></button>
+      <button id="sbOff" aria-label="오프라인 보상" hidden><i class="coin" style="width:28px;height:28px;display:block"></i>보상<span class="dot">!</span></button>
     </div>
     <div class="feed" id="feed"></div>
 
@@ -892,7 +893,8 @@ function calc(eq=save.eq){
   const minT=Math.min(...eq.map(setOf));
   for(let k=1;k<=minT;k++){const u=SETFX[k][2]; add(u[2]); active.push({t:k,need:8,txt:u[1]});}
   // 환생 능력치 (그룹)
-  cur='reb'; for(const R of REB) add({[R.fx]:rebLv(R.k)*R.per}); cur='base';
+  // 골드 강화 돌파 보너스: 기본 공격력·HP 강화 100레벨마다 ×1.15 (곱연산 그룹)
+  cur='mile'; add({atkP:Math.pow(1.15,Math.floor(upLv('atk')/100))-1, hpP:Math.pow(1.15,Math.floor(upLv('hp')/100))-1}); cur='base';
   // 스킨 (그룹)
   cur='skin'; for(let k=0;k<SETS.length;k++) if(skinOpen(k)) add(skinFx(k,'own'));
   add(skinFx(skinSet(),'eq')); cur='base';
@@ -1191,7 +1193,7 @@ function arena(){
   const vh=L.view, ph=Math.min(vh*.3,W*.36,210), py=vh-12, eh=Math.min(vh*.22,W*.26,170);
   return {vh,ph,px:W/2,py,lineY:py-ph*.62,eh,margin:eh*.35+10};
 }
-const sScale=s=>s<=100?Math.pow(1.11,s-1):Math.pow(1.11,99)*Math.pow(1.085,s-100), dScale=s=>Math.pow(1.07,s-1), gScale=s=>Math.pow(1.1,s-1), xScale=s=>Math.pow(1.08,s-1);   // 적 체력 증가 1.12→1.10, 공격 1.085→1.08
+const sScale=s=>s<=100?Math.pow(1.11,s-1):s<=200?Math.pow(1.11,99)*Math.pow(1.07,s-100):Math.pow(1.11,99)*Math.pow(1.07,100)*Math.pow(1.055,s-200), dScale=s=>Math.pow(1.07,s-1), gScale=s=>Math.pow(1.1,s-1), xScale=s=>Math.pow(1.08,s-1);   // 적 체력 증가 1.12→1.10, 공격 1.085→1.08
 function spawnEnemy(type){
   const s=curStage(), other=save.g==='f'?'m':'f', g=Math.random()<.6?other:save.g, hs=sScale(s);
   let set,hp,travel;
@@ -1459,7 +1461,7 @@ function killEnemy(e,chain){
   const gold=Math.round(({grunt:6,elite:20,mboss:300,boss:800})[e.type]*gScale(s)*(1+G.st.gold));
   const xp=Math.round(({grunt:2,elite:6,mboss:50,boss:120})[e.type]*xScale(s)*(1+G.st.xp));
   if(e.golden&&G.dun){const g2=dunGoldPer(G.dun.lv,G.st); G.dun.kills++; G.dun.gold+=g2; save.gold+=g2; G.goldAcc+=g2; floatText(r.x,r.y-r.h*1.25,'+'+fmtKo(g2),'#ffd36a',15);}
-  else { save.gold+=gold; G.goldAcc+=gold; gainXp(xp); }
+  else { save.gold+=gold; G.goldAcc+=gold; gainXp(xp); if(e.type==='elite'&&!G.dun&&Math.random()<.3){ const gm=2+Math.floor(s/40); save.gems+=gm; floatText(r.x,r.y-r.h*1.4,'💎+'+gm,'#8fd8ff',14);} }
   const nc=({boss:8,mboss:6,elite:3,grunt:2})[e.type];
   for(let i=0;i<nc;i++) G.coinFly.push({x:r.x+rnd(-.3,.3)*r.hw*2,y:r.cy+rnd(-.2,.2)*r.h,t:-i*.05,dur:rnd(.55,.75)});
   if(!monImg(e.kind,'d')) puff(r.x,r.cy,r.h*.55,'#b9aec9'); // 몬스터 그림은 사망 동작에 먼지가 있다
@@ -1558,7 +1560,7 @@ function update(dt){
     if(G.waveLeft>0){ if(G.spawnT<=0&&alive<cap){G.spawnT=rnd(.5,1.1); G.waveLeft--; spawnEnemy(Math.random()<Math.min(.35,save.stage*.01)?'elite':'grunt');} }
     else if(!G.enemies.length&&G.bossDelay<=0){
       if(!isBossStage(save.stage)) nextStage();
-      else if(G.bossBlock) G.waveLeft=waveSize(save.stage);   // 보스 실패 후에는 같은 스테이지를 계속 돈다
+      else if(G.bossBlock){ G.farmN=(G.farmN||0)+1; if(save.autoBoss!==false&&G.farmN>=2){G.farmN=0; G.bossBlock=false; G.bossDelay=1;} else G.waveLeft=waveSize(save.stage); }   // 보스 실패 후 같은 스테이지를 2바퀴 돌고 자동 재도전
       else G.bossDelay=1;                                       // 보스 자동 등장
     }
   }
@@ -1759,7 +1761,6 @@ function updateDots(){
   const fr=freeLeft(); $('dotSum').hidden=!fr; $('dotSum').textContent=fr;
   const mr=misReady(), ar=attReady(); $('dotCt').hidden=!(mr||ar); $('dotCt').textContent='!';
   const hr=achReadyN(); ach.ready=hr; $('dotMis').hidden=!(mr||repReady()); $('dotAtt').hidden=!ar; $('dotAch').hidden=!hr; $('dotAch').textContent=hr>9?'9+':hr;
-  $('dotReb').hidden=!(rebCanUp()||(rebReady()&&!(save.reb&&save.reb.n)));
   if(hr){$('dotCt').hidden=false;}
 }
 function drawAvatar(){
@@ -1790,7 +1791,9 @@ function tabs(list,cur,fn){
 function multSeg(cur,maxLabel){
   return `<div class="seg" style="grid-template-columns:repeat(4,1fr)">${[[1,'x1'],[10,'x10'],[100,'x100'],['max',maxLabel]].map(([v,n])=>`<button data-m="${v}" class="${String(v)===String(cur)?'on':''}">${n}</button>`).join('')}</div>`;
 }
-function bindMult(fn){$('pbody').querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{SFX.tap();fn(b.dataset.m==='max'?'max':+b.dataset.m);});}
+// 다시 그려도 목록 스크롤 위치를 유지
+function keepScroll(fn){ const sc=$('pbody').querySelector('.pscroll'), y=sc?sc.scrollTop:0; fn(); const n=$('pbody').querySelector('.pscroll'); if(n) n.scrollTop=y; }
+function bindMult(fn){$('pbody').querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{SFX.tap(); keepScroll(()=>fn(b.dataset.m==='max'?'max':+b.dataset.m));});}
 
 /* ---- 성장: 골드 강화 / 스텟 ---- */
 function renderGrow(){
@@ -2389,18 +2392,29 @@ function offlineCalc(sec){
   const kpm=offlineKpm(st,s);
   return {kpm, gold:Math.round(6*gScale(s)*(1+st.gold)*kpm*m), xp:Math.round(2*xScale(s)*(1+st.xp)*kpm*m)};
 }
+// 오프라인 보상: 켜자마자 쌓아 두고(보관함), 지금 받거나 나중에 오른쪽 '보상' 버튼으로 받는다
 function offlineCheck(){
-  const now=Date.now(), last=save.seen||0; save.seen=now; persist();
-  if(!last||!save.picked||!$('offM').hidden) return;
-  const sec=Math.floor((now-last)/1000); if(sec<OFF_MIN) return;
-  const t=Math.min(OFF_MAX,sec), h=Math.floor(t/3600), mi=Math.floor(t%3600/60), r=offlineCalc(t);
+  const now=Date.now(), last=save.seen||0; save.seen=now;
+  if(!last||!save.picked){persist(); return;}
+  const sec=Math.floor((now-last)/1000);
+  if(sec>=OFF_MIN){ const P=save.offPend||(save.offPend={gold:0,xp:0,sec:0}), room=Math.max(0,OFF_MAX-P.sec), t=Math.min(room,sec);
+    if(t>0){ const r=offlineCalc(t); P.gold+=r.gold; P.xp+=r.xp; P.sec+=t; P.kpm=r.kpm; P.stage=save.stage; P.over=sec>room; } }
+  persist(); updateOffBtn();
+  if(sec>=OFF_MIN&&save.offPend&&save.offPend.sec>0&&$('offM').hidden) offPopup();
+}
+function updateOffBtn(){ const b=$('sbOff'); if(b) b.hidden=!(save.offPend&&save.offPend.sec>0); }
+function offPopup(){
+  const P=save.offPend; if(!P||!P.sec) return;
+  const h=Math.floor(P.sec/3600), mi=Math.floor(P.sec%3600/60);
   $('offBody').innerHTML=`<h2>오프라인 보상</h2>
-    <p class="sub">스테이지 ${save.stage}에서 <b>${h?h+'시간 ':''}${mi}분</b> 동안 모은 보상이에요<br><small>전투력 기준 1분에 약 ${Math.round(r.kpm)}마리 처치</small>${sec>OFF_MAX?'<br>(최대 12시간까지 쌓여요)':''}</p>
-    <div class="rw"><span><i class="coin"></i>엽전</span><b class="num">+${fmtKo(r.gold)}</b></div>
-    <div class="rw"><span><i class="xpi">EXP</i>경험치</span><b class="num">+${fmtKo(r.xp)}</b></div>
-    <button class="obtn big green" id="offOk">받기</button>`;
+    <p class="sub">스테이지 ${P.stage||save.stage}에서 <b>${h?h+'시간 ':''}${mi}분</b> 동안 모은 보상이에요<br><small>전투력 기준 1분에 약 ${Math.round(P.kpm||0)}마리 처치</small>${P.sec>=OFF_MAX?'<br>(최대 12시간까지 쌓여요)':''}</p>
+    <div class="rw"><span><i class="coin"></i>엽전</span><b class="num">+${fmtKo(P.gold)}</b></div>
+    <div class="rw"><span><i class="xpi">EXP</i>경험치</span><b class="num">+${fmtKo(P.xp)}</b></div>
+    <div style="display:grid;grid-template-columns:1fr 2fr;gap:8px"><button class="obtn brown big" id="offLater">나중에</button><button class="obtn big green" id="offOk">받기</button></div>
+    <p class="note" style="text-align:center;margin:0">나중에 받으면 오른쪽 <b>보상</b> 버튼에 보관돼요 (최대 12시간)</p>`;
   $('offM').hidden=false;
-  $('offOk').onclick=()=>{ac();SFX.buy(); $('offM').hidden=true; save.gold+=r.gold; gainXp(r.xp); save.seen=Date.now(); persist(); updateTop(); updateDots(); toast(`엽전 +${fmtKo(r.gold)} · 경험치 +${fmtKo(r.xp)}`);};
+  $('offLater').onclick=()=>{SFX.tap(); $('offM').hidden=true; updateOffBtn();};
+  $('offOk').onclick=()=>{ac();SFX.buy(); $('offM').hidden=true; const g=P.gold,x=P.xp; save.offPend=null; save.gold+=g; gainXp(x); persist(); updateTop(); updateDots(); updateOffBtn(); toast(`엽전 +${fmtKo(g)} · 경험치 +${fmtKo(x)}`);};
 }
 setInterval(()=>{if(!document.hidden&&save.picked){save.seen=Date.now();persistSoon();}},15000);
 document.addEventListener('visibilitychange',()=>{if(!save.picked) return; if(document.hidden){save.seen=Date.now();persist();} else offlineCheck();});
@@ -2410,7 +2424,8 @@ addEventListener('pagehide',()=>{if(save.picked){save.seen=Date.now();persist();
 document.querySelectorAll('#nav [data-p]').forEach(b=>b.onclick=()=>{ac();SFX.tap();openPanel(b.dataset.p);});
 $('nav').addEventListener('click',e=>{ if(G&&G.dun&&e.target.closest('button')){ e.stopPropagation(); e.preventDefault(); toast('던전 진행 중에는 다른 메뉴를 쓸 수 없어요'); } },true);   // 던전 중엔 아래 메뉴 잠금
 const openCt=k=>{ac();SFX.tap(); if(G&&G.dun){toast('던전 진행 중에는 이용할 수 없어요'); return;} openPop(k);};
-$('sbMis').onclick=()=>openCt('mis'); $('sbAtt').onclick=()=>openCt('att'); $('sbAch').onclick=()=>openCt('ach'); $('sbReb').onclick=openReb;
+$('sbOff').onclick=()=>{ac();SFX.tap(); offPopup();};
+$('sbMis').onclick=()=>openCt('mis'); $('sbAtt').onclick=()=>openCt('att'); $('sbAch').onclick=()=>openCt('ach');
 $('navMid').onclick=()=>{ac();SFX.tap(); openPanel(panel||'lobby');};
 $('bossBtn').onclick=()=>{ac();SFX.tap();startBoss();};
 $('infoM').onclick=e=>{if(e.target.id==='infoM') $('infoM').hidden=true;};
@@ -2482,8 +2497,6 @@ if(AUTO) window.__sim={
     for(let sl=0;sl<8;sl++){const t=save.eq[sl], it=inv(sl,t); let g=0; while(it&&it.lv<itemMax(it)&&g++<50){const c=enhCost(t,it.lv); if(c>save.gold*.3) break; save.gold-=c; it.lv++;}}
     // 환생: 20분(게임 시간) 동안 최고 기록이 안 오르면 환생 → 환생석은 가장 싼 능력치부터
     this.tt=(this.tt||0)+10; if((save.runBest||0)>(this.lb||0)){this.lb=save.runBest; this.lt=this.tt;}
-    if(this.autoReb&&rebReady()&&this.tt-(this.lt||0)>=900){ doRebirth(true); this.rebs=(this.rebs||0)+1; this.lt=this.tt; this.lb=0; }
-    let g2=0; while(g2++<500){ let b=null,bc=1e9; for(const R of REB){const lv=rebLv(R.k); if(lv<REB_MAX&&rebCost(lv)<bc){bc=rebCost(lv);b=R;}} if(!b||rebStone()<bc) break; const RR=save.reb||(save.reb={}); RR.st-=bc; (RR.lv||(RR.lv={}))[b.k]=rebLv(b.k)+1; }
     refreshStats();
   },
   info(){ const st=calc(); return {stage:save.stage,best:save.bestStage,lv:save.lv,rank:save.rank,gold:Math.round(save.gold),gems:save.gems,cp:st.cp,atk:st.atk,hp:st.hp,aps:+st.aps.toFixed(2),crit:+st.crit.toFixed(2),pulls:save.pulls,eqSet:save.eq.map(setOf).join(''),relic:relicSum(),rebs:this.rebs||0,run:save.runBest||0,stone:rebStone(),rebLv:rebLv('atk'),atkMul:+st.atkMul.toFixed(1)}; },
