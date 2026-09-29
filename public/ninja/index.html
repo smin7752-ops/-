@@ -143,6 +143,92 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
 .mpbody .pscroll{height:auto;overflow:visible;padding:2px}
 #ui.indun .nav button,#ui.indun .nav .mid{filter:grayscale(.7) brightness(.6)}
 #ui.indun .sideb{display:none}
+
+/* ===== UI 카드 (그림 위에 글자를 얹는 방식, 크기는 카드 폭 기준 cqw) ===== */
+.ucard,.urow.ucard{position:relative;container-type:inline-size;background:var(--img) center/100% 100% no-repeat!important;border:0!important;padding:0!important;box-shadow:none!important;border-radius:0!important;color:#3a2410;display:block!important;gap:0}
+.ucard>*{position:absolute;margin:0}
+.ucard .obtn{background:none!important;border:0!important;box-shadow:none!important;padding:0!important;color:#fff;text-shadow:0 .25cqw 0 #6a2a00,0 0 .8cqw rgba(0,0,0,.45);font-family:var(--display);font-weight:400;line-height:1.05;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.4cqw}
+.ucard .obtn:disabled{filter:grayscale(.85) brightness(.75);opacity:1}
+.ucard .obtn .cost{font-size:3.6cqw;color:#fff;background:rgba(40,16,0,.35);border-radius:9cqw;padding:.2cqw 2.2cqw;display:flex;align-items:center;gap:.8cqw}
+.ucard .obtn .cost i{width:4.4cqw;height:4.4cqw}
+.ucard .num{font-family:var(--display);font-weight:400}
+/* 성장 카드 2098x749 */
+.crow{--img:var(--ui-stat);aspect-ratio:2098/749;display:block;margin:-2.5cqw 0 -2cqw}
+.crow .uinfo,.crow .uright{display:contents!important}
+.crow .c-ic,.crow .c-tt,.crow .c-lv,.crow .c-val,.crow .c-mx,.crow .c-bt{position:absolute!important;margin:0!important;padding:0}
+.crow .c-ic{left:9.4%;top:32.2%;width:15.3%;height:41.3%;border-radius:1.2cqw;border:0;background-size:cover;background-position:center;box-shadow:none}
+.crow .c-tt{left:28.6%;top:33.5%;width:36%;font-family:var(--display);font-weight:400;font-size:6.1cqw;color:#3a1c0a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.crow .c-lv{left:32.4%;top:54.6%;width:5.7%;height:7.6%;display:flex;align-items:center;justify-content:center;font-size:3.1cqw;color:#5a3414}
+.crow .c-val{left:30%;top:66.4%;width:35.4%;height:10.2%;display:block}
+.crow .c-val i,.crow .c-val em{position:absolute;top:0;height:100%;display:flex;align-items:center;justify-content:center;font-style:normal;font-family:var(--display);font-size:3.7cqw;white-space:nowrap}
+.crow .c-val i{left:0;width:46.6%;color:#5a3414}.crow .c-val em{left:57.4%;width:42.6%;color:#1f8a2a}
+.crow .c-mx{left:81.9%;top:35.2%;width:9.5%;height:10.4%;display:flex;align-items:center;justify-content:center;font-size:2.7cqw;color:#5a3414;font-family:var(--display)}
+.crow .c-bt{left:67.8%;top:53%;width:24.8%;height:24.6%;font-size:3.7cqw;gap:0}
+.crow .c-bt .cost{font-size:3cqw;padding:0 1.8cqw}
+.crow .c-bt.green{font-size:4.2cqw}
+/* 던전 카드 1942x809 */
+.dcard{--img:var(--ui-dun);aspect-ratio:1942/809;display:block;margin:0 0 1.5cqw}
+.dcard .d-art{left:6%;top:29.6%;width:23.4%;height:56.2%;background:center/cover no-repeat;border-radius:1.5cqw}
+.dcard .d-tt{left:43.6%;top:25.3%;width:16.6%;height:12.6%;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-weight:400;font-size:4.9cqw;color:#5a1a0a;white-space:nowrap}
+.dcard .d-ds{left:32.2%;top:44%;width:60%;height:18%;display:flex;align-items:center;justify-content:center;text-align:center;font-size:2.9cqw;line-height:1.35;color:#4a2a12;font-weight:700}
+.dcard .d-best,.dcard .d-tk{top:76.6%;height:6.9%;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:3.1cqw;color:#ffe6b0}
+.dcard .d-best{left:37.8%;width:9.9%}.dcard .d-tk{left:57.3%;width:11.3%}
+.dcard .d-go{left:72.4%;top:62.5%;width:21.2%;height:21.5%;color:transparent;text-shadow:none}
+.dcard.lock .d-go{color:#e8d8c0;font-size:3.6cqw;text-shadow:0 .3cqw 0 #000;background:linear-gradient(180deg,#4a3a30,#2a201a)!important;border:.4cqw solid #7a6048!important;border-radius:2.4cqw;filter:none;left:73.5%;top:64.5%;width:19%;height:17%}
+.dcard.lock .d-art{filter:grayscale(.8) brightness(.55)}
+/* 소환 카드 1774x887 */
+.scard{--img:var(--ui-sum);aspect-ratio:1774/887;display:block;margin:0 0 2cqw}
+.scard .s-art{left:12.4%;top:17.6%;width:17.6%;height:35.4%;border-radius:50%;background:#2a0a08 center/cover no-repeat;box-shadow:0 0 0 .6cqw rgba(0,0,0,.35),inset 0 0 3cqw rgba(0,0,0,.6)}
+.scard .s-tt{left:43.5%;top:21.5%;width:40.5%;height:15%;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-weight:400;font-size:5.4cqw;color:#5a1a0a;white-space:nowrap}
+.scard .s-lv{left:53.3%;top:57.2%;width:36.2%;font-size:2.6cqw;color:#e8d4b0;text-align:center;white-space:nowrap}
+.scard .s-bar{left:53.3%;top:50.3%;width:36.2%;height:5.9%;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:2.9cqw;color:#fff;text-shadow:0 .2cqw 0 #0a4a12}
+.scard .s-bar i{position:absolute;left:0;top:0;bottom:0;background:rgba(10,40,10,.55);border-radius:3cqw}
+.scard .s-b{top:66.4%;height:21.8%;font-size:4.2cqw;justify-content:flex-start;padding-top:1.6cqw}
+.scard .s-b[data-n="free"]{left:8.6%;width:27.8%}.scard .s-b[data-n="1"]{left:38.6%;width:25.5%}.scard .s-b[data-n="10"]{left:65.9%;width:26%}
+.scard .s-b .cost{position:absolute;bottom:2.3cqw;right:2.6cqw;background:none;font-size:3.1cqw;padding:0}
+.scard .s-b .cost i{display:none}
+
+/* 장비 카드 1536x1024 */
+.ecard{--img:var(--ui-eq);aspect-ratio:1536/1024;margin:0;flex:none}
+.ecard .e-ic{left:10.4%;top:32.6%;width:23.5%;height:33.3%;border-radius:1cqw;box-shadow:inset 0 0 0 .6cqw var(--gc),inset 0 0 5cqw rgba(0,0,0,.5)}
+.ecard .e-ic .ic{position:absolute;inset:8%}
+.ecard .e-gr{position:absolute;right:4%;top:3%;font-family:var(--display);font-size:5cqw;color:var(--gc);text-shadow:0 .3cqw 0 #000}
+.ecard .e-sn{position:absolute;left:5%;top:3%;font-family:var(--display);font-size:3.2cqw;color:#fff;text-shadow:0 .3cqw 0 #000}
+.ecard .e-on{position:absolute;left:0;right:0;bottom:-.3cqw;text-align:center;font-size:2.6cqw;font-weight:700;color:#fff;background:rgba(40,140,50,.85);border-radius:0 0 1cqw 1cqw}
+.ecard .e-tt,.ecard .fxr span:first-child{font-family:var(--display)!important;font-weight:400}
+.ecard .e-tt{left:30%;top:18%;width:41.8%;height:11%;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-weight:400;font-size:4.2cqw;color:#5a1a0a;white-space:nowrap;overflow:hidden}
+.ecard .e-lv{left:80.4%;top:25.4%;width:10.4%;height:7.2%;display:flex;align-items:center;justify-content:center;font-size:3.1cqw;color:#ffe6b0;white-space:nowrap}
+.ecard .e-lv small{font-size:2.2cqw;color:#bba68a}
+.ecard .e-fx{left:59.4%;width:30.4%;height:8.6%;display:flex;flex-direction:column;justify-content:center;gap:.2cqw;padding:0 1.2cqw!important;box-sizing:border-box}
+.ecard .e-fx1{top:36.4%}.ecard .e-fx2{top:49.4%}
+.ecard .fxr{display:flex;justify-content:space-between;gap:1cqw;font-size:2.4cqw;color:#f3e4c4;white-space:nowrap;line-height:1.15}
+.ecard .fxr em{color:#8fe38f;font-style:normal}
+.ecard .e-cnt{left:37.4%;top:63.2%;width:7.4%;height:5.8%;display:flex;align-items:center;justify-content:center;font-size:2.8cqw;color:#ffe6b0}
+.ecard .e-bar{left:45.3%;top:63.6%;width:45.6%;height:5.2%;background:#1a120e;border-radius:3cqw;overflow:hidden}
+.ecard .e-bar i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(180deg,#6fe06a,#1f9a2a);border-radius:3cqw}
+.ecard .e-b1,.ecard .e-b2,.ecard .e-b3{top:71.8%;height:12%;font-size:3.6cqw}
+.ecard .e-b1{left:9.8%;width:26%}.ecard .e-b2{left:37.4%;width:25.4%}.ecard .e-b3{left:64%;width:26.4%}
+.ecard .e-b1 .cost,.ecard .e-b3 .cost{font-size:2.3cqw}
+
+/* 프로필 카드 1024x1536 */
+.pcard{--img:var(--ui-prof);aspect-ratio:1024/1536;margin:0 auto 2cqw;max-width:420px}
+.pcard .p-lv{left:9.6%;top:9.6%;width:12.2%;height:6.2%;display:flex;align-items:center;justify-content:center;font-size:3.6cqw;color:#ffe6b0}
+.pcard .p-rk{left:9.4%;top:16.3%;width:12.6%;height:2.4%;display:flex;align-items:center;justify-content:center;font-size:2.4cqw;font-weight:700;color:#ffe6b0;white-space:nowrap}
+.pcard .p-nm{left:25%;top:10.5%;width:47%;height:7.2%;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-weight:400;font-size:5.4cqw;color:#5a1a0a;white-space:nowrap;overflow:hidden}
+.pcard .p-ed{left:73.6%;top:11.4%;width:8.2%;height:5%;border-radius:50%;background:transparent;border:0;cursor:pointer}
+.pcard .p-cv{left:20%;top:18.4%;width:60%;height:auto;aspect-ratio:360/300}
+.pcard .p-cp{left:34%;top:54.2%;width:43%;height:6.2%;display:flex;align-items:center;justify-content:center;font-size:4.2cqw;color:#ffd36a;text-shadow:0 .3cqw 0 #3a1a00}
+.pcard .p-v{height:3.6%;display:flex;align-items:center;justify-content:center;font-size:2.9cqw;color:#4a2a12;white-space:nowrap}
+/* 오프라인 팝업 1149x1207 */
+.offcard{--img:var(--ui-off);background:var(--img) center/100% 100% no-repeat!important;width:min(92vw,400px);aspect-ratio:1149/1207;background-color:transparent!important;border:0!important;padding:0!important;overflow:visible!important;box-shadow:none!important;container-type:inline-size;position:relative;max-height:none!important}
+.offcard>*{position:absolute;margin:0}
+.offcard .o-t{left:44%;top:28.4%;width:24%;height:7.3%;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:3.9cqw;color:#ffe6b0;white-space:nowrap}
+.offcard .o-v{left:52%;width:34.5%;height:11.3%;display:flex;align-items:center;justify-content:flex-end;font-family:var(--display);font-size:6cqw;color:#ffd36a;text-shadow:0 .3cqw 0 #3a1a00}
+.offcard .o-g{top:47.4%}.offcard .o-x{top:60.8%}
+.offcard .o-n{left:12%;right:12%;top:73%;text-align:center;font-size:2.8cqw;color:#e8d4b0}
+.offcard .o-ok{left:13%;top:74.2%;width:73.7%;height:11.8%;background:transparent;border:0;cursor:pointer}
+.offcard .o-close{left:85.3%;top:8.6%;width:10.8%;height:10.3%;border-radius:50%;background:transparent;border:0;cursor:pointer}
+.offcard .o-sub{left:4%;right:4%;top:101%;text-align:center;font-size:2.7cqw;color:#e8d4b0;text-shadow:0 .2cqw 2px #000}
 .sideb{position:absolute;right:8px;top:198px;display:flex;flex-direction:column;gap:10px;z-index:2}
 .sideb button{position:relative;width:54px;height:58px;padding:0;border-radius:14px;border:2px solid #d6a85a;background:linear-gradient(180deg,#4a3222,#2a1b12);box-shadow:0 3px 0 #1a100a,0 0 0 1px #000,inset 0 1px 0 rgba(255,230,170,.35);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;color:#ffe6b0;font-family:var(--display);font-size:11px;text-shadow:0 1px 0 #000;cursor:pointer}
 .sideb button:active{transform:translateY(2px);box-shadow:0 1px 0 #1a100a}
@@ -1802,18 +1888,18 @@ function renderGrow(){
   const body=$('pbody');
   if(view.grow==='gold'){
     body.innerHTML=multSeg(view.mult,'MAX (5,000)')+`<div class="pscroll">${UPG.map(u=>`
-      <div class="urow" data-u="${u.k}"><div class="itile pic" style="background-image:var(--st-${u.k})"></div>
-        <div class="uinfo"><b>${u.n}</b><span class="ulv num"></span><span class="uval num"></span></div>
-        <div class="uright"><span class="umax">MAX LV.${u.max.toLocaleString()}</span><button class="obtn"></button></div></div>`).join('')}</div>`;
+      <div class="urow ucard crow" data-u="${u.k}"><div class="itile pic c-ic" style="background-image:var(--st-${u.k})"></div>
+        <div class="uinfo"><b class="c-tt">${u.n}</b><span class="ulv num c-lv"></span><span class="uval num c-val"></span></div>
+        <div class="uright"><span class="umax c-mx">${fmtKo(u.max)}</span><button class="obtn c-bt"></button></div></div>`).join('')}</div>`;
     bindMult(m=>{view.mult=m;renderGrow();});
     body.querySelectorAll('[data-u]').forEach(row=>row.querySelector('button').onclick=()=>{
       const u=UPG.find(x=>x.k===row.dataset.u), b=upBatch(u,view.mult); if(!b.ok) return;
       save.gold-=b.cost; save.up[u.k]=upLv(u.k)+b.n; mis('up',b.n); SFX.up(); refreshStats(); persistSoon(); updateDots();});
   }else{
     body.innerHTML=multSeg(view.spMult,'MAX')+`<div class="pscroll"><div class="spcard"><div><small>현재 레벨 LV.${save.lv}</small><br><b class="num">스텟 포인트 <em id="spL">0</em> / <span id="spT">0</span></b></div><small style="text-align:right">레벨이 오를 때마다<br>스텟 포인트 ${SP_PER_LV}개</small></div>${SP.map(p=>`
-      <div class="urow" data-s="${p.k}"><div class="itile pic" style="background-image:var(--st-${p.k})"></div>
-        <div class="uinfo"><b>${p.n}</b><span class="ulv num"></span><span class="uval num"></span></div>
-        <div class="uright"><span class="umax">MAX LV.${p.max.toLocaleString()}</span><button class="obtn"></button></div></div>`).join('')}</div>`;
+      <div class="urow ucard crow" data-s="${p.k}"><div class="itile pic c-ic" style="background-image:var(--st-${p.k})"></div>
+        <div class="uinfo"><b class="c-tt">${p.n}</b><span class="ulv num c-lv"></span><span class="uval num c-val"></span></div>
+        <div class="uright"><span class="umax c-mx">${fmtKo(p.max)}</span><button class="obtn c-bt"></button></div></div>`).join('')}</div>`;
     bindMult(m=>{view.spMult=m;renderGrow();});
     body.querySelectorAll('[data-s]').forEach(row=>row.querySelector('button').onclick=()=>{
       const p=SP.find(x=>x.k===row.dataset.s), lv=save.sp[p.k]||0, b=spBatch(p,view.spMult); if(!b.ok) return;
@@ -1825,19 +1911,19 @@ function refreshGrow(){
   const body=$('pbody');
   body.querySelectorAll('[data-u]').forEach(row=>{
     const u=UPG.find(x=>x.k===row.dataset.u), lv=upLv(u.k), b=upBatch(u,view.mult), btn=row.querySelector('button'), maxed=lv>=u.max, n=b.n;
-    row.querySelector('.ulv').textContent=`LV.${lv.toLocaleString()}`;
-    row.querySelector('.uval').innerHTML=maxed?`${u.show(u.val(lv))}<span class="ar">›</span><em>MAX</em>`:`${u.show(u.val(lv))}<span class="ar">›</span><em>${u.show(u.val(Math.min(u.max,lv+n)))}</em>`;
-    if(maxed){btn.className='obtn green';btn.innerHTML='최대레벨';btn.disabled=true;}
-    else{btn.className='obtn';btn.disabled=!b.ok;btn.innerHTML=`강화하기${b.n>1?` x${b.n.toLocaleString()}`:''}<span class="cost"><i class="coin"></i>${fmtKo(b.cost)}</span>`;}
+    row.querySelector('.ulv').textContent=fmtKo(lv);
+    row.querySelector('.uval').innerHTML=`<i>${u.show(u.val(lv))}</i><em>${maxed?'MAX':u.show(u.val(Math.min(u.max,lv+n)))}</em>`;
+    if(maxed){btn.className='obtn green c-bt';btn.innerHTML='최대레벨';btn.disabled=true;}
+    else{btn.className='obtn c-bt';btn.disabled=!b.ok;btn.innerHTML=`강화하기${b.n>1?` x${b.n.toLocaleString()}`:''}<span class="cost"><i class="coin"></i>${fmtKo(b.cost)}</span>`;}
   });
   const sl=$('spL'); if(sl){sl.textContent=spLeft().toLocaleString(); $('spT').textContent=(SP_PER_LV*(save.lv-1)).toLocaleString();}
   body.querySelectorAll('[data-s]').forEach(row=>{
     const p=SP.find(x=>x.k===row.dataset.s), lv=save.sp[p.k]||0, btn=row.querySelector('button'), maxed=lv>=p.max;
     const b=spBatch(p,view.spMult), n=b.n;
-    row.querySelector('.ulv').textContent=`LV.${lv.toLocaleString()}`;
-    row.querySelector('.uval').innerHTML=`${fmtPct(lv*p.per)}<span class="ar">›</span><em>${maxed?'MAX':fmtPct((lv+n)*p.per)}</em>`;
-    if(maxed){btn.className='obtn green';btn.innerHTML='최대레벨';btn.disabled=true;}
-    else{btn.className='obtn';btn.disabled=!b.ok;btn.innerHTML=`강화하기${n>1?` x${n.toLocaleString()}`:''}<span class="cost">포인트 ${n.toLocaleString()}</span>`;}
+    row.querySelector('.ulv').textContent=fmtKo(lv);
+    row.querySelector('.uval').innerHTML=`<i>${fmtPct(lv*p.per)}</i><em>${maxed?'MAX':fmtPct((lv+n)*p.per)}</em>`;
+    if(maxed){btn.className='obtn green c-bt';btn.innerHTML='최대레벨';btn.disabled=true;}
+    else{btn.className='obtn c-bt';btn.disabled=!b.ok;btn.innerHTML=`강화하기${n>1?` x${n.toLocaleString()}`:''}<span class="cost">포인트 ${n.toLocaleString()}</span>`;}
   });
 }
 
@@ -1848,18 +1934,18 @@ function renderGear(){
   if(view.gear==='skin') return renderSkin();
   const s=view.slot, t=view.sel, it=inv(s,t), own=!!(it&&it.lv>0), lv=own?it.lv:1, n=it?it.n:0, isEq=save.eq[s]===t;
   const IM=itemMax(it), cur=equipFx(s,t,lv), nxt=equipFx(s,t,Math.min(IM,lv+1)), oc=ownFx(s,t,lv), on=ownFx(s,t,Math.min(IM,lv+1));
-  const rows=(a,b)=>Object.keys(a).map(k=>`<div class="fxr"><span>${FXN[k]} 증가</span><span class="num">${fmtPct(a[k])}${own&&lv<IM?` › <em>${fmtPct(b[k])}</em>`:''}</span></div>`).join('');
+  const rows=(a,b)=>Object.keys(a).map(k=>`<div class="fxr"><span>${FXN[k]}</span><span class="num">+${fmtPct(a[k])}${own&&lv<IM?` › <em>${fmtPct(b[k])}</em>`:''}</span></div>`).join('');
   const cnt=k=>{const x=inv(s,k);return x?x.n:0;};
   $('pbody').innerHTML=`
-    <div class="gdet">
-      <div>${gbox(s,t,{show:true,eq:isEq})}<div class="cbar${n>=MERGE?' full':''}"><i style="width:${Math.min(100,n/MERGE*100)}%"></i><span class="num">${n}/${MERGE}</span></div></div>
-      <div class="ginfo"><h4>${itemName(s,t)}<span class="num">${own?`${it.tr?`<em style="color:#ffcf5a;font-style:normal">★${it.tr}</em> `:''}LV.${lv}/<b>${IM}</b>`:'미보유'}</span></h4>
-        <div class="fxs"><h5>장착효과</h5>${rows(cur,nxt)}<h5 class="sep">보유효과</h5>${rows(oc,on)}</div></div>
-      <div class="gbtns">
-        <button class="obtn brown" id="gComb">합성하기<span class="cost">${MERGE}개 → ${t<TIERS-1?`${SETS[setOf(t+1)].n} ${GR[grOf(t+1)]}`:'최고 등급'}</span></button>
-        <button class="obtn brown" id="gEq">${isEq?'장착중':'장착하기'}</button>
-        <button class="obtn" id="gEnh"></button>
-      </div>
+    <div class="ucard ecard">
+      <div class="e-ic" style="--rc:${RC[setOf(t)]};--gc:${GRC[grOf(t)]}">${iconEl(s,t)}<span class="e-gr">${GR[grOf(t)]}</span><span class="e-sn">${setNo(t)}</span>${isEq?'<span class="e-on">장착중</span>':''}</div>
+      <b class="e-tt">${itemName(s,t)}</b>
+      <span class="e-lv num">${own?`${it.tr?`★${it.tr} `:''}${lv}<small>/${IM}</small>`:'미보유'}</span>
+      <div class="e-fx e-fx1">${rows(cur,nxt)}</div><div class="e-fx e-fx2">${rows(oc,on)}</div>
+      <span class="e-cnt num">${n}/${MERGE}</span><span class="e-bar"><i style="width:${Math.min(100,n/MERGE*100)}%"></i></span>
+      <button class="obtn e-b1" id="gComb">합성하기<span class="cost">${MERGE}개 → ${t<TIERS-1?`${SETS[setOf(t+1)].n} ${GR[grOf(t+1)]}`:'최고 등급'}</span></button>
+      <button class="obtn e-b2" id="gEq">${isEq?'장착중':'장착'}</button>
+      <button class="obtn e-b3" id="gEnh"></button>
     </div>
     <div class="slottabs">${SLOTS.map((_,i)=>`<button data-sl="${i}" class="${i===s?'on':''}">${slotName(i)}</button>`).join('')}</div>
     <div class="pscroll"><div class="ggrid">${Array.from({length:TIERS},(_,k)=>`<button class="gcard${k===t?' sel':''}" data-t="${k}">${gbox(s,k,{eq:save.eq[s]===k})}<div class="cbar${cnt(k)>=MERGE?' full':''}"><i style="width:${Math.min(100,cnt(k)/MERGE*100)}%"></i><span class="num">${cnt(k)}/${MERGE}</span></div><div class="gname">${SETS[setOf(k)].n} ${GR[grOf(k)]}</div></button>`).join('')}</div>
@@ -1903,10 +1989,10 @@ function refreshGearBtns(){
   const b=$('gEnh'); if(!b) return;
   const s=view.slot,t=view.sel,it=inv(s,t),own=!!(it&&it.lv>0),lv=own?it.lv:1;
   if(own&&lv>=itemMax(it)){
-    if((it.tr||0)>=TR_MAX){b.className='obtn green';b.innerHTML='최대레벨';b.disabled=true;return;}
-    const nd=trNeed(it), g=trGem(t,it); b.className='obtn green'; b.disabled=it.n<nd||save.gems<g;
+    if((it.tr||0)>=TR_MAX){b.className='obtn green e-b3';b.innerHTML='최대레벨';b.disabled=true;return;}
+    const nd=trNeed(it), g=trGem(t,it); b.className='obtn green e-b3'; b.disabled=it.n<nd||save.gems<g;
     b.innerHTML=`초월하기<span class="cost">여분 ${it.n}/${nd} · <i class="gem"></i>${fmtKo(g)}</span>`; return;}
-  const c=enhCost(t,lv); b.className='obtn'; b.disabled=!own||save.gold<c;
+  const c=enhCost(t,lv); b.className='obtn e-b3'; b.disabled=!own||save.gold<c;
   b.innerHTML=`강화하기<span class="cost"><i class="coin"></i>${fmtKo(c)}</span>`;
 }
 /* ---- 스킨: 세트별 모습 한 번에 갈아입기 ---- */
@@ -1992,15 +2078,13 @@ function renderSummon(){
   tabs([['sum','소환']],'sum',()=>{});
   $('pbody').innerHTML=`<div class="pscroll">${BANNERS.map(b=>{const S=sumOf(b.k), [lo,hi]=gradeRange(S.lv), mx=S.lv>=SUM_MAX;
     const art=`<i class="shop" style="background-image:var(--sh-${b.k})"></i>`;
-    return `<div class="banner" style="--c1:${b.c1};--c2:${b.c2}" data-b="${b.k}"><div class="art">${art}</div>
-      <h4>${b.n}</h4>
-      <div class="slv"><span>소환 레벨 LV.${S.lv}</span><span>${b.relic?`유물 조각 ${RELICS.length}종`:`${SETS[lo].n} ~ ${SETS[hi].n}`}</span></div>
-      <div class="sbar"><i style="width:${mx?100:S.xp/sumNeed(S.lv)*100}%"></i><span class="num">${mx?'MAX':`${S.xp}/${sumNeed(S.lv)}`}</span></div>
-      <div class="sbtns">
-        <button class="obtn green" data-n="free" ${save.free[b.k]?'':'disabled'}>무료 10회<span class="cost">${save.free[b.k]||0}/${FREE_N}</span></button>
-        <button class="obtn" data-n="1" ${save.gems<COST1?'disabled':''}>1회<span class="cost"><i class="gem"></i>${COST1}</span></button>
-        <button class="obtn" data-n="10" ${save.gems<COST10?'disabled':''}>10회<span class="cost"><i class="gem"></i>${COST10}</span></button>
-      </div></div>`;}).join('')}
+    return `<div class="ucard scard" data-b="${b.k}"><i class="s-art" style="background-image:var(--sh-${b.k})"></i>
+      <b class="s-tt">${b.n}</b>
+      <span class="s-lv num">LV.${S.lv} · ${b.relic?`유물 조각 ${RELICS.length}종`:`${SETS[lo].n} ~ ${SETS[hi].n}`}</span>
+      <div class="s-bar num"><i style="left:${mx?100:S.xp/sumNeed(S.lv)*100}%;right:0"></i><span style="position:relative">${mx?'MAX':`${S.xp}/${sumNeed(S.lv)}`}</span></div>
+      <button class="obtn s-b" data-n="free" ${save.free[b.k]?'':'disabled'}>무료 10회<span class="cost">${save.free[b.k]||0}/${FREE_N}</span></button>
+      <button class="obtn s-b" data-n="1" ${save.gems<COST1?'disabled':''}>1회<span class="cost">${COST1}</span></button>
+      <button class="obtn s-b" data-n="10" ${save.gems<COST10?'disabled':''}>10회<span class="cost">${COST10}</span></button></div>`;}).join('')}
     <p class="note">보석은 보스 처치·레벨 업·승급으로 얻어요. 소환할수록 소환 레벨이 올라 높은 등급이 잘 나와요. 무료 소환은 매일 다시 채워져요.</p></div>`;
   $('pbody').querySelectorAll('[data-b] [data-n]').forEach(btn=>btn.onclick=()=>{
     const b=BANNERS.find(x=>x.k===btn.closest('[data-b]').dataset.b), m=btn.dataset.n;
@@ -2266,10 +2350,11 @@ function renderContent(){
   const d=dunState();
   $('pbody').innerHTML=`<div class="pscroll">${CONTENTS.map(x=>{
     if(x.k&&DUN[x.k]){const D=DUN[x.k], locked=!TEST_OPEN&&save.bestStage<D.open, best=d.best[x.k]||0;
-      return `<div class="urow ct-row dun" data-k="${x.k}"><div class="itile relic"><i style="background-image:var(--ct-${x.im})"></i></div>
-      <div class="uinfo"><b>${x.n}</b>
-        <span class="uval" style="font-family:var(--body);font-size:12px;white-space:normal">${locked?`스테이지 ${D.open} 클리어 후 열려요`:`${x.d}<br>${x.k==='tower'?`최고 <b>${best}층</b> · 입장권 없음`:`최고 <b>${best}단계</b> · 입장권 <b>${d.n[x.k]||0}/${D.tickets}</b>`}`}</span></div>
-      <div class="uright">${locked?'<button class="obtn" disabled>잠김</button>':'<button class="obtn dgo">입장</button>'}</div></div>`;}
+      const ds=locked?`스테이지 ${D.open} 클리어 후 열려요`:x.d;
+      return `<div class="urow ct-row dun ucard dcard${locked?' lock':''}" data-k="${x.k}"><i class="d-art" style="background-image:var(--ct-${x.im})"></i>
+        <b class="d-tt">${x.n}</b><span class="d-ds">${ds}</span>
+        <span class="d-best num">${x.k==='tower'?`${best}층`:`${best}단계`}</span><span class="d-tk num">${x.k==='tower'?'없음':`${d.n[x.k]||0}/${D.tickets}`}</span>
+        <button class="obtn dgo d-go" ${locked?'disabled':''}>${locked?'🔒 잠김':'입장'}</button></div>`;}
     return `<div class="urow ct-row"><div class="itile relic"><i style="background-image:var(--ct-${x.im})"></i></div>
     <div class="uinfo"><b>${x.n}</b><span class="uval" style="font-family:var(--body);font-size:12px;white-space:normal">${x.d}</span></div>
     <div class="uright"><button class="obtn" disabled>준비 중</button></div></div>`;}).join('')}
@@ -2284,10 +2369,14 @@ function renderLobby(){
   const st=calc();
   const rows=[['공격력',fmtKo(st.atk)],['공격 속도',`${st.aps.toFixed(2)}/초`],['최대 HP',fmtKo(st.hp)],['HP 회복량',`${fmtKo(st.regen)}/초`],['크리티컬',fmtPct(st.crit)],['크리티컬 데미지',fmtPct(st.cdmg)],['동시 투척',`${st.shots}개`],['골드 획득량','+'+fmtPct(st.gold)],['경험치 획득량','+'+fmtPct(st.xp)]];
   $('pbody').innerHTML=`<div class="pscroll">
-    <div class="lb-stage"><canvas id="lbcv" width="360" height="300"></canvas>
-      <div class="lb-name"><b id="lbNm"></b><span class="rtag">${RANKS[save.rank].n}</span><button class="nmed" id="lbNmEd">✎ 이름</button></div>
-      <div class="lb-cp">${svgI('sword')} 전투력 <b class="num">${fmtKo(st.cp)}</b></div></div>
-    <div class="stab"><h5>능력치</h5><div class="lb-kv">${rows.map(([k,v])=>`<span>${k}</span><b class="num">${v}</b>`).join('')}</div></div>
+    <div class="ucard pcard">
+      <span class="p-lv num">LV.${save.lv}</span><span class="p-rk">${RANKS[save.rank].n}</span>
+      <b class="p-nm" id="lbNm"></b><button class="p-ed" id="lbNmEd" aria-label="이름 바꾸기"></button>
+      <canvas id="lbcv" class="p-cv" width="360" height="300"></canvas>
+      <span class="p-cp num">전투력 ${fmtKo(st.cp)}</span>
+      ${rows.slice(0,5).map(([,v],i)=>`<span class="p-v num" style="left:31.2%;top:${[68.3,72.8,77.2,81.7,86.1][i]}%;width:16.2%">${v}</span>`).join('')}
+      ${rows.slice(5,9).map(([,v],i)=>`<span class="p-v num" style="left:76.8%;top:${[68.3,73.3,78.5,83.6][i]}%;width:13.2%">${v}</span>`).join('')}
+    </div>
     <div class="stab"><h5>세트 효과 · 고유 능력</h5><div class="chips">${st.active.length?st.active.map(a=>`<span style="--rc:${RC[a.t]}">${SETS[a.t].n} ${a.need<8?`${GR[a.g]}급 ${a.need}세트`:'고유'} · ${a.txt}</span>`).join(''):'<span>같은 세트를 2부위 이상 입으면 켜져요</span>'}</div></div>
   </div>`;
   $('lbNm').textContent=myName(); $('lbNmEd').onclick=()=>{SFX.tap(); askName(false);};
@@ -2362,8 +2451,7 @@ let lbTap=-9;
 function drawLobbyChar(){
   const cv0=$('lbcv'); if(cv0&&!cv0.onclick) cv0.onclick=()=>{lbTap=T;SFX.tap();};
   const c=$('lbcv'); if(!c) return; const x=sharp(c,360,300); x.clearRect(0,0,360,300);
-  const g=x.createRadialGradient(180,200,10,180,200,190); g.addColorStop(0,'rgba(255,200,120,.3)'); g.addColorStop(1,'rgba(255,200,120,0)'); x.fillStyle=g; x.fillRect(0,0,360,300);
-  x.fillStyle='#5a3e2a'; x.beginPath(); x.ellipse(180,282,96,16,0,0,7); x.fill(); x.fillStyle='#c89a5a'; x.beginPath(); x.ellipse(180,278,88,13,0,0,7); x.fill();
+  // 배경·받침대는 프로필 카드 그림에 있음
   const st=G?G.st:calc(); if(st.minT>0) aura(x,180,276,240,SETS[st.minT].glow,T);
   const hop=T-lbTap<.45?Math.sin(Math.PI*(T-lbTap)/.45)*26:0;
   if(!drawIdle(x,save.g,skinSet(),180,276-hop,240)) drawNinja(x,save.g,pEq(),'idle',Math.floor(T*8),180,276-hop,240);
@@ -2406,12 +2494,11 @@ function updateOffBtn(){ const b=$('sbOff'); if(b) b.hidden=!(save.offPend&&save
 function offPopup(){
   const P=save.offPend; if(!P||!P.sec) return;
   const h=Math.floor(P.sec/3600), mi=Math.floor(P.sec%3600/60);
-  $('offBody').innerHTML=`<h2>오프라인 보상</h2>
-    <p class="sub">스테이지 ${P.stage||save.stage}에서 <b>${h?h+'시간 ':''}${mi}분</b> 동안 모은 보상이에요<br><small>전투력 기준 1분에 약 ${Math.round(P.kpm||0)}마리 처치</small>${P.sec>=OFF_MAX?'<br>(최대 12시간까지 쌓여요)':''}</p>
-    <div class="rw"><span><i class="coin"></i>엽전</span><b class="num">+${fmtKo(P.gold)}</b></div>
-    <div class="rw"><span><i class="xpi">EXP</i>경험치</span><b class="num">+${fmtKo(P.xp)}</b></div>
-    <div style="display:grid;grid-template-columns:1fr 2fr;gap:8px"><button class="obtn brown big" id="offLater">나중에</button><button class="obtn big green" id="offOk">받기</button></div>
-    <p class="note" style="text-align:center;margin:0">나중에 받으면 오른쪽 <b>보상</b> 버튼에 보관돼요 (최대 12시간)</p>`;
+  $('offBody').className='offcard';
+  $('offBody').innerHTML=`<span class="o-t">${h?h+'시간 ':''}${mi}분</span>
+    <span class="o-v o-g num">+${fmtKo(P.gold)}</span><span class="o-v o-x num">+${fmtKo(P.xp)}</span>
+    <button class="o-ok" id="offOk" aria-label="보상 받기"></button><button class="o-close" id="offLater" aria-label="나중에 받기"></button>
+    <span class="o-sub">✕ 를 누르면 나중에 받을 수 있어요 · 오른쪽 <b>보상</b> 버튼 (최대 12시간)</span>`;
   $('offM').hidden=false;
   $('offLater').onclick=()=>{SFX.tap(); $('offM').hidden=true; updateOffBtn();};
   $('offOk').onclick=()=>{ac();SFX.buy(); $('offM').hidden=true; const g=P.gold,x=P.xp; save.offPend=null; save.gold+=g; gainXp(x); persist(); updateTop(); updateDots(); updateOffBtn(); toast(`엽전 +${fmtKo(g)} · 경험치 +${fmtKo(x)}`);};
@@ -2503,6 +2590,7 @@ if(AUTO) window.__sim={
   offline(sec){ return offlineCalc(sec); },
   reb(){ return {ready:rebReady(),stones:rebStones(rebRun())}; }
 };
+for(const [k,f] of [['eq','ui_eq.webp'],['prof','ui_prof.webp'],['stat','ui_stat.webp'],['dun','ui_dun.webp'],['sum','ui_sum.webp'],['off','ui_off.webp']]) document.documentElement.style.setProperty('--ui-'+k,`url("${aurl(f)}")`);
 function startGame(){ setTimeout(()=>{const b=monBase(save.stage); for(let k=b;k<b+6;k++) for(const c of 'waqhd') monImg(k,c);},1500);   // 던전에서 나오는 몬스터까지 미리 받아 둔다
   $('ui').hidden=false; initBattle(); layout(); drawAvatar(); updateTop(); updateDots(); openPanel('lobby'); offlineCheck(); if(AUTO&&!save.name) save.name='테스트'; if(!save.name) askName(true); tutInit(); attPopup(); } // 시작은 로비부터
 
