@@ -177,7 +177,7 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
 .dcard.lock .d-go{color:#e8d8c0;font-size:3.6cqw;text-shadow:0 .3cqw 0 #000;background:linear-gradient(180deg,#4a3a30,#2a201a)!important;border:.4cqw solid #7a6048!important;border-radius:2.4cqw;filter:none;left:72.9%;top:63.2%;width:20.2%;height:20%}
 .dcard.lock .d-art{filter:grayscale(.8) brightness(.55)}
 /* 소환 카드 1774x887 */
-.scard{--img:var(--ui-sum);aspect-ratio:1774/887;display:block;margin:0 0 2cqw}
+.scard{aspect-ratio:1774/887;display:block;margin:0 0 2cqw}
 .scard .s-art{left:12.4%;top:17.6%;width:17.6%;height:35.4%;border-radius:50%;background:#2a0a08 center/cover no-repeat;box-shadow:0 0 0 .6cqw rgba(0,0,0,.35),inset 0 0 3cqw rgba(0,0,0,.6)}
 .scard .s-tt{left:43.5%;top:21.5%;width:40.5%;height:15%;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-weight:400;font-size:5.4cqw;color:#5a1a0a;white-space:nowrap}
 .scard .s-lv{left:53.3%;top:57.2%;width:36.2%;font-size:2.6cqw;color:#e8d4b0;text-align:center;white-space:nowrap}
@@ -185,6 +185,7 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
 .scard .s-bar i{position:absolute;left:0;top:0;bottom:0;background:rgba(10,40,10,.55);border-radius:3cqw}
 .scard .s-b{top:66.4%;height:21.8%;font-size:4.2cqw;justify-content:flex-start;padding-top:.6%!important;font-size:3.8cqw}
 .scard .s-b[data-n="free"]{left:8.6%;width:27.8%}.scard .s-b[data-n="1"]{left:38.6%;width:25.5%}.scard .s-b[data-n="10"]{left:65.9%;width:26%}
+.scard .s-b:disabled{filter:none!important;background:rgba(0,0,0,.45)!important;border-radius:2.2cqw}
 .scard .s-b .cost{position:absolute;top:53%;height:30%;left:28%;right:9%;background:none;font-size:3.1cqw;padding:0;justify-content:center}
 .scard .s-b .cost i{display:none}
 
@@ -2065,7 +2066,7 @@ function renderRelic(){
 
 /* ---- 소환 ---- */
 const BANNERS=[
-  {k:'wep',n:'쿠나이 소환',slots:[7],c1:'#8a1e16',c2:'#2a0a08',art:[7,9]},
+  {k:'wep',n:'무기 소환',slots:[7],c1:'#8a1e16',c2:'#2a0a08',art:[7,9]},
   {k:'arm',n:'방어구 소환',slots:[0,1,2,4],c1:'#16466e',c2:'#0a1a2a',art:[2,9]},
   {k:'acc',n:'장신구 소환',slots:[3,5,6],c1:'#1a6038',c2:'#0a2416',art:[6,9]},
   {k:'rel',n:'유물 소환',c1:'#4a2272',c2:'#160a24',relic:true}
@@ -2086,13 +2087,11 @@ function renderSummon(){
   tabs([['sum','소환']],'sum',()=>{});
   $('pbody').innerHTML=`<div class="pscroll">${BANNERS.map(b=>{const S=sumOf(b.k), [lo,hi]=gradeRange(S.lv), mx=S.lv>=SUM_MAX;
     const art=`<i class="shop" style="background-image:var(--sh-${b.k})"></i>`;
-    return `<div class="ucard scard" data-b="${b.k}"><i class="s-art" style="background-image:var(--sh-${b.k})"></i>
-      <b class="s-tt">${b.n}</b>
-      
+    return `<div class="ucard scard" data-b="${b.k}" style="--img:var(--ui-sum-${b.k})" aria-label="${b.n}">
       <div class="s-bar num"><i style="left:${mx?100:S.xp/sumNeed(S.lv)*100}%;right:0"></i><span style="position:relative">LV.${S.lv} · ${mx?'MAX':`${S.xp}/${sumNeed(S.lv)}`}</span></div>
-      <button class="obtn s-b" data-n="free" ${save.free[b.k]?'':'disabled'}>무료 10회<span class="cost">${save.free[b.k]||0}/${FREE_N}</span></button>
-      <button class="obtn s-b" data-n="1" ${save.gems<COST1?'disabled':''}>1회<span class="cost">${COST1}</span></button>
-      <button class="obtn s-b" data-n="10" ${save.gems<COST10?'disabled':''}>10회<span class="cost">${COST10}</span></button></div>`;}).join('')}
+      <button class="obtn s-b" data-n="free" aria-label="무료 10회" ${save.free[b.k]?'':'disabled'}><span class="cost">${save.free[b.k]||0}/${FREE_N}</span></button>
+      <button class="obtn s-b" data-n="1" aria-label="1회" ${save.gems<COST1?'disabled':''}><span class="cost">${COST1}</span></button>
+      <button class="obtn s-b" data-n="10" aria-label="10회" ${save.gems<COST10?'disabled':''}><span class="cost">${COST10}</span></button></div>`;}).join('')}
     <p class="note">보석은 보스 처치·레벨 업·승급으로 얻어요. 소환할수록 소환 레벨이 올라 높은 등급이 잘 나와요. 무료 소환은 매일 다시 채워져요.</p></div>`;
   $('pbody').querySelectorAll('[data-b] [data-n]').forEach(btn=>btn.onclick=()=>{
     const b=BANNERS.find(x=>x.k===btn.closest('[data-b]').dataset.b), m=btn.dataset.n;
@@ -2598,7 +2597,7 @@ if(AUTO) window.__sim={
   offline(sec){ return offlineCalc(sec); },
   reb(){ return {ready:rebReady(),stones:rebStones(rebRun())}; }
 };
-for(const [k,f] of [['eq','ui_eq.webp'],['prof','ui_prof.webp'],['stat','ui_stat.webp'],['dun','ui_dun.webp'],['sum','ui_sum.webp'],['off','ui_off.webp']]) document.documentElement.style.setProperty('--ui-'+k,`url("${aurl(f)}")`);
+for(const [k,f] of [['eq','ui_eq.webp'],['prof','ui_prof.webp'],['stat','ui_stat.webp'],['dun','ui_dun.webp'],['sum-wep','ui_sum_wep.webp'],['sum-arm','ui_sum_arm.webp'],['sum-acc','ui_sum_acc.webp'],['sum-rel','ui_sum_rel.webp'],['off','ui_off.webp']]) document.documentElement.style.setProperty('--ui-'+k,`url("${aurl(f)}")`);
 function startGame(){ setTimeout(()=>{const b=monBase(save.stage); for(let k=b;k<b+6;k++) for(const c of 'waqhd') monImg(k,c);},1500);   // 던전에서 나오는 몬스터까지 미리 받아 둔다
   $('ui').hidden=false; initBattle(); layout(); drawAvatar(); updateTop(); updateDots(); openPanel('lobby'); offlineCheck(); if(AUTO&&!save.name) save.name='테스트'; if(!save.name) askName(true); tutInit(); attPopup(); } // 시작은 로비부터
 
