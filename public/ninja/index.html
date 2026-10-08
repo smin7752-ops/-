@@ -167,15 +167,14 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
 .crow .c-bt .cost{font-size:3cqw;padding:0 1.8cqw}
 .crow .c-bt.green{font-size:4.2cqw}
 /* 던전 카드 1942x809 */
-.dcard{--img:var(--ui-dun);aspect-ratio:1942/809;display:block;margin:0 0 1.5cqw}
+.dcard{aspect-ratio:1942/809;display:block;margin:0 0 1.5cqw}
 .dcard .d-art{left:6%;top:29.6%;width:23.4%;height:56.2%;background:center/cover no-repeat;border-radius:1.5cqw}
-.dcard .d-tt{left:43.6%;top:25.3%;width:16.6%;height:12.6%;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-weight:400;font-size:4.9cqw;color:#5a1a0a;white-space:nowrap}
-.dcard .d-ds{left:34%;top:45.5%;width:57%;height:15%;display:flex;align-items:center;justify-content:center;text-align:center;font-size:2.55cqw;line-height:1.35;color:#4a2a12;font-weight:700}
+.dcard .d-ds{left:34%;top:45.5%;width:57%;height:15%;display:flex;align-items:center;justify-content:center;text-align:center;font-size:2.55cqw;line-height:1.35;color:#4a2a12;font-weight:700;text-shadow:0 0 .5cqw #f4e6cc,0 0 .5cqw #f4e6cc,0 0 1cqw #f4e6cc,0 0 1cqw #f4e6cc}
 .dcard .d-best,.dcard .d-tk{top:76.6%;height:6.9%;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:3.1cqw;color:#ffe6b0}
 .dcard .d-best{left:37.8%;width:9.9%}.dcard .d-tk{left:57.3%;width:11.3%}
 .dcard .d-go{left:72.4%;top:62.5%;width:21.2%;height:21.5%;color:transparent;text-shadow:none}
 .dcard.lock .d-go{color:#e8d8c0;font-size:3.6cqw;text-shadow:0 .3cqw 0 #000;background:linear-gradient(180deg,#4a3a30,#2a201a)!important;border:.4cqw solid #7a6048!important;border-radius:2.4cqw;filter:none;left:72.9%;top:63.2%;width:20.2%;height:20%}
-.dcard.lock .d-art{filter:grayscale(.8) brightness(.55)}
+.dcard.lock .d-art{background:rgba(10,6,4,.6);mix-blend-mode:multiply}
 /* 소환 카드 1774x887 */
 .scard{aspect-ratio:1774/887;display:block;margin:0 0 2cqw}
 .scard .s-art{left:12.4%;top:17.6%;width:17.6%;height:35.4%;border-radius:50%;background:#2a0a08 center/cover no-repeat;box-shadow:0 0 0 .6cqw rgba(0,0,0,.35),inset 0 0 3cqw rgba(0,0,0,.6)}
@@ -2358,8 +2357,8 @@ function renderContent(){
   $('pbody').innerHTML=`<div class="pscroll">${CONTENTS.map(x=>{
     if(x.k&&DUN[x.k]){const D=DUN[x.k], locked=!TEST_OPEN&&save.bestStage<D.open, best=d.best[x.k]||0;
       const ds=locked?`스테이지 ${D.open} 클리어 후 열려요`:x.d;
-      return `<div class="urow ct-row dun ucard dcard${locked?' lock':''}" data-k="${x.k}"><i class="d-art" style="background-image:var(--ct-${x.im})"></i>
-        <b class="d-tt">${x.n}</b><span class="d-ds">${ds}</span>
+      return `<div class="urow ct-row dun ucard dcard${locked?' lock':''}" data-k="${x.k}" style="--img:var(--ui-dun-${x.k})" aria-label="${x.n}"><i class="d-art"></i>
+        <span class="d-ds">${ds}</span>
         <span class="d-best num">${x.k==='tower'?`${best}층`:`${best}단계`}</span><span class="d-tk num">${x.k==='tower'?'없음':`${d.n[x.k]||0}/${D.tickets}`}</span>
         <button class="obtn dgo d-go" ${locked?'disabled':''}>${locked?'🔒 잠김':'입장'}</button></div>`;}
     return `<div class="urow ct-row"><div class="itile relic"><i style="background-image:var(--ct-${x.im})"></i></div>
@@ -2597,7 +2596,7 @@ if(AUTO) window.__sim={
   offline(sec){ return offlineCalc(sec); },
   reb(){ return {ready:rebReady(),stones:rebStones(rebRun())}; }
 };
-for(const [k,f] of [['eq','ui_eq.webp'],['prof','ui_prof.webp'],['stat','ui_stat.webp'],['dun','ui_dun.webp'],['sum-wep','ui_sum_wep.webp'],['sum-arm','ui_sum_arm.webp'],['sum-acc','ui_sum_acc.webp'],['sum-rel','ui_sum_rel.webp'],['off','ui_off.webp']]) document.documentElement.style.setProperty('--ui-'+k,`url("${aurl(f)}")`);
+for(const [k,f] of [['eq','ui_eq.webp'],['prof','ui_prof.webp'],['stat','ui_stat.webp'],['dun-gold','ui_dun_gold.webp'],['dun-equip','ui_dun_equip.webp'],['dun-rush','ui_dun_rush.webp'],['dun-tower','ui_dun_tower.webp'],['sum-wep','ui_sum_wep.webp'],['sum-arm','ui_sum_arm.webp'],['sum-acc','ui_sum_acc.webp'],['sum-rel','ui_sum_rel.webp'],['off','ui_off.webp']]) document.documentElement.style.setProperty('--ui-'+k,`url("${aurl(f)}")`);
 function startGame(){ setTimeout(()=>{const b=monBase(save.stage); for(let k=b;k<b+6;k++) for(const c of 'waqhd') monImg(k,c);},1500);   // 던전에서 나오는 몬스터까지 미리 받아 둔다
   $('ui').hidden=false; initBattle(); layout(); drawAvatar(); updateTop(); updateDots(); openPanel('lobby'); offlineCheck(); if(AUTO&&!save.name) save.name='테스트'; if(!save.name) askName(true); tutInit(); attPopup(); } // 시작은 로비부터
 
