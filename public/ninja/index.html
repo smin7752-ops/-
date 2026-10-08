@@ -332,7 +332,7 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
 .ptabs button{flex:1;max-width:150px;padding:9px 4px 8px;border-radius:10px 10px 0 0;background:linear-gradient(180deg,#5a4638,#43342b);color:#e8d9c0;font-family:var(--display);font-size:15px;position:relative}
 .ptabs button.on{background:linear-gradient(180deg,var(--orange-hi),var(--orange));color:#fff;text-shadow:0 1px 0 rgba(0,0,0,.3)}
 .pbody{flex:1;min-height:0;display:flex;flex-direction:column}
-.pscroll{flex:1;min-height:0;overflow-y:auto;padding:10px}
+.pscroll{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;touch-action:pan-y;padding:10px}
 .seg{display:grid;gap:6px;padding:10px 10px 0;flex:none}
 .seg button{padding:7px 0;border-radius:8px;background:#3a2d26;border:2px solid var(--edge);color:#e8d9c0;font-family:var(--display);font-size:14px}
 .seg button.on{background:linear-gradient(180deg,#8a6b4d,#6a5040);color:#fff;border-color:#b08a60}
@@ -1985,11 +1985,17 @@ function setMid(){
 }
 function openPanel(p){
   panel=panel===p?null:p;
+  if(panel) for(const k in SCR) if(k.startsWith(panel+':')) delete SCR[k];
   document.querySelectorAll('#nav [data-p]').forEach(b=>b.classList.toggle('on',b.dataset.p===panel));
   setMid(); $('panel').hidden=!panel; $('panel').classList.toggle('full',!!panel); $('sideb').hidden=!!panel;
   if(panel){if(panel==='gear'){view.sel=save.eq[view.slot];} renderPanel();}
   requestAnimationFrame(layout);
 }
+// 목록 스크롤 위치 기억: 버튼을 눌러 화면을 다시 그려도 보던 자리 그대로 (패널을 새로 열 때만 맨 위부터)
+const SCR={};
+const scrKey=()=>panel+':'+(panel==='grow'?view.grow:panel==='gear'?view.gear+':'+view.slot:panel==='lobby'?(view.lob||'lobby'):'');
+$('pbody').addEventListener('scroll',e=>{ const t=e.target; if(!(t.classList&&t.classList.contains('pscroll'))) return; if(t.scrollLeft) t.scrollLeft=0; SCR[scrKey()]=t.scrollTop; },true);   // 옆으로는 절대 밀리지 않게
+function keepPos(fn){ return function(...a){ const r=fn.apply(this,a); const sc=$('pbody').querySelector('.pscroll'), y=SCR[scrKey()]; if(sc&&y) sc.scrollTop=y; return r; }; }
 function renderPanel(){({content:renderContent,lobby:renderLobby,grow:renderGrow,gear:renderGear,rank:renderRank,summon:renderSummon})[panel](); updateTop();}
 function tabs(list,cur,fn){
   $('ptabs').innerHTML=list.map(([k,n,dot])=>`<button data-k="${k}" class="${k===cur?'on':''}">${n}${dot?'<span class="dot" style="right:6px;top:-4px">!</span>':''}</button>`).join('');
@@ -2018,7 +2024,7 @@ function renderGrow(){
       save.gold-=b.cost; save.up[u.k]=upLv(u.k)+b.n; mis('up',b.n); SFX.up(); refreshStats(); persistSoon(); updateDots();});
   }else{
     body.innerHTML=multSeg(view.spMult,'MAX')+`<div class="pscroll"><div class="spcard"><div><small>현재 레벨 LV.${save.lv}</small><br><b class="num">스텟 포인트 <em id="spL">0</em> / <span id="spT">0</span></b></div><small style="text-align:right">레벨이 오를 때마다<br>스텟 포인트 ${SP_PER_LV}개</small></div>${SP.map(p=>`
-      <div class="urow ucard crow" data-s="${p.k}" style="--img:var(--ui-st-${p.k})" aria-label="${p.n}">
+      <div class="urow ucard crow" data-s="${p.k}" style="--img:var(--ui-st-${p.k==='atk'?'atkp':p.k})" aria-label="${p.n}">
         <div class="uinfo"><span class="ulv num c-lv"></span><span class="uval num c-val"></span></div>
         <div class="uright"><span class="umax c-mx"></span><button class="obtn c-bt"></button></div></div>`).join('')}</div>`;
     bindMult(m=>{view.spMult=m;renderGrow();});
@@ -2698,6 +2704,7 @@ if(AUTO) window.__snd={ async render(name,sec){ const off=new OfflineAudioContex
   document.addEventListener('pointerdown',e=>{const b=e.target.closest&&e.target.closest(SEL); if(!b||b.disabled) return; cur=b;t0=performance.now();b.classList.add('prs');},true);
   ['pointerup','pointercancel'].forEach(k=>document.addEventListener(k,up,true));
   document.addEventListener('pointermove',e=>{if(cur&&!cur.contains(document.elementFromPoint(e.clientX,e.clientY))){cur.classList.remove('prs');cur=null;}},true);})();
+renderGrow=keepPos(renderGrow); renderGear=keepPos(renderGear); renderContent=keepPos(renderContent); renderSummon=keepPos(renderSummon); renderLobby=keepPos(renderLobby); renderRank=keepPos(renderRank);
 if(AUTO) window.__t={spawn:t=>spawnEnemy(t),g:()=>G,monImg,drawMon};   // 자동 테스트 전용
 // 자동 밸런스 점검(백테스트) 전용: 사람처럼 강화·소환·합성·장착·승급을 하며 시간을 빠르게 돌린다
 if(AUTO) window.__sim={
@@ -2725,7 +2732,7 @@ if(AUTO) window.__sim={
   offline(sec){ return offlineCalc(sec); },
   reb(){ return {ready:rebReady(),stones:rebStones(rebRun())}; }
 };
-for(const [k,f] of [['eq','ui_eq.webp'],['prof','ui_prof.webp'],['stat','ui_stat.webp'],['st-atk','ui_st_atk.webp'],['st-aspd','ui_st_aspd.webp'],['st-hp','ui_st_hp.webp'],['st-regen','ui_st_regen.webp'],['st-crit','ui_st_crit.webp'],['st-cdmg','ui_st_cdmg.webp'],['st-gold','ui_st_gold.webp'],['st-xp','ui_st_xp.webp'],['dun-gold','ui_dun_gold.webp'],['dun-equip','ui_dun_equip.webp'],['dun-rush','ui_dun_rush.webp'],['dun-tower','ui_dun_tower.webp'],['sum-wep','ui_sum_wep.webp'],['sum-arm','ui_sum_arm.webp'],['sum-acc','ui_sum_acc.webp'],['sum-rel','ui_sum_rel.webp'],['off','ui_off.webp'],['lock','ui_lock.webp'],['num-gold','num_gold.webp'],['num-green','num_green.webp'],['num-red','num_red.webp'],['maxlv','ui_maxlv.webp']]) document.documentElement.style.setProperty('--ui-'+k,`url("${aurl(f)}")`);
+for(const [k,f] of [['eq','ui_eq.webp'],['prof','ui_prof.webp'],['stat','ui_stat.webp'],['st-atk','ui_st_atk.webp'],['st-atkp','ui_st_atkp.webp'],['st-aspd','ui_st_aspd.webp'],['st-hp','ui_st_hp.webp'],['st-regen','ui_st_regen.webp'],['st-crit','ui_st_crit.webp'],['st-cdmg','ui_st_cdmg.webp'],['st-gold','ui_st_gold.webp'],['st-xp','ui_st_xp.webp'],['dun-gold','ui_dun_gold.webp'],['dun-equip','ui_dun_equip.webp'],['dun-rush','ui_dun_rush.webp'],['dun-tower','ui_dun_tower.webp'],['sum-wep','ui_sum_wep.webp'],['sum-arm','ui_sum_arm.webp'],['sum-acc','ui_sum_acc.webp'],['sum-rel','ui_sum_rel.webp'],['off','ui_off.webp'],['lock','ui_lock.webp'],['num-gold','num_gold.webp'],['num-green','num_green.webp'],['num-red','num_red.webp'],['maxlv','ui_maxlv.webp']]) document.documentElement.style.setProperty('--ui-'+k,`url("${aurl(f)}")`);
 function startGame(){ setTimeout(()=>{const b=monBase(save.stage); for(let k=b;k<b+6;k++) for(const c of 'waqhd') monImg(k,c);},1500);   // 던전에서 나오는 몬스터까지 미리 받아 둔다
   $('ui').hidden=false; initBattle(); layout(); drawAvatar(); updateTop(); updateDots(); openPanel('lobby'); offlineCheck(); if(AUTO&&!save.name) save.name='테스트'; if(!save.name) askName(true); tutInit(); attPopup(); } // 시작은 로비부터
 
