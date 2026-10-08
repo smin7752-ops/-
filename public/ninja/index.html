@@ -235,19 +235,22 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
 .crow+.crow{margin-top:-5.4%!important}
 /* 카드에 그려진 버튼을 그 자리에서 잘라 버튼 자체에 깔아 둔다 → 누르면 그림째로 눌려 들어간다 */
 .ucard .obtn,.urow.ucard .obtn{min-width:0!important;min-height:0!important}
-.ucard .obtn,.offcard .o-ok,.offcard .o-close,.pcard .p-ed{isolation:isolate;transition:transform .07s ease-out,filter .07s;--ps:.93;-webkit-tap-highlight-color:transparent}
-.ucard .obtn::before,.offcard .o-ok::before,.offcard .o-close::before,.pcard .p-ed::before{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;border-radius:inherit;background-image:var(--img);background-repeat:no-repeat;background-size:calc(100% * 100 / var(--w,100)) calc(100% * 100 / var(--h,100));background-position:calc(var(--l,0) / (100 - var(--w,99)) * 100%) calc(var(--t,0) / (100 - var(--h,99)) * 100%);transition:filter .07s}
-.ucard .obtn::after,.offcard .o-ok::after,.offcard .o-close::after,.pcard .p-ed::after{content:'';position:absolute;inset:0;z-index:-2;pointer-events:none;border-radius:inherit;background:#1c0d04;box-shadow:inset 0 .6cqw 1.2cqw rgba(0,0,0,.75);transform:scale(calc(1 / var(--ps)));opacity:0}
-.ucard .obtn:active:not(:disabled),.offcard .o-ok:active,.offcard .o-close:active,.pcard .p-ed:active{transform:scale(var(--ps))!important;box-shadow:none}
-.ucard .obtn:active:not(:disabled)::before,.offcard .o-ok:active::before,.offcard .o-close:active::before,.pcard .p-ed:active::before{filter:brightness(.82)}
-.ucard .obtn:active:not(:disabled)::after,.offcard .o-ok:active::after,.offcard .o-close:active::after,.pcard .p-ed:active::after{opacity:1}
+.ucard .obtn,.offcard .o-ok,.offcard .o-close,.pcard .p-ed{isolation:isolate;--ps:.955;transform-origin:50% 100%;transition:transform .18s cubic-bezier(.34,1.35,.6,1);-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.ucard .obtn::before,.offcard .o-ok::before,.offcard .o-close::before,.pcard .p-ed::before,.ucard .obtn::after,.offcard .o-ok::after,.offcard .o-close::after,.pcard .p-ed::after{content:'';position:absolute;inset:0;pointer-events:none;border-radius:inherit;background-image:var(--img);background-repeat:no-repeat;background-size:calc(100% * 100 / var(--w,100)) calc(100% * 100 / var(--h,100));background-position:calc(var(--l,0) / (100 - var(--w,99)) * 100%) calc(var(--t,0) / (100 - var(--h,99)) * 100%)}
+.ucard .obtn::before,.offcard .o-ok::before,.offcard .o-close::before,.pcard .p-ed::before{z-index:-1;transition:filter .2s}
+/* 뒤에 깔린 홈: 원래 버튼 자리 그대로(아래 기준으로 크기 되돌림), 그림을 어둡게 해서 그늘처럼 */
+.ucard .obtn::after,.offcard .o-ok::after,.offcard .o-close::after,.pcard .p-ed::after{z-index:-2;transform-origin:50% 100%;transform:scale(calc(1 / var(--ps)));filter:brightness(.5) saturate(.85);box-shadow:inset 0 1cqw 1.2cqw rgba(0,0,0,.45);opacity:0;transition:opacity .2s}
+/* 누를 때: 아래쪽은 제자리, 윗면이 살짝 내려앉고 약간 어두워짐 → 놓으면 톡 튀어 올라옴 */
+.ucard .obtn.prs:not(:disabled),.ucard .obtn:active:not(:disabled),.offcard .o-ok.prs,.offcard .o-ok:active,.offcard .o-close.prs,.offcard .o-close:active,.pcard .p-ed.prs,.pcard .p-ed:active{transform:scale(var(--ps))!important;box-shadow:none;transition:transform .06s ease-out}
+.ucard .obtn.prs:not(:disabled)::before,.ucard .obtn:active:not(:disabled)::before,.offcard .o-ok.prs::before,.offcard .o-ok:active::before,.offcard .o-close.prs::before,.offcard .o-close:active::before,.pcard .p-ed.prs::before,.pcard .p-ed:active::before{filter:brightness(.88);transition:filter .06s}
+.ucard .obtn.prs:not(:disabled)::after,.ucard .obtn:active:not(:disabled)::after,.offcard .o-ok.prs::after,.offcard .o-ok:active::after,.offcard .o-close.prs::after,.offcard .o-close:active::after,.pcard .p-ed.prs::after,.pcard .p-ed:active::after{opacity:1;transition:opacity .04s}
 .crow .c-bt{--l:67.56;--t:52.34;--w:25.22;--h:28.04}
 .scard .s-b{--t:65.33;--h:23.33}.scard .s-b[data-n="free"]{--l:8;--w:29}.scard .s-b[data-n="1"]{--l:38.22;--w:26.33}.scard .s-b[data-n="10"]{--l:65.56;--w:27.11}
 .dcard .d-go{--l:72.33;--t:61.07;--w:22.44;--h:24;border-radius:2.4cqw}
 .ecard .e-b1,.ecard .e-b2,.ecard .e-b3{--t:71.33;--h:13.5;border-radius:2cqw}.ecard .e-b1{--l:9.33;--w:27.11}.ecard .e-b2{--l:36.89;--w:26.22}.ecard .e-b3{--l:63.56;--w:27.33}
-.offcard .o-ok{--l:12.5;--t:73.68;--w:75;--h:13.62;--ps:.97;border-radius:3cqw}
-.offcard .o-close{--l:84.72;--t:7.94;--w:11.25;--h:10.71;--ps:.88}
-.pcard .p-ed{--l:73.14;--t:11.14;--w:8.29;--h:6;--ps:.88}
+.offcard .o-ok{--l:12.5;--t:73.68;--w:75;--h:13.62;--ps:.975;border-radius:3cqw}
+.offcard .o-close{--l:84.72;--t:7.94;--w:11.25;--h:10.71;--ps:.92;transform-origin:50% 50%}.offcard .o-close::after{transform-origin:50% 50%}
+.pcard .p-ed{--l:73.14;--t:11.14;--w:8.29;--h:6;--ps:.92;transform-origin:50% 50%}.pcard .p-ed::after{transform-origin:50% 50%}
 /* 버튼 칸 = 카드 그림 속 버튼 테두리 그대로 */
 .crow .c-bt,.scard .s-b,.dcard:not(.lock) .d-go,.ecard .e-b1,.ecard .e-b2,.ecard .e-b3,.offcard .o-ok,.offcard .o-close,.pcard .p-ed{left:calc(var(--l) * 1%)!important;top:calc(var(--t) * 1%)!important;width:calc(var(--w) * 1%)!important;height:calc(var(--h) * 1%)!important}
 .dcard.lock .d-go::before,.dcard.lock .d-go::after,.crow .c-bt.green::before{display:none}
@@ -2594,6 +2597,12 @@ if(AUTO) window.__snd={ async render(name,sec){ const off=new OfflineAudioContex
     const buf=await off.startRendering(); AC=keep; if(keep) makeBus(); BGM.cur=null; const L=buf.getChannelData(0), R=buf.getChannelData(1); let pk=0,ss=0; for(let i=0;i<L.length;i++){const v=Math.abs(L[i]); if(v>pk) pk=v; ss+=L[i]*L[i];}
     const n=L.length, out=new Int16Array(n*2); for(let i=0;i<n;i++){out[2*i]=Math.max(-1,Math.min(1,L[i]))*32767; out[2*i+1]=Math.max(-1,Math.min(1,R[i]))*32767;}
     let b='', u=new Uint8Array(out.buffer); for(let i=0;i<u.length;i+=32768) b+=String.fromCharCode.apply(null,u.subarray(i,i+32768)); return {peak:pk,rms:Math.sqrt(ss/n),pcm:btoa(b)}; } };
+// 카드 버튼: 짧게 톡 눌러도 눌린 모습이 보이도록 최소 90ms 유지
+(()=>{const SEL='.ucard .obtn,.offcard .o-ok,.offcard .o-close,.pcard .p-ed';let cur=null,t0=0;
+  const up=()=>{if(!cur)return;const b=cur;cur=null;setTimeout(()=>b.classList.remove('prs'),Math.max(0,90-(performance.now()-t0)));};
+  document.addEventListener('pointerdown',e=>{const b=e.target.closest&&e.target.closest(SEL); if(!b||b.disabled) return; cur=b;t0=performance.now();b.classList.add('prs');},true);
+  ['pointerup','pointercancel'].forEach(k=>document.addEventListener(k,up,true));
+  document.addEventListener('pointermove',e=>{if(cur&&!cur.contains(document.elementFromPoint(e.clientX,e.clientY))){cur.classList.remove('prs');cur=null;}},true);})();
 if(AUTO) window.__t={spawn:t=>spawnEnemy(t),g:()=>G,monImg,drawMon};   // 자동 테스트 전용
 // 자동 밸런스 점검(백테스트) 전용: 사람처럼 강화·소환·합성·장착·승급을 하며 시간을 빠르게 돌린다
 if(AUTO) window.__sim={
