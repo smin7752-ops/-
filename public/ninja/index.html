@@ -25,7 +25,7 @@
 }
 html,body{height:100%}
 [hidden]{display:none!important}
-body{margin:0;background:var(--night);color:var(--text);font-family:var(--body);overflow:hidden;-webkit-user-select:none;user-select:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--night);color:var(--text);font-family:var(--body);overflow:hidden;word-break:keep-all;overflow-wrap:break-word;-webkit-user-select:none;user-select:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 #app{position:fixed;left:0;right:0;top:env(safe-area-inset-top,0px);bottom:env(safe-area-inset-bottom,0px);overflow:hidden}
 #stage{position:absolute;inset:0;width:100%;height:100%;display:block}
 button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;padding:0}
@@ -170,12 +170,21 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
 .crow .c-tt{left:28.6%;top:33.5%;width:36%;font-family:var(--display);font-weight:400;font-size:6.1cqw;color:#3a1c0a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .crow .c-lv{left:32.2%;top:54%;width:6.2%;height:8.2%;display:flex;align-items:center;justify-content:center;font-size:3.1cqw;color:#5a3414}
 .crow .c-val{left:30.4%;top:66%;width:34.7%;height:10.4%;display:block}
-.crow .c-val i,.crow .c-val em{position:absolute;top:0;height:100%;display:flex;align-items:center;justify-content:center;font-style:normal;font-family:var(--display);font-size:3.7cqw;white-space:nowrap}
-.crow .c-val i{left:0;width:45.3%;color:#5a3414}.crow .c-val em{left:56.9%;width:43.1%;color:#1f8a2a}
+.crow .c-val>i,.crow .c-val>em{position:absolute;top:0;height:100%;display:flex;align-items:center;justify-content:center;font-style:normal;font-family:var(--display);font-size:3.7cqw;white-space:nowrap}
+.crow .c-val>i{left:0;width:45.3%;color:#5a3414}.crow .c-val>em{left:56.9%;width:43.1%;color:#1f8a2a}
 .crow .c-mx{left:81.8%;top:34.8%;width:9.4%;height:10.6%;display:flex;align-items:center;justify-content:center;font-size:2.7cqw;color:#5a3414;font-family:var(--display)}
 .crow .c-bt{left:68.7%;top:52.8%;width:22.9%;height:25.4%;font-size:3.7cqw;gap:0;border-radius:2.2cqw}
 .crow .c-bt .cost{position:absolute;left:50%;bottom:3.5%;transform:translateX(-50%);font-size:2.3cqw;line-height:1;padding:.3cqw 1.6cqw;gap:.5cqw;white-space:nowrap;background:rgba(50,16,0,.82);box-shadow:0 0 0 .25cqw rgba(255,200,120,.35)}
 .crow .c-bt .cost i{width:2.5cqw;height:2.5cqw}
+/* 숫자 그림 */
+.ng{display:inline-flex;align-items:center;height:1em;line-height:1;white-space:nowrap;pointer-events:none}
+.ng i{display:block;flex:none;height:1em;margin:0 -.035em;background-repeat:no-repeat;background-size:auto 1em}
+.ng-gold i{background-image:var(--ui-num-gold)}.ng-green i{background-image:var(--ui-num-green)}.ng-red i{background-image:var(--ui-num-red)}
+.ng-t{font-family:var(--display);font-weight:400;font-size:.7em;color:#ffd36a;-webkit-text-stroke:.08em #6d2b04;paint-order:stroke}
+.ng-green .ng-t{color:#9be860;-webkit-text-stroke-color:#0c4c0f}.ng-red .ng-t{color:#d63a20;-webkit-text-stroke-color:#ffe29b}
+.crow .c-lv,.crow .c-mx,.crow .c-val>i,.crow .c-val>em{overflow:visible}
+.crow .c-lv{font-size:3.4cqw}.crow .c-mx{font-size:3.6cqw}.crow .c-val>i,.crow .c-val>em{font-size:4.6cqw}
+
 .crow .c-bt.green,.crow .c-bt.green:disabled{filter:none;font-size:4cqw;background:linear-gradient(180deg,#6cb544,#2f7a1e)!important;color:#fff;text-shadow:0 .3cqw 0 #1a4a0a}
 /* 던전 카드 1942x809 */
 .dcard{aspect-ratio:1942/809;display:block;margin:0 0 1.5cqw}
@@ -223,7 +232,8 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
 .ecard .e-bar i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(180deg,#6fe06a,#1f9a2a);border-radius:3cqw}
 .ecard .e-b1,.ecard .e-b2,.ecard .e-b3{top:71.8%;height:12%;font-size:3.6cqw}
 .ecard .e-b1{left:9.8%;width:26%}.ecard .e-b2{left:37.4%;width:25.4%}.ecard .e-b3{left:64%;width:26.4%}
-.ecard .e-b1 .cost,.ecard .e-b3 .cost{font-size:2.3cqw}
+.ecard .e-b1,.ecard .e-b2,.ecard .e-b3{font-size:3.3cqw;gap:.5cqw}.ecard .e-b1 .cost,.ecard .e-b3 .cost{font-size:2.1cqw;line-height:1.1;padding:.15cqw 1.6cqw;gap:.5cqw}.ecard .obtn .cost i{width:2.4cqw;height:2.4cqw}
+.ucard .obtn.mx,.ucard .obtn.mx:disabled{filter:none!important;background:var(--ui-maxlv) center/100% 100% no-repeat!important;color:transparent!important;text-shadow:none!important}.ucard .obtn.mx::before,.ucard .obtn.mx::after{display:none}
 
 /* 프로필 카드 1024x1536 */
 .pcard{--img:var(--ui-prof);aspect-ratio:1024/1536;margin:0 auto 2cqw;max-width:420px}
@@ -274,7 +284,7 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
 .offcard .o-n{left:12%;right:12%;top:73%;text-align:center;font-size:2.8cqw;color:#e8d4b0}
 .offcard .o-ok{left:13%;top:74.2%;width:73.7%;height:11.8%;background:transparent;border:0;cursor:pointer}
 .offcard .o-close{left:85.3%;top:8.6%;width:10.8%;height:10.3%;border-radius:50%;background:transparent;border:0;cursor:pointer}
-.offcard .o-sub{left:4%;right:4%;top:101%;text-align:center;font-size:2.7cqw;color:#e8d4b0;text-shadow:0 .2cqw 2px #000}
+.offcard .o-sub{left:6%;right:6%;top:101.5%;text-align:center;font-size:2.8cqw;line-height:1.45;color:#f0dfbf;text-shadow:0 .2cqw 2px #000;background:rgba(10,6,4,.78);border-radius:999px;padding:.8cqw 2cqw}
 .sideb{position:absolute;right:8px;top:198px;display:flex;flex-direction:column;gap:10px;z-index:2}
 .sideb button{position:relative;width:54px;height:58px;padding:0;border-radius:14px;border:2px solid #d6a85a;background:linear-gradient(180deg,#4a3222,#2a1b12);box-shadow:0 3px 0 #1a100a,0 0 0 1px #000,inset 0 1px 0 rgba(255,230,170,.35);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;color:#ffe6b0;font-family:var(--display);font-size:11px;text-shadow:0 1px 0 #000;cursor:pointer}
 .sideb button:active{transform:translateY(2px);box-shadow:0 1px 0 #1a100a}
@@ -421,6 +431,7 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
 .st-btns{display:grid;gap:8px;margin-top:4px}.st-btns .obtn{font-size:14px;padding:9px}
 .ms-prog{height:8px;border-radius:5px;background:rgba(0,0,0,.25);overflow:hidden;margin-top:4px}.ms-prog i{display:block;height:100%;background:linear-gradient(90deg,#e0913a,#ffd36a)}
 .urow.ms-done{opacity:.55}
+#mpBody .urow{gap:8px}#mpBody .urow .obtn{min-width:80px}#mpBody .urow .uinfo b{font-size:15px;line-height:1.25}
 .ms-rw{display:flex;align-items:center;gap:3px;font-family:var(--display);font-size:13px;justify-content:center}
 .ms-rw i{width:16px;height:16px;background-size:contain;background-repeat:no-repeat;background-position:center;display:inline-block}
 .ms-all{background:linear-gradient(180deg,#3a2616,#2a1b10);border:2px solid #c89a5a;border-radius:12px;padding:10px 12px;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;color:#f3ecdf;margin-bottom:8px}
@@ -817,6 +828,10 @@ function fmtKo(n){
   for(let i=0;i<U.length;i++){const [v,u]=U[i]; if(n>=v){const a=Math.floor(n/v); let s=a.toLocaleString()+u;
     if(i<U.length-1){const [v2,u2]=U[i+1]; const b=Math.floor((n-a*v)/v2); if(b) s+=b+u2;} return s;}}
 }
+// 강화 전후 비교용: 만 단위 이상도 소수로 (186만 → 186.6만) 차이가 보이게
+function fmtFine(n){ n=Math.floor(n); if(!isFinite(n)) return '∞'; if(n<10000) return n.toLocaleString();
+  for(const [v,u] of [[1e16,'경'],[1e12,'조'],[1e8,'억'],[1e4,'만']]) if(n>=v){const x=n/v, d=x<10?3:x<100?2:x<1000?1:0, f=Math.pow(10,d);
+    return (Math.floor(x*f)/f).toLocaleString(undefined,{maximumFractionDigits:d})+u;} }
 // 재화 칸용 짧은 표기: 12.3만, 1,234만, 5.67억 (소수점 버림)
 function fmtShort(n){
   n=Math.floor(n); if(!isFinite(n)) return '∞'; if(n<10000) return n.toLocaleString();
@@ -923,9 +938,9 @@ const ICONS={
 const svgI=k=>`<svg class="i" viewBox="0 0 24 24">${ICONS[k]}</svg>`;
 const BASE_APS=1.8;
 const UPG=[
-  {k:'atk',n:'기본 공격력',ic:'sword',base:4,gr:1.013,max:1e6,val:l=>10+2*l+.02*l*l,show:v=>fmtKo(v)},
+  {k:'atk',n:'기본 공격력',ic:'sword',base:4,gr:1.013,max:1e6,val:l=>10+2*l+.02*l*l,show:v=>fmtFine(v)},
   {k:'aspd',n:'공격 속도',ic:'bolt',base:15,gr:1.013,max:200,val:l=>.012*l,show:v=>'+'+fmtPct(v)},
-  {k:'hp',n:'최대 HP',ic:'heart',base:4,gr:1.013,max:1e6,val:l=>100+20*l+.2*l*l,show:v=>fmtKo(v)},
+  {k:'hp',n:'최대 HP',ic:'heart',base:4,gr:1.013,max:1e6,val:l=>100+20*l+.2*l*l,show:v=>fmtFine(v)},
   {k:'regen',n:'HP 회복량',ic:'regen',base:5,gr:1.013,max:1e6,val:l=>1+.5*l+.005*l*l,show:v=>`${+v.toFixed(1)}/초`},
   {k:'crit',n:'크리티컬 확률',ic:'crit',base:10,gr:1.013,max:950,val:l=>.05+.0005*l,show:fmtPct},
   {k:'cdmg',n:'크리티컬 데미지',ic:'burst',base:10,gr:1.013,max:1e6,val:l=>1.5+.01*l,show:fmtPct},
@@ -1996,7 +2011,7 @@ function renderGrow(){
     body.innerHTML=multSeg(view.mult,'MAX (5,000)')+`<div class="pscroll">${UPG.map(u=>`
       <div class="urow ucard crow" data-u="${u.k}" style="--img:var(--ui-st-${u.k})" aria-label="${u.n}">
         <div class="uinfo"><span class="ulv num c-lv"></span><span class="uval num c-val"></span></div>
-        <div class="uright"><span class="umax c-mx">${fmtKo(u.max)}</span><button class="obtn c-bt"></button></div></div>`).join('')}</div>`;
+        <div class="uright"><span class="umax c-mx"></span><button class="obtn c-bt"></button></div></div>`).join('')}</div>`;
     bindMult(m=>{view.mult=m;renderGrow();});
     body.querySelectorAll('[data-u]').forEach(row=>row.querySelector('button').onclick=()=>{
       const u=UPG.find(x=>x.k===row.dataset.u), b=upBatch(u,view.mult); if(!b.ok) return;
@@ -2005,7 +2020,7 @@ function renderGrow(){
     body.innerHTML=multSeg(view.spMult,'MAX')+`<div class="pscroll"><div class="spcard"><div><small>현재 레벨 LV.${save.lv}</small><br><b class="num">스텟 포인트 <em id="spL">0</em> / <span id="spT">0</span></b></div><small style="text-align:right">레벨이 오를 때마다<br>스텟 포인트 ${SP_PER_LV}개</small></div>${SP.map(p=>`
       <div class="urow ucard crow" data-s="${p.k}" style="--img:var(--ui-st-${p.k})" aria-label="${p.n}">
         <div class="uinfo"><span class="ulv num c-lv"></span><span class="uval num c-val"></span></div>
-        <div class="uright"><span class="umax c-mx">${fmtKo(p.max)}</span><button class="obtn c-bt"></button></div></div>`).join('')}</div>`;
+        <div class="uright"><span class="umax c-mx"></span><button class="obtn c-bt"></button></div></div>`).join('')}</div>`;
     bindMult(m=>{view.spMult=m;renderGrow();});
     body.querySelectorAll('[data-s]').forEach(row=>row.querySelector('button').onclick=()=>{
       const p=SP.find(x=>x.k===row.dataset.s), lv=save.sp[p.k]||0, b=spBatch(p,view.spMult); if(!b.ok) return;
@@ -2013,22 +2028,32 @@ function renderGrow(){
   }
   refreshGrow();
 }
+// 숫자 그림: 빨강=레벨, 금색=현재 수치, 초록=강화 후 수치 (그림에 없는 글자는 글씨로)
+const NUMG={"gold":{"h":73,"g":{"0":[0.0,53.0],"1":[54.0,47.5],"2":[102.5,48.5],"3":[152.0,50.0],"4":[203.0,53.5],"5":[257.5,49.5],"6":[308.0,51.5],"7":[360.5,50.0],"8":[411.5,51.0],"9":[463.5,52.0],"+":[516.5,54.5],"-":[572.0,33.5],"%":[606.5,75.0],".":[682.5,25.0],"/":[708.5,37.5],",":[747.0,28.5],"만":[776.5,59.5],"억":[837.0,55.0],"조":[893.0,56.0],"경":[950.0,56.5],"초":[1007.5,56.0]}},"green":{"h":73,"g":{"0":[0.0,53.0],"1":[54.0,47.5],"2":[102.5,48.5],"3":[152.0,50.0],"4":[203.0,53.5],"5":[257.5,49.5],"6":[308.0,51.5],"7":[360.5,50.0],"8":[411.5,51.0],"9":[463.5,52.0],"+":[516.5,54.5],"-":[572.0,33.5],"%":[606.5,75.0],".":[682.5,25.0],"/":[708.5,37.5],",":[747.0,28.5],"만":[776.5,59.5],"억":[837.0,55.0],"조":[893.0,56.0],"경":[950.0,56.5],"초":[1007.5,56.0],"MAX":[1064.5,158.0]}},"red":{"h":73,"g":{"0":[0.0,53.0],"1":[54.0,47.5],"2":[102.5,48.5],"3":[152.0,50.0],"4":[203.0,53.5],"5":[257.5,49.5],"6":[308.0,51.5],"7":[360.5,50.0],"8":[411.5,51.0],"9":[463.5,52.0],"+":[516.5,54.5],"-":[572.0,33.5],"%":[606.5,75.0],".":[682.5,25.0],"/":[708.5,37.5],",":[747.0,28.5],"만":[776.5,59.5],"억":[837.0,55.0],"조":[893.0,56.0],"경":[950.0,56.5],"초":[1007.5,56.0]}}};
+function numH(s,set){ const M=NUMG[set]; s=String(s); let o='';
+  for(let i=0;i<s.length;i++){ let ch=s[i]; if(ch==='M'&&s.startsWith('MAX',i)&&M.g.MAX){ch='MAX';i+=2;}
+    const g=M.g[ch]; if(!g){ o+=`<b class="ng-t">${ch}</b>`; continue; }
+    o+=`<i style="width:${(g[1]/M.h).toFixed(3)}em;background-position:${(-g[0]/M.h).toFixed(3)}em 0"></i>`; }
+  return `<span class="ng ng-${set}" role="img" aria-label="${s}">${o}</span>`; }
+// 바뀐 때만 다시 그리고, 칸보다 길면 줄인다
+function setNum(el,s,set){ if(!el||el.dataset.v===set+s) return; el.dataset.v=set+s; el.innerHTML=numH(s,set);
+  const n=el.firstChild; el.style.fontSize=''; const w=n.getBoundingClientRect().width, cw=el.getBoundingClientRect().width*.94;
+  if(w>cw&&cw>0) el.style.fontSize=(parseFloat(getComputedStyle(el).fontSize)*cw/w)+'px'; }
+function numVal(row,cur,nxt){ const v=row.querySelector('.uval'); if(!v.querySelector('i.cv')) v.innerHTML='<i class="cv"></i><em class="nv"></em>'; setNum(v.querySelector('.cv'),cur,'gold'); setNum(v.querySelector('.nv'),nxt,'green'); }
 function refreshGrow(){
   const body=$('pbody');
   body.querySelectorAll('[data-u]').forEach(row=>{
     const u=UPG.find(x=>x.k===row.dataset.u), lv=upLv(u.k), b=upBatch(u,view.mult), btn=row.querySelector('button'), maxed=lv>=u.max, n=b.n;
-    row.querySelector('.ulv').textContent=fmtKo(lv);
-    row.querySelector('.uval').innerHTML=`<i>${u.show(u.val(lv))}</i><em>${maxed?'MAX':u.show(u.val(Math.min(u.max,lv+n)))}</em>`;
-    if(maxed){btn.className='obtn green c-bt';btn.innerHTML='최대레벨';btn.disabled=true;}
+    setNum(row.querySelector('.ulv'),fmtKo(lv),'red'); numVal(row,u.show(u.val(lv)),maxed?'MAX':u.show(u.val(Math.min(u.max,lv+n)))); setNum(row.querySelector('.umax'),fmtKo(u.max),'red');
+    if(maxed){btn.className='obtn mx c-bt';btn.innerHTML='';btn.setAttribute('aria-label','최대레벨');btn.disabled=true;}
     else{btn.className='obtn c-bt';btn.disabled=!b.ok;btn.setAttribute('aria-label','강화하기');btn.innerHTML=`<span class="cost">${b.n>1?`x${b.n.toLocaleString()} · `:''}<i class="coin"></i>${fmtKo(b.cost)}</span>`;}
   });
   const sl=$('spL'); if(sl){sl.textContent=spLeft().toLocaleString(); $('spT').textContent=(SP_PER_LV*(save.lv-1)).toLocaleString();}
   body.querySelectorAll('[data-s]').forEach(row=>{
     const p=SP.find(x=>x.k===row.dataset.s), lv=save.sp[p.k]||0, btn=row.querySelector('button'), maxed=lv>=p.max;
     const b=spBatch(p,view.spMult), n=b.n;
-    row.querySelector('.ulv').textContent=fmtKo(lv);
-    row.querySelector('.uval').innerHTML=`<i>${fmtPct(lv*p.per)}</i><em>${maxed?'MAX':fmtPct((lv+n)*p.per)}</em>`;
-    if(maxed){btn.className='obtn green c-bt';btn.innerHTML='최대레벨';btn.disabled=true;}
+    setNum(row.querySelector('.ulv'),fmtKo(lv),'red'); numVal(row,fmtPct(lv*p.per),maxed?'MAX':fmtPct((lv+n)*p.per)); setNum(row.querySelector('.umax'),fmtKo(p.max),'red');
+    if(maxed){btn.className='obtn mx c-bt';btn.innerHTML='';btn.setAttribute('aria-label','최대레벨');btn.disabled=true;}
     else{btn.className='obtn c-bt';btn.disabled=!b.ok;btn.setAttribute('aria-label','강화하기');btn.innerHTML=`<span class="cost">포인트 ${n.toLocaleString()}</span>`;}
   });
 }
@@ -2095,7 +2120,7 @@ function refreshGearBtns(){
   const b=$('gEnh'); if(!b) return;
   const s=view.slot,t=view.sel,it=inv(s,t),own=!!(it&&it.lv>0),lv=own?it.lv:1;
   if(own&&lv>=itemMax(it)){
-    if((it.tr||0)>=TR_MAX){b.className='obtn green e-b3';b.innerHTML='최대레벨';b.disabled=true;return;}
+    if((it.tr||0)>=TR_MAX){b.className='obtn mx e-b3';b.innerHTML='';b.setAttribute('aria-label','최대레벨');b.disabled=true;return;}
     const nd=trNeed(it), g=trGem(t,it); b.className='obtn green e-b3'; b.disabled=it.n<nd||save.gems<g;
     b.innerHTML=`초월하기<span class="cost">여분 ${it.n}/${nd} · <i class="gem"></i>${fmtKo(g)}</span>`; return;}
   const c=enhCost(t,lv); b.className='obtn e-b3'; b.disabled=!own||save.gold<c;
@@ -2700,7 +2725,7 @@ if(AUTO) window.__sim={
   offline(sec){ return offlineCalc(sec); },
   reb(){ return {ready:rebReady(),stones:rebStones(rebRun())}; }
 };
-for(const [k,f] of [['eq','ui_eq.webp'],['prof','ui_prof.webp'],['stat','ui_stat.webp'],['st-atk','ui_st_atk.webp'],['st-aspd','ui_st_aspd.webp'],['st-hp','ui_st_hp.webp'],['st-regen','ui_st_regen.webp'],['st-crit','ui_st_crit.webp'],['st-cdmg','ui_st_cdmg.webp'],['st-gold','ui_st_gold.webp'],['st-xp','ui_st_xp.webp'],['dun-gold','ui_dun_gold.webp'],['dun-equip','ui_dun_equip.webp'],['dun-rush','ui_dun_rush.webp'],['dun-tower','ui_dun_tower.webp'],['sum-wep','ui_sum_wep.webp'],['sum-arm','ui_sum_arm.webp'],['sum-acc','ui_sum_acc.webp'],['sum-rel','ui_sum_rel.webp'],['off','ui_off.webp'],['lock','ui_lock.webp']]) document.documentElement.style.setProperty('--ui-'+k,`url("${aurl(f)}")`);
+for(const [k,f] of [['eq','ui_eq.webp'],['prof','ui_prof.webp'],['stat','ui_stat.webp'],['st-atk','ui_st_atk.webp'],['st-aspd','ui_st_aspd.webp'],['st-hp','ui_st_hp.webp'],['st-regen','ui_st_regen.webp'],['st-crit','ui_st_crit.webp'],['st-cdmg','ui_st_cdmg.webp'],['st-gold','ui_st_gold.webp'],['st-xp','ui_st_xp.webp'],['dun-gold','ui_dun_gold.webp'],['dun-equip','ui_dun_equip.webp'],['dun-rush','ui_dun_rush.webp'],['dun-tower','ui_dun_tower.webp'],['sum-wep','ui_sum_wep.webp'],['sum-arm','ui_sum_arm.webp'],['sum-acc','ui_sum_acc.webp'],['sum-rel','ui_sum_rel.webp'],['off','ui_off.webp'],['lock','ui_lock.webp'],['num-gold','num_gold.webp'],['num-green','num_green.webp'],['num-red','num_red.webp'],['maxlv','ui_maxlv.webp']]) document.documentElement.style.setProperty('--ui-'+k,`url("${aurl(f)}")`);
 function startGame(){ setTimeout(()=>{const b=monBase(save.stage); for(let k=b;k<b+6;k++) for(const c of 'waqhd') monImg(k,c);},1500);   // 던전에서 나오는 몬스터까지 미리 받아 둔다
   $('ui').hidden=false; initBattle(); layout(); drawAvatar(); updateTop(); updateDots(); openPanel('lobby'); offlineCheck(); if(AUTO&&!save.name) save.name='테스트'; if(!save.name) askName(true); tutInit(); attPopup(); } // 시작은 로비부터
 
