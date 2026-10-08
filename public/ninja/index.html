@@ -125,6 +125,16 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
 #dunT .lb div{height:6px;margin-top:6px;border-radius:4px;background:rgba(255,255,255,.1);overflow:hidden;border:1px solid rgba(214,168,90,.5)}
 #dunT .lb i{display:block;height:100%;width:0;background:linear-gradient(90deg,#b8322a,#f0b44a);transition:width 1.2s .3s linear}
 #dunT.show .lb i{width:100%}
+#dunC{position:absolute;inset:0;z-index:61;display:grid;place-items:center;padding:0 16px;background:rgba(8,6,10,0);transition:background .3s}
+#dunC.on{background:rgba(8,6,10,.55)}
+#dunC .cbox{max-width:360px;opacity:0;transform:translateY(14px) scale(.96);transition:opacity .25s,transform .3s cubic-bezier(.2,.8,.3,1.2)}
+#dunC.on .cbox{opacity:1;transform:none}
+#dunC .cbox h2{color:#8ae070;text-shadow:0 2px 0 #1a3a10}
+#dunC .cn{margin:0;text-align:center;font-size:15px;color:#efe0c4}
+#dunC .cn small{display:block;font-size:12px;color:#bba68a;margin-top:2px}
+#dunC .cn b{font-size:22px;color:#ffd36a;margin-right:2px}#dunC .cn em{font-style:normal;color:#ffb04a;font-family:var(--display)}
+#dunC .cbar{height:7px;border-radius:5px;background:rgba(255,255,255,.1);border:1px solid rgba(214,168,90,.5);overflow:hidden;margin-top:-4px}
+#dunC .cbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#b8322a,#f0b44a);transition:width .1s linear}
 #dunX{position:absolute;inset:0;z-index:60;background:rgba(5,3,8,0);transition:background .45s}
 #dunX.dark{background:rgba(5,3,8,1)}
 #dunX.out{background:rgba(5,3,8,0);transition:background .55s}
@@ -653,6 +663,7 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
   <section class="modal" id="offM" hidden><div class="sheet info off" id="offBody"></div></section>
   <section class="modal" id="sumM" hidden><div class="sheet" id="sumBody"></div></section>
   <div id="dunT" hidden><div class="bg" id="dtBg"></div><div class="vg"></div><div class="tt"><small id="dtSm"></small><h3 id="dtH"></h3><b id="dtLv"></b><div class="ln"></div><p id="dtP"></p></div><div class="lb">던전 입장 중…<div><i></i></div></div></div>
+  <div id="dunC" hidden></div>
   <div id="dunX" hidden><div class="ray"></div><div class="st" id="dxSt"><h3 id="dxH"></h3><p id="dxP"></p></div></div>
   <div id="tut" hidden><div class="tdim" id="tDim"></div><div class="tring" id="tRing"></div><div class="tbub" id="tBub"></div></div>
   <div class="toast" id="toast" style="opacity:0"></div>
@@ -1422,22 +1433,81 @@ function dunEnd(ok){
   $('dxP').textContent=clear?'보상을 정산하고 있어요':D.t<=0?'결과를 정산하고 있어요':'다음엔 더 강해져서 오세요';
   st.classList.toggle('fail',!clear); el.className=clear?'win':''; el.hidden=false; void el.offsetWidth; el.classList.add('go');
   clear?SFX.buy():SFX.fail();
+  if(clear){   // 클리어: 나가지 않고 그 자리에서 보상 정산 → 5초 뒤 다음 단계
+    setTimeout(()=>{ const S=dunSettle(D,ok); G.enemies=[]; G.shots=[]; G.kunais=[]; G.boss=null; updateBossBar();
+      el.classList.add('out'); setTimeout(()=>{el.hidden=true; el.className='';},600); dunChain(S); },1300);
+    return;
+  }
   setTimeout(()=>{ el.classList.add('dark'); $('dxP').textContent='스테이지로 돌아가는 중…'; },1100);
   setTimeout(()=>{ dunEndNow(ok); el.classList.add('out'); TR.busy=false;
     setTimeout(()=>{el.hidden=true; el.className='';},600); },1800);
 }
-function dunEndNow(ok){
-  $('ui').classList.remove('indun');
-  const D=G.dun, d=dunState(), k=D.k, clear=(k==='gold'||k==='rush')?D.kills>=DUN[k].need:!!ok;
+// 보상 정산 (한 판에 한 번)
+function dunSettle(D,ok){
+  const d=dunState(), k=D.k, clear=(k==='gold'||k==='rush')?D.kills>=DUN[k].need:!!ok;
   const firstTower=k==='tower'&&clear&&D.lv>(d.best.tower||0);
   if(clear) d.best[k]=Math.max(d.best[k]||0,D.lv);
+  let R=null, gems=0;
+  if(k==='equip') R=clear?eqReward(D.lv):null;
+  else if(k==='rush') R=D.kills?rushReward(D.lv,D.kills):null;
+  else if(k==='tower'){ if(firstTower){gems=towerGems(D.lv); save.gems+=gems;} refreshStats(); }
+  persist(); updateTop();
+  return {D,k,clear,R,gems};
+}
+// 던전에서 스테이지로 돌아오기
+function dunLeave(){
+  $('ui').classList.remove('indun');
   G.dun=null; G.enemies=[]; G.shots=[]; G.kunais=[]; G.timeMax=0;
   G.waveLeft=waveSize(save.stage); G.bossBlock=isBossStage(save.stage); G.spawnT=1;
-  G.banner={txt:`스테이지 ${save.stage}`,sub:'',t:0}; persist(); updateTop();
-  if(k==='equip'){ const R=clear?eqReward(D.lv):null; eqResult(D.lv,D.cat,clear,R,false); return; }
-  if(k==='rush'){ const R=D.kills?rushReward(D.lv,D.kills):null; rushResult(D.lv,D.kills,clear,R,false); return; }
-  if(k==='tower'){ let gems=0; if(firstTower){gems=towerGems(D.lv); save.gems+=gems;} refreshStats(); persist(); updateTop(); towerResult(D.lv,clear,gems); return; }
+  G.banner={txt:`스테이지 ${save.stage}`,sub:'',t:0}; persist(); updateTop(); if(panel==='content') renderContent();
+}
+function dunShowResult(S){ const {D,k,clear,R,gems}=S;
+  if(k==='equip') return eqResult(D.lv,D.cat,clear,R,false);
+  if(k==='rush') return rushResult(D.lv,D.kills,clear,R,false);
+  if(k==='tower') return towerResult(D.lv,clear,gems);
   dunResult(D,clear,false);
+}
+function dunEndNow(ok){ const S=dunSettle(G.dun,ok); dunLeave(); dunShowResult(S); }
+// 클리어 후 이어하기: 이번 보상을 보여 주고 5초 세다가 다음 단계로 (입장권이 없으면 나감)
+const CHAIN_T=5;
+function chainRows(S){ const {D,k,R,gems}=S;
+  if(k==='gold') return `<span>처치</span><b class="num">${D.kills}마리</b><span>획득 엽전</span><b class="num">+${fmtKo(D.gold)}</b>`;
+  if(k==='rush') return `<span>보스 격파</span><b class="num">${D.kills}마리</b>${R?`<span>보석</span><b class="num">+${R.gems}</b><span>유물 조각</span><b class="num">+${Object.values(R.got).reduce((a,b)=>a+b,0)}</b>`:''}`;
+  if(k==='equip') return R?`<span>장비</span><b class="num">${R.res.length}개${R.res.some(r=>r.isNew)?` (새 장비 ${R.res.filter(r=>r.isNew).length})`:''}</b><span>보석</span><b class="num">+${R.gems}</b>`:'';
+  const fx=D.lv%10===0?towerFx(D.lv):null;
+  return (gems?`<span>첫 돌파 보상</span><b class="num">보석 +${gems}</b>`:'<span>보상</span><b class="num">이미 받은 층이에요</b>')+(fx?`<span>영구 능력치</span><b class="num">${fxText(fx).join(' · ')}</b>`:'');
+}
+function dunChain(S){
+  const {D,k}=S, d=dunState(), L2=D.lv+1, can=k==='tower'||d.n[k]>0, el=$('dunC'), u=dunUnit(k);
+  el.innerHTML=`<div class="sheet info cbox"><h2>${DUN[k].n} ${D.lv}${u} 클리어!</h2>
+    <div class="kv">${chainRows(S)}${k!=='tower'?`<span>남은 입장권</span><b class="num">${d.n[k]||0} / ${DUN[k].tickets}</b>`:''}</div>
+    <p class="cn">${can?`<b class="num" id="dcN">${CHAIN_T}</b>초 뒤 <em>${L2}${u}</em>에 도전해요${k!=='tower'?'<small>입장권 1장 사용</small>':''}`:`입장권을 모두 썼어요 · <b class="num" id="dcN">${CHAIN_T}</b>초 뒤 나가요`}</p>
+    <div class="cbar"><i id="dcBar"></i></div>
+    <div class="dbtns" style="grid-template-columns:${can?'1fr 1fr':'1fr'}"><button class="obtn big brown" id="dcOut">나가기</button>${can?'<button class="obtn big" id="dcGo">바로 도전</button>':''}</div></div>`;
+  el.className=''; el.hidden=false; void el.offsetWidth; el.classList.add('on');
+  let acc=0, last=performance.now(), fin=false;
+  const iv=setInterval(()=>{ const n=performance.now(); if(!document.hidden) acc+=(n-last)/1000; last=n;   // 앱이 뒤로 가 있는 동안은 멈춤
+    const r=Math.max(0,CHAIN_T-acc); $('dcN').textContent=Math.ceil(r); $('dcBar').style.width=Math.min(100,acc/CHAIN_T*100)+'%';
+    if(r<=0) done(can?'go':'out'); },100);
+  function done(m){ if(fin) return; fin=true; clearInterval(iv); SFX.tap(); el.classList.remove('on'); setTimeout(()=>{el.hidden=true; el.innerHTML='';},300);
+    if(m==='go'&&(k==='tower'||dunState().n[k]>0)) dunNext(k,L2); else dunExit(); }
+  $('dcOut').onclick=()=>done('out');
+  if(can) $('dcGo').onclick=()=>{ac(); done('go');};
+}
+// 다음 단계로: 짧은 입장 연출 → 바로 전투
+function dunNext(k,L){
+  const el=$('dunT'); TR.busy=true; dlPre(k);
+  $('dtBg').style.backgroundImage=`url("${aurl(DLOAD[k]||DMAPS[k])}")`; $('dtSm').textContent='NEXT';
+  $('dtH').textContent=DUN[k].n; $('dtLv').textContent=`${L}${dunUnit(k)}`; $('dtP').textContent=DUN_SUB[k]||'';
+  el.className=''; el.hidden=false; void el.offsetWidth; el.classList.add('in');
+  setTimeout(()=>{ dunStart(k,L); if(G.banner) G.banner.t=99; el.classList.add('show');
+    setTimeout(()=>{ el.classList.add('out'); TR.busy=false; setTimeout(()=>{el.hidden=true; el.className='';},520); },1500); },380);
+}
+// 나가기: 어두워졌다가 스테이지로 (보상은 이미 받았으니 결과 창 없이)
+function dunExit(){
+  const el=$('dunX'); TR.busy=true; $('dxH').textContent=''; $('dxP').textContent='스테이지로 돌아가는 중…';
+  $('dxSt').classList.remove('fail'); el.className=''; el.hidden=false; void el.offsetWidth; el.classList.add('go','dark');
+  setTimeout(()=>{ dunLeave(); el.classList.add('out'); TR.busy=false; setTimeout(()=>{el.hidden=true; el.className='';},600); },650);
 }
 function rushResult(L,kills,clear,R,sweep){
   $('infoBody').innerHTML=`<h2>보스 러시 ${L}단계</h2>
