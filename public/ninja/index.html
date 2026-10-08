@@ -166,8 +166,7 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
 .crow .c-bt{left:68.7%;top:52.8%;width:22.9%;height:25.4%;font-size:3.7cqw;gap:0;border-radius:2.2cqw}
 .crow .c-bt .cost{position:absolute;left:50%;bottom:-5%;transform:translateX(-50%);font-size:2.3cqw;line-height:1;padding:.3cqw 1.6cqw;gap:.5cqw;white-space:nowrap;background:rgba(50,16,0,.82);box-shadow:0 0 0 .25cqw rgba(255,200,120,.35)}
 .crow .c-bt .cost i{width:2.5cqw;height:2.5cqw}
-.crow .c-bt:disabled{filter:none!important;background:rgba(0,0,0,.42)!important}
-.crow .c-bt.green,.crow .c-bt.green:disabled{font-size:4cqw;background:linear-gradient(180deg,#6cb544,#2f7a1e)!important;color:#fff;text-shadow:0 .3cqw 0 #1a4a0a}
+.crow .c-bt.green,.crow .c-bt.green:disabled{filter:none;font-size:4cqw;background:linear-gradient(180deg,#6cb544,#2f7a1e)!important;color:#fff;text-shadow:0 .3cqw 0 #1a4a0a}
 /* 던전 카드 1942x809 */
 .dcard{aspect-ratio:1942/809;display:block;margin:0 0 1.5cqw}
 .dcard .d-art{left:6%;top:29.6%;width:23.4%;height:56.2%;background:center/cover no-repeat;border-radius:1.5cqw}
@@ -190,7 +189,7 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
 .scard .s-bar i{position:absolute;left:0;top:0;bottom:0;background:rgba(10,40,10,.55);border-radius:3cqw}
 .scard .s-b{top:66.4%;height:21.8%;font-size:4.2cqw;justify-content:flex-start;padding-top:.6%!important;font-size:3.8cqw}
 .scard .s-b[data-n="free"]{left:8.6%;width:27.8%}.scard .s-b[data-n="1"]{left:38.6%;width:25.5%}.scard .s-b[data-n="10"]{left:65.9%;width:26%}
-.scard .s-b:disabled{filter:none!important;background:rgba(0,0,0,.45)!important;border-radius:2.2cqw}
+.scard .s-b{border-radius:2.2cqw}
 .scard .s-b .cost{position:absolute;top:53%;height:30%;left:28%;right:9%;background:none;font-size:3.1cqw;padding:0;justify-content:center}
 .scard .s-b .cost i{display:none}
 
@@ -234,6 +233,22 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
 .pcard{width:103.539%!important;max-width:none!important;margin:-2.831% 0 -3.640% -1.719%!important}
 .crow+.crow,.dcard+.dcard,.scard+.scard{margin-top:calc(-2.9% + 6px)!important}
 .crow+.crow{margin-top:-5.4%!important}
+/* 카드에 그려진 버튼을 그 자리에서 잘라 버튼 자체에 깔아 둔다 → 누르면 그림째로 눌려 들어간다 */
+.ucard .obtn,.offcard .o-ok,.offcard .o-close,.pcard .p-ed{isolation:isolate;transition:transform .07s ease-out,filter .07s;--ps:.93;-webkit-tap-highlight-color:transparent}
+.ucard .obtn::before,.offcard .o-ok::before,.offcard .o-close::before,.pcard .p-ed::before{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;border-radius:inherit;background-image:var(--img);background-repeat:no-repeat;background-size:calc(100% * 100 / var(--w,100)) calc(100% * 100 / var(--h,100));background-position:calc(var(--l,0) / (100 - var(--w,99)) * 100%) calc(var(--t,0) / (100 - var(--h,99)) * 100%);transition:filter .07s}
+.ucard .obtn::after,.offcard .o-ok::after,.offcard .o-close::after,.pcard .p-ed::after{content:'';position:absolute;inset:0;z-index:-2;pointer-events:none;border-radius:inherit;background:#1c0d04;box-shadow:inset 0 .6cqw 1.2cqw rgba(0,0,0,.75);transform:scale(calc(1 / var(--ps)));opacity:0}
+.ucard .obtn:active:not(:disabled),.offcard .o-ok:active,.offcard .o-close:active,.pcard .p-ed:active{transform:scale(var(--ps))!important;box-shadow:none}
+.ucard .obtn:active:not(:disabled)::before,.offcard .o-ok:active::before,.offcard .o-close:active::before,.pcard .p-ed:active::before{filter:brightness(.82)}
+.ucard .obtn:active:not(:disabled)::after,.offcard .o-ok:active::after,.offcard .o-close:active::after,.pcard .p-ed:active::after{opacity:1}
+.crow .c-bt{--l:68.7;--t:52.8;--w:22.9;--h:25.4}
+.scard .s-b{--t:66.4;--h:21.8}.scard .s-b[data-n="free"]{--l:8.6;--w:27.8}.scard .s-b[data-n="1"]{--l:38.6;--w:25.5}.scard .s-b[data-n="10"]{--l:65.9;--w:26}
+.dcard .d-go{--l:72.4;--t:62.5;--w:21.2;--h:21.5;border-radius:2.4cqw}
+.ecard .e-b1,.ecard .e-b2,.ecard .e-b3{--t:71.8;--h:12;border-radius:2cqw}.ecard .e-b1{--l:9.8;--w:26}.ecard .e-b2{--l:37.4;--w:25.4}.ecard .e-b3{--l:64;--w:26.4}
+.offcard .o-ok{--l:13;--t:74.2;--w:73.7;--h:11.8;--ps:.97;border-radius:3cqw}
+.offcard .o-close{--l:85.3;--t:8.6;--w:10.8;--h:10.3;--ps:.88}
+.pcard .p-ed{--l:73.6;--t:11.4;--w:8.2;--h:5;--ps:.88}
+.dcard.lock .d-go::before,.dcard.lock .d-go::after,.crow .c-bt.green::before{display:none}
+
 /* 오프라인 팝업 1149x1207 */
 .offcard{--img:var(--ui-off);background:var(--img) center/100% 100% no-repeat!important;width:min(92vw,400px);aspect-ratio:1149/1207;background-color:transparent!important;border:0!important;padding:0!important;overflow:visible!important;box-shadow:none!important;container-type:inline-size;position:relative;max-height:none!important}
 .offcard>*{position:absolute;margin:0}
