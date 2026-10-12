@@ -50,12 +50,22 @@ public class MainActivity extends Activity {
         s.setAllowUniversalAccessFromFileURLs(true);
         try { ua = s.getUserAgentString(); } catch (Exception e) {}
         web.setWebViewClient(new WebViewClient() {
-            // 그림·글꼴: 인터넷이 되면 받아서 폰에 저장하고 보여 주고, 안 되면 저장해 둔 것을 보여 준다
+            // 그림·글꼴: 폰에 저장해 둔 것이 있으면 바로 보여 준다(빠름). 주소 끝의 ?v=버전 이 바뀐 그림만 새로 받는다.
+            // 인터넷이 안 되면 저장해 둔 것(버전이 달라도)을 보여 준다.
             @Override public WebResourceResponse shouldInterceptRequest(WebView v, String url) {
                 if (url == null || !(url.startsWith("https://") || url.startsWith("http://"))) return null;
-                File f = cacheFile(url);
+                int q = url.indexOf('?');
+                String base = q >= 0 ? url.substring(0, q) : url, ver = q >= 0 ? url.substring(q + 1) : "";
+                File f = cacheFile(base), fv = new File(f.getPath() + ".v");
+                if (f.exists()) {
+                    String have = readStr(fv);
+                    if (ver.equals(have) || !online) {
+                        byte[] d = readFile(f);
+                        if (d != null) return new WebResourceResponse(mime(url), null, new ByteArrayInputStream(d));
+                    }
+                }
                 byte[] data = online ? fetch(url) : null;
-                if (data != null) save(f, data);
+                if (data != null) { save(f, data); try { save(fv, ver.getBytes("UTF-8")); } catch (Exception e) {} }
                 else if (f.exists()) data = readFile(f);
                 if (data == null) return null;
                 return new WebResourceResponse(mime(url), null, new ByteArrayInputStream(data));
@@ -154,6 +164,12 @@ public class MainActivity extends Activity {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    private static String readStr(File f) {
+        if (!f.exists()) return null;
+        byte[] b = readFile(f);
+        try { return b == null ? null : new String(b, "UTF-8"); } catch (Exception e) { return null; }
     }
 
     private static String mime(String url) {
