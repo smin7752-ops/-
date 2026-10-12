@@ -963,11 +963,12 @@ const ICONS={
 };
 const svgI=k=>`<svg class="i" viewBox="0 0 24 24">${ICONS[k]}</svg>`;
 const BASE_APS=1.8;
+const REG_CAP=.10;   // HP 회복량 최대: 초당 최대 HP 의 10%
 const UPG=[
   {k:'atk',n:'기본 공격력',ic:'sword',base:4,gr:1.013,max:1e6,val:l=>10+2*l+.02*l*l,show:v=>fmtFine(v)},
   {k:'aspd',n:'공격 속도',ic:'bolt',base:15,gr:1.013,max:200,val:l=>.012*l,show:v=>'+'+fmtPct(v)},
   {k:'hp',n:'최대 HP',ic:'heart',base:4,gr:1.013,max:1e6,val:l=>100+20*l+.2*l*l,show:v=>fmtFine(v)},
-  {k:'regen',n:'HP 회복량',ic:'regen',base:5,gr:1.013,max:1e6,val:l=>1+.5*l+.005*l*l,show:v=>`${+v.toFixed(1)}/초`},
+  {k:'regen',n:'HP 회복량',ic:'regen',base:5,gr:1.013,max:400,val:l=>.01+.0001*Math.min(l,400),show:v=>fmtPct(v)+'/초'},   // 초당 최대 HP 의 % (1% → 400레벨 5%)
   {k:'crit',n:'크리티컬 확률',ic:'crit',base:10,gr:1.013,max:950,val:l=>.05+.0005*l,show:fmtPct},
   {k:'cdmg',n:'크리티컬 데미지',ic:'burst',base:10,gr:1.013,max:1e6,val:l=>1.5+.01*l,show:fmtPct},
   {k:'gold',n:'골드 획득량',ic:'coin',base:12,gr:1.013,max:1e6,val:l=>.02*l,show:v=>'+'+fmtPct(v)},
@@ -1087,7 +1088,7 @@ function calc(eq=save.eq){
   s.atkMul=(1+s.atkP)*gm('atkP'); s.hpMul=(1+s.hpP)*gm('hpP');
   s.atk=Math.max(1,Math.round(s.atkF*s.atkMul));
   s.hp=Math.max(1,Math.round(s.hpF*s.hpMul));
-  s.regen=s.regF*(1+s.regP)*gm('regP');
+  s.regPct=Math.min(REG_CAP,s.regF*(1+s.regP)*gm('regP')); s.regen=s.hp*s.regPct;   // 회복량 = 최대 HP × % (초당, 최대 10%)
   s.gold=(1+s.gold)*gm('gold')-1; s.xp=(1+s.xp)*gm('xp')-1;
   s.apsRaw=BASE_APS*(1+s.aspd); s.aps=Math.min(APS_MAX,s.apsRaw<=APS_SOFT?s.apsRaw:APS_SOFT+(s.apsRaw-APS_SOFT)*.4);   // 공속: 초당 5회 넘으면 효율 40%, 최대 12회
   s.shots=s.multi+s.extra;
@@ -2085,7 +2086,7 @@ function refreshGrow(){
   const body=$('pbody');
   body.querySelectorAll('[data-u]').forEach(row=>{
     const u=UPG.find(x=>x.k===row.dataset.u), lv=upLv(u.k), b=upBatch(u,view.mult), btn=row.querySelector('button'), maxed=lv>=u.max, n=b.n;
-    setNum(row.querySelector('.ulv'),fmtKo(lv),'red'); numVal(row,u.show(u.val(lv)),maxed?'MAX':u.show(u.val(Math.min(u.max,lv+n)))); setNum(row.querySelector('.umax'),fmtKo(u.max),'red');
+    setNum(row.querySelector('.ulv'),fmtKo(Math.min(lv,u.max)),'red'); numVal(row,u.show(u.val(lv)),maxed?'MAX':u.show(u.val(Math.min(u.max,lv+n)))); setNum(row.querySelector('.umax'),fmtKo(u.max),'red');
     if(maxed){btn.className='obtn mx c-bt';btn.innerHTML='';btn.setAttribute('aria-label','최대레벨');btn.disabled=true;}
     else{btn.className='obtn c-bt';btn.disabled=!b.ok;btn.setAttribute('aria-label','강화하기');btn.innerHTML=`<span class="cost">${b.n>1?`x${b.n.toLocaleString()} · `:''}<i class="coin"></i>${fmtKo(b.cost)}</span>`;}
   });
@@ -2304,14 +2305,15 @@ function summon(b,count,free){
   }
   save.pulls+=count; mis('sum',count); persist(); SFX.buy(); refreshStats(); updateDots(); if(panel==='summon') renderSummon();
   const freeMore=free&&(save.free[b.k]||0)>0;
+  const againN=free?10:count, againCost=againN===10?COST10:COST1;
   $('sumBody').innerHTML=`<h2>${b.n} 결과</h2><div class="rgrid">${res.map(r=>r.relic?`<div><div class="itile relic" style="width:100%;height:auto;aspect-ratio:1"><i style="background-image:var(--rl-${r.relic.k})"></i></div><div class="gname">${r.relic.n.replace(' 증가','')}</div></div>`
     :`<div style="position:relative">${gbox(r.s,r.t,{show:true,nolv:true})}${r.isNew?'<span class="new">NEW</span>':''}<div class="gname">${SETS[setOf(r.t)].n} ${GR[grOf(r.t)]}</div></div>`).join('')}</div>
     <div class="gbtns" style="grid-template-columns:1fr 1fr"><button class="obtn brown big" id="sumOk">확인</button>${freeMore
       ?`<button class="obtn big green" id="sumAgain">무료 10회 더<span class="cost">남은 무료 ${save.free[b.k]}/${FREE_N}</span></button>`
-      :`<button class="obtn big" id="sumAgain" ${save.gems<COST10?'disabled':''}>10회 더<span class="cost"><i class="gem"></i>${COST10}</span></button>`}</div>`;
+      :`<button class="obtn big" id="sumAgain" ${save.gems<againCost?'disabled':''}>${againN}회 더<span class="cost"><i class="gem"></i>${againCost}</span></button>`}</div>`;
   $('sumM').hidden=false;
   $('sumOk').onclick=()=>{SFX.tap();$('sumM').hidden=true;};
-  $('sumAgain').onclick=()=>summon(b,10,freeMore);   // 무료로 뽑았고 무료가 남아 있으면 계속 무료로
+  $('sumAgain').onclick=()=>summon(b,freeMore?10:againN,freeMore);   // 무료면 무료로, 1회면 1회, 10회면 10회 그대로 이어서
 }
 
 /* ---- 승급 ---- */
@@ -2571,7 +2573,7 @@ function renderLobby(){
   tabs([['lobby','로비'],['set','⚙ 설정']],view.lob||'lobby',k=>{view.lob=k;renderLobby();});
   if(view.lob==='set') return renderSettings();
   const st=calc();
-  const rows=[['공격력',fmtKo(st.atk)],['공격 속도',`${st.aps.toFixed(2)}/초`],['최대 HP',fmtKo(st.hp)],['HP 회복량',`${fmtKo(st.regen)}/초`],['크리티컬',fmtPct(st.crit)],['크리티컬 데미지',fmtPct(st.cdmg)],['동시 투척',`${st.shots}개`],['골드 획득량','+'+fmtPct(st.gold)],['경험치 획득량','+'+fmtPct(st.xp)]];
+  const rows=[['공격력',fmtKo(st.atk)],['공격 속도',`${st.aps.toFixed(2)}/초`],['최대 HP',fmtKo(st.hp)],['HP 회복량',`${fmtPct(st.regPct)}/초`],['크리티컬',fmtPct(st.crit)],['크리티컬 데미지',fmtPct(st.cdmg)],['동시 투척',`${st.shots}개`],['골드 획득량','+'+fmtPct(st.gold)],['경험치 획득량','+'+fmtPct(st.xp)]];
   $('pbody').innerHTML=`<div class="pscroll">
     <div class="ucard pcard">
       <span class="p-lv num">LV.${save.lv}</span><span class="p-rk">${RANKS[save.rank].n}</span>
@@ -2664,7 +2666,7 @@ function drawLobbyChar(){
 /* ---- 능력치 창 ---- */
 function openInfo(){
   const st=calc();
-  const rows=[['공격력',fmtKo(st.atk)],['공격 속도',`초당 ${st.aps.toFixed(2)}회`],['최대 HP',fmtKo(st.hp)],['HP 회복량',`${fmtKo(st.regen)}/초`],['크리티컬',fmtPct(st.crit)],['크리티컬 데미지',fmtPct(st.cdmg)],['동시 투척',`${st.shots}개`],['골드 획득량','+'+fmtPct(st.gold)],['경험치 획득량','+'+fmtPct(st.xp)],['전투력',fmtKo(st.cp)]];
+  const rows=[['공격력',fmtKo(st.atk)],['공격 속도',`초당 ${st.aps.toFixed(2)}회`],['최대 HP',fmtKo(st.hp)],['HP 회복량',`${fmtPct(st.regPct)}/초`],['크리티컬',fmtPct(st.crit)],['크리티컬 데미지',fmtPct(st.cdmg)],['동시 투척',`${st.shots}개`],['골드 획득량','+'+fmtPct(st.gold)],['경험치 획득량','+'+fmtPct(st.xp)],['전투력',fmtKo(st.cp)]];
   $('infoBody').innerHTML=`<h2>능력치</h2><div><h5>전체 능력치</h5><div class="kv">${rows.map(([k,v])=>`<span>${k}</span><b class="num">${v}</b>`).join('')}</div></div>
     <div><h5>세트 효과 · 고유 능력</h5><div class="chips">${st.active.length?st.active.map(a=>`<span style="--rc:${RC[a.t]}">${SETS[a.t].n} ${a.need<8?`${GR[a.g]}급 ${a.need}세트`:'고유'} · ${a.txt}</span>`).join(''):'<span>같은 세트를 2부위 이상 입으면 켜져요</span>'}</div>
     <p class="note" style="margin-top:6px">고유 능력: 8부위 모두 ○등급 이상이면 그 등급까지의 고유 능력이 모두 켜져요.</p></div>
