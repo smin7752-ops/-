@@ -176,6 +176,25 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
 .crow .c-bt{left:68.7%;top:52.8%;width:22.9%;height:25.4%;font-size:3.7cqw;gap:0;border-radius:2.2cqw}
 .crow .c-bt .cost{position:absolute;left:50%;bottom:3.5%;transform:translateX(-50%);font-size:2.3cqw;line-height:1;padding:.3cqw 1.6cqw;gap:.5cqw;white-space:nowrap;background:rgba(50,16,0,.82);box-shadow:0 0 0 .25cqw rgba(255,200,120,.35)}
 .crow .c-bt .cost i{width:2.5cqw;height:2.5cqw}
+
+/* 소환 카드 도움말 버튼 · 확률 창 */
+.shelp{display:contents}
+.scard .s-help{left:83.4%;top:31.2%;width:6.6cqw;height:6.6cqw;border-radius:50%;padding:0;border:.45cqw solid #f3c461;background:radial-gradient(circle at 40% 35%,#7a3a1a,#3a1206);color:#ffe6a8;font-family:var(--display);font-size:4.2cqw;line-height:1;display:grid;place-items:center;box-shadow:0 .4cqw 0 #1a0804,0 0 1.4cqw rgba(255,190,90,.45);text-shadow:0 .2cqw 0 #000;cursor:pointer;transition:transform .12s cubic-bezier(.34,1.6,.6,1)}
+.scard .s-help:active{transform:scale(.88)}
+.scard .s-help::before{content:'';position:absolute;inset:-2.4cqw;border-radius:50%}
+.shelp .sh-sub{margin:0;text-align:center;font-size:13px;color:#e8d4b0;line-height:1.5}
+.shelp .sh-note{margin:2px 0 0;font-size:11.5px;color:var(--muted);line-height:1.5}
+.shelp h5{margin:4px 0 0;font-size:14px;color:var(--gold)}
+.sh-tbl{width:100%;border-collapse:collapse;font-size:12px;background:rgba(0,0,0,.22);border-radius:8px;overflow:hidden}
+.sh-tbl th{font-family:var(--display);font-weight:400;font-size:12.5px;padding:6px 3px;background:rgba(0,0,0,.35);color:#e9d6b2}
+.sh-tbl td{padding:5px 3px;text-align:center;border-top:1px solid rgba(255,255,255,.06);white-space:nowrap}
+.sh-tbl td:first-child{text-align:left;padding-left:7px}.sh-tbl td b{font-family:var(--display);font-weight:400;font-size:12.5px}
+.sh-tbl td.num{font-family:var(--display);font-weight:400;color:#f3e4c4}
+.sh-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.sh-it{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0}
+.sh-it .gbox,.sh-it .itile{width:100%;height:auto;aspect-ratio:1;max-width:70px}
+.sh-it b{font-family:var(--display);font-weight:400;font-size:12.5px;color:#f3e4c4;white-space:nowrap}
+.sh-it span{font-family:var(--display);font-size:12px;color:#ffd36a}
 /* 숫자 그림 */
 .ng{display:inline-flex;align-items:center;height:1em;line-height:1;white-space:nowrap;pointer-events:none}
 .ng i{display:block;flex:none;height:1em;margin:0 -.035em;background-repeat:no-repeat;background-size:auto 1em}
@@ -996,13 +1015,21 @@ const RANKS=[
   {n:'암부',fx:{atkP:1.5,hpP:1,aspd:.2},req:[['stage',80],['lv',65],['grade',5],['upatk',300],['relic',80]]},
   {n:'카게',fx:{atkP:2.5,gold:.5,xp:.5,extra:1},req:[['stage',120],['lv',90],['grade',7],['pulls',800],['relic',200]]}
 ];
+// 기록 점검: 망가지거나 예전 버전에서 온 값 때문에 게임이 멈추지 않게 바로잡는다
+(()=>{ const D={gold:0,gems:0,lv:1,xp:0,stage:1,bestStage:0,pulls:0};
+  for(const k in D) if(typeof save[k]!=='number'||!isFinite(save[k])||save[k]<0) save[k]=D[k];
+  save.lv=Math.max(1,Math.floor(save.lv)); save.stage=Math.max(1,Math.floor(save.stage));
+  save.rank=Math.max(0,Math.min(RANKS.length-1,Math.floor(+save.rank||0)));
+  if(!Array.isArray(save.eq)||save.eq.length!==8) save.eq=[0,0,0,0,0,0,0,0];
+  for(let sl=0;sl<8;sl++){const t=save.eq[sl], it=save.inv[sl+'-'+t]; if(!(t>=0&&t<TIERS&&it&&it.lv>0)) save.eq[sl]=0;}
+})();
 const maxGrade=()=>{let m=0;for(const k in save.inv){if(save.inv[k].lv>0) m=Math.max(m,setOf(+k.split('-')[1]));}return m;};
 function reqInfo([type,v]){
   switch(type){
     case 'stage':return {t:`스테이지 ${v} 클리어`,cur:save.bestStage,need:v};
     case 'lv':return {t:`레벨 ${v} 달성`,cur:save.lv,need:v};
     case 'upatk':return {t:`기본 공격력 강화 LV.${v}`,cur:upLv('atk'),need:v};
-    case 'grade':return {t:`${SETS[v].n} 세트 장비 보유`,cur:maxGrade()+1,need:v+1};
+    case 'grade':{const m=maxGrade(); return {t:`${SETS[v].n} 세트 이상 장비 보유`,cur:m+1,need:v+1,label:m>=v?`${SETS[m].n} 세트 보유 중`:`지금 최고: ${SETS[m].n} 세트`};}   // 개수가 아니라 '가진 장비 중 가장 높은 세트'
     case 'relic':return {t:`유물 레벨 합계 ${v}`,cur:relicSum(),need:v};
     case 'pulls':return {t:`소환 ${v}회`,cur:save.pulls,need:v};
   }}
@@ -1515,7 +1542,9 @@ function dunNext(k,L){
   $('dtBg').style.backgroundImage=`url("${aurl(DLOAD[k]||DMAPS[k])}")`; $('dtSm').textContent='NEXT';
   $('dtH').textContent=DUN[k].n; $('dtLv').textContent=`${L}${dunUnit(k)}`; $('dtP').textContent=DUN_SUB[k]||'';
   el.className=''; el.hidden=false; void el.offsetWidth; el.classList.add('in');
-  setTimeout(()=>{ dunStart(k,L); if(G.banner) G.banner.t=99; el.classList.add('show');
+  setTimeout(()=>{ const old=G.dun; dunStart(k,L);
+    if(G.dun===old){ TR.busy=false; el.hidden=true; el.className=''; dunLeave(); return; }   // 입장이 안 됐으면(입장권 등) 스테이지로
+    if(G.banner) G.banner.t=99; el.classList.add('show');
     setTimeout(()=>{ el.classList.add('out'); TR.busy=false; setTimeout(()=>{el.hidden=true; el.className='';},520); },1500); },380);
 }
 // 나가기: 어두워졌다가 스테이지로 (보상은 이미 받았으니 결과 창 없이)
@@ -2219,11 +2248,42 @@ function renderSummon(){
       <div class="s-bar num"><i style="left:${mx?100:S.xp/sumNeed(S.lv)*100}%;right:0"></i><span style="position:relative">LV.${S.lv} · ${mx?'MAX':`${S.xp}/${sumNeed(S.lv)}`}</span></div>
       <button class="obtn s-b" data-n="free" aria-label="무료 10회" ${save.free[b.k]?'':'disabled'}><span class="cost">${save.free[b.k]||0}/${FREE_N}</span></button>
       <button class="obtn s-b" data-n="1" aria-label="1회" ${save.gems<COST1?'disabled':''}><span class="cost">${COST1}</span></button>
-      <button class="obtn s-b" data-n="10" aria-label="10회" ${save.gems<COST10?'disabled':''}><span class="cost">${COST10}</span></button></div>`;}).join('')}
+      <button class="obtn s-b" data-n="10" aria-label="10회" ${save.gems<COST10?'disabled':''}><span class="cost">${COST10}</span></button>
+      <button class="s-help" data-h="${b.k}" aria-label="${b.n} 확률·획득 정보">!</button></div>`;}).join('')}
     <p class="note">보석은 보스 처치·레벨 업·승급으로 얻어요. 소환할수록 소환 레벨이 올라 높은 등급이 잘 나와요. 무료 소환은 매일 다시 채워져요.</p></div>`;
+  $('pbody').querySelectorAll('[data-h]').forEach(btn=>btn.onclick=()=>{SFX.tap(); sumHelp(btn.dataset.h);});
   $('pbody').querySelectorAll('[data-b] [data-n]').forEach(btn=>btn.onclick=()=>{
     const b=BANNERS.find(x=>x.k===btn.closest('[data-b]').dataset.b), m=btn.dataset.n;
     summon(b,m==='free'?10:+m,m==='free');});
+}
+// 소환 도움말: 소환 레벨별 확률표 + 얻을 수 있는 장비 (◀ ▶ 로 다른 레벨도 확인)
+const GR_P=[.62,.25,.10,.03];
+function setProbs(lv){const [lo,hi]=gradeRange(lv); let tot=0; const w=[]; for(let t=lo;t<=hi;t++){const v=Math.pow(.45,t-lo); w.push([t,v]); tot+=v;} return w.map(([t,v])=>[t,v/tot]);}
+const pctS=v=>{const p=v*100; return (p>=10?p.toFixed(1):p>=1?p.toFixed(2):p>=.01?p.toFixed(3):p.toFixed(4)).replace(/\.?0+$/,'')+'%';};
+function sumHelp(k,L){
+  const b=BANNERS.find(x=>x.k===k), S=sumOf(k); L=Math.max(1,Math.min(SUM_MAX,L||S.lv));
+  let body='';
+  if(b.relic){
+    body=`<p class="sh-sub">한 번 소환할 때마다 아래 유물 중 하나의 <b>조각 1개</b>를 얻어요. 조각으로 [장비 › 유물]에서 제작하면 <b>${RELIC_RATE*100}%</b> 확률로 레벨이 올라요.</p>
+      <h5>획득 가능 유물 · 확률</h5><div class="sh-grid">${RELICS.map(r=>`<div class="sh-it"><div class="itile relic"><i style="background-image:var(--rl-${r.k})"></i></div><b>${r.n.replace(' 증가','')}</b><span class="num">${pctS(1/RELICS.length)}</span></div>`).join('')}</div>`;
+  }else{
+    const sp=setProbs(L), [lo,hi]=gradeRange(L);
+    body=`<div class="dsel"><button id="shM" ${L<=1?'disabled':''}>◀</button><b>소환 LV.${L}</b><button id="shP" ${L>=SUM_MAX?'disabled':''}>▶</button></div>
+      <p class="sh-sub">${L===S.lv?'<span style="color:#8ae070">지금 내 소환 레벨</span>':`지금 내 소환 레벨은 LV.${S.lv}`} · ${L<SUM_MAX?`LV.${L+1}까지 소환 ${sumNeed(L)}회`:'최고 레벨'}</p>
+      <h5>세트 · 등급 확률</h5>
+      <table class="sh-tbl"><thead><tr><th>세트</th><th>세트 확률</th>${GR.map((g,i)=>`<th style="color:${GRC[i]}">${g}</th>`).join('')}</tr></thead><tbody>
+      ${sp.map(([t,p])=>`<tr><td><b style="color:${RC[t]}">${String(t+1).padStart(2,'0')} ${SETS[t].n}</b></td><td class="num">${pctS(p)}</td>${GR_P.map(g=>`<td class="num">${pctS(p*g)}</td>`).join('')}</tr>`).join('')}
+      </tbody></table>
+      <p class="sh-note">등급 확률은 어느 세트든 같아요: ${GR.map((g,i)=>`${g} ${pctS(GR_P[i])}`).join(' · ')}<br>표의 F·D·A·S 칸 = 그 세트 그 등급이 나올 확률</p>
+      <h5>획득 가능 ${b.k==='wep'?'무기':b.k==='arm'?'방어구':'장신구'} · 부위 확률</h5>
+      <div class="sh-grid">${b.slots.map(sl=>`<div class="sh-it">${gbox(sl,hi*4,{show:true,nolv:true})}<b>${slotName(sl)}</b><span class="num">${pctS(1/b.slots.length)}</span></div>`).join('')}</div>
+      <p class="sh-note">이 레벨에서 나오는 세트: <b style="color:${RC[lo]}">${SETS[lo].n}</b> ~ <b style="color:${RC[hi]}">${SETS[hi].n}</b> (그림은 가장 높은 세트)</p>`;
+  }
+  $('infoBody').innerHTML=`<h2>${b.n} 정보</h2><div class="shelp">${body}</div><button class="obtn big" id="infoOk">닫기</button>`;
+  $('infoM').hidden=false;
+  $('infoOk').onclick=()=>{SFX.tap(); $('infoM').hidden=true;};
+  const m=$('shM'), pl=$('shP'); if(m) m.onclick=()=>{SFX.tap(); sumHelp(k,L-1);}; if(pl) pl.onclick=()=>{SFX.tap(); sumHelp(k,L+1);};
+  $('infoBody').scrollTop=0;
 }
 function summon(b,count,free){
   freeCheck();
@@ -2255,7 +2315,7 @@ function renderRank(){
     html+=`<div class="rkhead">다음 계급 · ${nx.n}</div>
       <div class="prog"><div><b>승급 미션 달성도</b><div class="mbar"><i style="width:${done/infos.length*100}%"></i><span class="num">${done}/${infos.length}</span></div></div><button class="obtn big" id="rkGo" ${done<infos.length?'disabled':''}>승급하기</button></div>
       <div class="rkfx" style="margin:-2px 0 10px">${fxText(nx.fx).map(t=>`<span>${t}</span>`).join('')}</div>
-      ${infos.map(i=>{const ok=i.cur>=i.need;return `<div class="mis"><div><b>${i.t}</b><div class="mbar"><i style="width:${Math.min(100,i.cur/i.need*100)}%"></i><span class="num">${Math.min(i.cur,i.need).toLocaleString()}/${i.need.toLocaleString()}</span></div></div><span class="mst${ok?' ok':''}">${ok?'달성 완료':'진행 중'}</span></div>`;}).join('')}`;
+      ${infos.map(i=>{const ok=i.cur>=i.need;return `<div class="mis"><div><b>${i.t}</b><div class="mbar"><i style="width:${Math.min(100,i.cur/i.need*100)}%"></i><span class="num">${i.label||`${Math.min(i.cur,i.need).toLocaleString()}/${i.need.toLocaleString()}`}</span></div></div><span class="mst${ok?' ok':''}">${ok?'달성 완료':'진행 중'}</span></div>`;}).join('')}`;
   }else html+=`<div class="rkhead">최고 계급에 도달했어요</div>`;
   $('pbody').innerHTML=html+'</div>';
   const go=$('rkGo'); if(go) go.onclick=()=>{if(!rankReady()) return; save.rank++; save.gems+=1000; persist(); SFX.buy(); refreshStats(); updateDots();
@@ -2705,7 +2765,7 @@ if(AUTO) window.__snd={ async render(name,sec){ const off=new OfflineAudioContex
   ['pointerup','pointercancel'].forEach(k=>document.addEventListener(k,up,true));
   document.addEventListener('pointermove',e=>{if(cur&&!cur.contains(document.elementFromPoint(e.clientX,e.clientY))){cur.classList.remove('prs');cur=null;}},true);})();
 renderGrow=keepPos(renderGrow); renderGear=keepPos(renderGear); renderContent=keepPos(renderContent); renderSummon=keepPos(renderSummon); renderLobby=keepPos(renderLobby); renderRank=keepPos(renderRank);
-if(AUTO) window.__t={spawn:t=>spawnEnemy(t),g:()=>G,monImg,drawMon};   // 자동 테스트 전용
+if(AUTO) window.__t={spawn:t=>spawnEnemy(t),g:()=>G,monImg,drawMon,save:()=>save,calc:()=>calc(),openPanel:k=>openPanel(k),panel:()=>panel,view:()=>view};   // 자동 테스트 전용
 // 자동 밸런스 점검(백테스트) 전용: 사람처럼 강화·소환·합성·장착·승급을 하며 시간을 빠르게 돌린다
 if(AUTO) window.__sim={
   play(sec,dt=1/15){ const n=Math.round(sec/dt); for(let i=0;i<n;i++){ update(dt); if(G.dead){G.deathT=(G.deathT||0)+dt; if(G.deathT>1.2){G.deathT=0; revive();}} if(i%Math.round(10/dt)===0) this.act(); } },
