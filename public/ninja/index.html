@@ -1034,6 +1034,9 @@ const RANKS=[
   for(const k in D) if(typeof save[k]!=='number'||!isFinite(save[k])||save[k]<0) save[k]=D[k];
   save.lv=Math.max(1,Math.floor(save.lv)); save.stage=Math.max(1,Math.floor(save.stage));
   save.rank=Math.max(0,Math.min(RANKS.length-1,Math.floor(+save.rank||0)));
+  if(save.dunV!==2){ const B=(save.dun&&save.dun.best)||{}; save.dunV=2;
+    for(const k of ['gold','rush']) if(B[k]) B[k]=Math.floor((B[k]+1)/2);
+    if(B.equip) B.equip=Math.floor((B.equip+3)/4); }
   if(!Array.isArray(save.eq)||save.eq.length!==8) save.eq=[0,0,0,0,0,0,0,0];
   for(let sl=0;sl<8;sl++){const t=save.eq[sl], it=save.inv[sl+'-'+t]; if(!(t>=0&&t<TIERS&&it&&it.lv>0)) save.eq[sl]=0;}
 })();
@@ -1409,7 +1412,9 @@ const DUN={gold:{n:'골드 던전',open:10,time:30,need:30,tickets:5},
            tower:{n:'수련의 탑',open:50,time:45,unit:'층'}};
 const dunUnit=k=>DUN[k].unit||'단계';
 // 보스 러시: 격파 수만큼 유물 조각·보석
-const rushPieces=(L,kills)=>kills*(1+Math.floor(L/3)), rushGems=(L,kills)=>kills*(10+5*L);
+// 단계가 오를 때마다 확 세지게: 골드·보스 러시는 한 단계 = 예전 2단계, 장비 던전은 한 단계 = 예전 4단계 (보상도 그만큼 같이 오른다)
+const G2=L=>2*L-1, eqR=L=>4*L-3;
+const rushPieces=(L,kills)=>kills*(1+Math.floor(G2(L)/3)), rushGems=(L,kills)=>kills*(10+5*G2(L));
 function rushReward(L,kills){const got={}; for(let i=0;i<rushPieces(L,kills);i++){const r=RELICS[Math.floor(Math.random()*RELICS.length)]; rel(r.k).n++; got[r.n]=(got[r.n]||0)+1;}
   const gems=rushGems(L,kills); save.gems+=gems; persist(); updateTop(); updateDots(); return {got,gems};}
 // 수련의 탑: 층 F 의 적 강함 = 스테이지 20+2F, 처음 오른 층마다 보석, 10층마다 영구 능력치
@@ -1420,19 +1425,19 @@ const curStage=()=>!(G&&G.dun)?save.stage:G.dun.k==='tower'?towerStage(G.dun.lv)
 const DUN_CATS=[{k:'wep',n:'쿠나이',slots:[7]},{k:'arm',n:'방어구',slots:[0,1,2,4]},{k:'acc',n:'장신구',slots:[3,5,6]}];
 // 부위마다 같은 개수: 1~10단계는 입문자 세트 1→10개, 그 뒤로는 10개를 유지하면서 한 단계마다 다음 세트가 1개씩 늘고 이전 세트가 1개씩 준다
 // (11단계: 강화 1 + 입문자 9 … 20단계: 강화 10, 21단계: 가죽 1 + 강화 9 …)
-function eqMix(L){ if(L<=10) return [[0,L]];
+function eqMix(L){ L=eqR(L); if(L<=10) return [[0,L]];
   const j=L-10, up=Math.floor((j-1)/10)+1, nu=((j-1)%10)+1;
   if(up>9) return [[9,10]];
   return nu>=10?[[up,10]]:[[up,nu],[up-1,10-nu]]; }
 const eqPer=L=>eqMix(L).reduce((a,[,n])=>a+n,0);
 const eqDrops=L=>eqPer(L)*3;
-const eqStage=L=>20+5*L;           // 적 강함
-const eqGrade=L=>Math.min(SUM_MAX,L+1);                    // 소환 레벨처럼 세트 범위 결정
-const eqGems=L=>10*L;
+const eqStage=L=>20+5*eqR(L);      // 적 강함 (한 단계마다 스테이지 +20)
+const eqGrade=L=>Math.min(SUM_MAX,eqR(L)+1);                    // 소환 레벨처럼 세트 범위 결정
+const eqGems=L=>10*eqR(L);
 // 단계마다 정해진 세트: 1단계 입문자 … 10단계 전설 (11단계부터 전설, 좋은 등급이 더 잘 나옴)
-const eqSet=L=>Math.min(9,L-1);
-function eqRollGr(L){const b=Math.max(0,L-10)*.02, x=Math.random(); return x<.55-b?0:x<.83-b/2?1:x<.96-b/4?2:3;}   // F·D·A·S
-const eqGrRate=L=>{const b=Math.max(0,L-10)*.02; const a=[.55-b,.83-b/2,.96-b/4,1]; return a.map((v,i)=>Math.round((v-(i?a[i-1]:0))*100));};
+const eqSet=L=>Math.min(9,eqR(L)-1);
+function eqRollGr(L){const b=Math.min(.5,Math.max(0,eqR(L)-10)*.02), x=Math.random(); return x<.55-b?0:x<.83-b/2?1:x<.96-b/4?2:3;}   // F·D·A·S
+const eqGrRate=L=>{const b=Math.min(.5,Math.max(0,eqR(L)-10)*.02); const a=[.55-b,.83-b/2,.96-b/4,1]; return a.map((v,i)=>Math.round((v-(i?a[i-1]:0))*100));};
 function eqReward(L){
   const res=[], picks=[]; for(const C of DUN_CATS) for(const [set,n] of eqMix(L)) for(let i=0;i<n;i++) picks.push([C.slots[Math.floor(Math.random()*C.slots.length)],set]);
   for(const [sl,set] of picks){const t=set*4+eqRollGr(L), key=sl+'-'+t, it=save.inv[key]||(save.inv[key]={n:0,lv:0});
@@ -1440,7 +1445,7 @@ function eqReward(L){
   const gems=eqGems(L); save.gems+=gems; persist(); refreshStats(); updateDots(); updateTop();
   return {res,gems};
 }
-const dunStage=L=>L*10;
+const dunStage=L=>10*G2(L);   // 골드·보스 러시 적 강함: 1단계 10, 그 뒤 한 단계마다 스테이지 +20
 const dunGoldPer=(L,st)=>Math.round(6*3*gScale(dunStage(L))*(1+st.gold));   // 1마리당 (일반의 3배)
 function dunState(){const d=save.dun||(save.dun={day:'',n:{},best:{}}); d.n=d.n||{}; d.best=d.best||{};
   if(d.day!==today()){d.day=today(); for(const k in DUN) if(DUN[k].tickets) d.n[k]=Math.max(d.n[k]||0,DUN[k].tickets);}   // 남은 입장권(출석 보너스 등)은 지우지 않는다
@@ -1623,7 +1628,7 @@ function dunPopup(k,L){ dlPre(k); if(k==='gold') for(const c of 'wqahd') monImg(
     <div class="kv"><span>제한 시간</span><b class="num">${D.time}초</b>${k==='gold'?`<span>클리어 조건</span><b class="num">황금 산적 ${D.need}마리</b>
       <span>1마리당 엽전</span><b class="num">${fmtKo(per)}</b><span>소탕 보상${SW?` (${SW}단계)`:''}</span><b class="num">${SW?'엽전 '+fmtKo(dunGoldPer(SW,calc())*D.need):'-'}</b>`
       :k==='rush'?`<span>클리어 조건</span><b class="num">보스 ${D.need}마리 격파</b><span>첫 보스 강함</span><b class="num">스테이지 ${dunStage(L)}</b>
-      <span>보스 1마리당</span><b class="num">유물 조각 ${1+Math.floor(L/3)} · 보석 ${10+5*L}</b><span>소탕 보상${SW?` (${SW}단계)`:''}</span><b class="num">${SW?`조각 ${rushPieces(SW,D.need)} · 보석 ${rushGems(SW,D.need)}`:'-'}</b>`
+      <span>보스 1마리당</span><b class="num">유물 조각 ${rushPieces(L,1)} · 보석 ${rushGems(L,1)}</b><span>소탕 보상${SW?` (${SW}단계)`:''}</span><b class="num">${SW?`조각 ${rushPieces(SW,D.need)} · 보석 ${rushGems(SW,D.need)}`:'-'}</b>`
       :`<span>클리어 조건</span><b class="num">${D.waves}웨이브 + 수호자</b><span>적 강함</span><b class="num">스테이지 ${eqStage(L)}</b>
       <span>부위마다</span><b class="num">${eqMix(L).map(([t,n])=>`${SETS[t].n} ${n}개`).join(' + ')}</b><span>구성</span><b class="num">쿠나이·방어구·장신구 각 ${eqPer(L)}개 (총 ${eqDrops(L)}개)</b><span>등급 확률</span><b class="num">${eqGrRate(L).map((p,i)=>`${GR[i]} ${p}%`).join(' · ')}</b><span>추가 보상</span><b class="num">보석 ${eqGems(L)}</b><span>소탕 보상${SW?` (${SW}단계)`:''}</span><b class="num">${SW?`장비 ${eqDrops(SW)}개 · 보석 ${eqGems(SW)}`:'-'}</b>`}
       <span>입장권</span><b class="num">${n} / ${D.tickets}</b></div>
@@ -2815,7 +2820,9 @@ if(AUTO) window.__sim={
 const UI_IMGS=[['eq','ui_eq.webp'],['prof','ui_prof.webp'],['stat','ui_stat.webp'],['st-atk','ui_st_atk.webp'],['st-atkp','ui_st_atkp.webp'],['st-aspd','ui_st_aspd.webp'],['st-hp','ui_st_hp.webp'],['st-regen','ui_st_regen.webp'],['st-crit','ui_st_crit.webp'],['st-cdmg','ui_st_cdmg.webp'],['st-gold','ui_st_gold.webp'],['st-xp','ui_st_xp.webp'],['dun-gold','ui_dun_gold.webp'],['dun-equip','ui_dun_equip.webp'],['dun-rush','ui_dun_rush.webp'],['dun-tower','ui_dun_tower.webp'],['sum-wep','ui_sum_wep.webp'],['sum-arm','ui_sum_arm.webp'],['sum-acc','ui_sum_acc.webp'],['sum-rel','ui_sum_rel.webp'],['off','ui_off.webp'],['lock','ui_lock.webp'],['num-gold','num_gold.webp'],['num-green','num_green.webp'],['num-red','num_red.webp'],['maxlv','ui_maxlv.webp']];
 for(const [k,f] of UI_IMGS) document.documentElement.style.setProperty('--ui-'+k,`url("${aurl(f)}")`);
 // 탭을 처음 열 때 그림이 늦게 뜨지 않게: 켜고 조금 뒤부터 화면 그림을 하나씩 미리 받아 둔다
-setTimeout(()=>UI_IMGS.forEach(([,f],i)=>setTimeout(()=>{const im=new Image(); im.decoding='async'; im.src=aurl(f);},i*90)),1200);
+setTimeout(()=>{ const g=save.g, L=UI_IMGS.map(([,f])=>f).concat(['equip','gold','rush','tower'].flatMap(k=>['dload_'+k+'.webp','dmap_'+k+'.webp']),[1,2,3,4].map(i=>`map${i}.webp`),
+    [`${g}_items.webp`],Array.from({length:10},(_,i)=>`I${g}${String(i+1).padStart(2,'0')}.webp`));
+  L.forEach((f,i)=>setTimeout(()=>{const im=new Image(); im.decoding='async'; im.src=aurl(f);},i*110)); },1200);
 function startGame(){ setTimeout(()=>{const b=monBase(save.stage); for(let k=b;k<b+6;k++) for(const c of 'waqhd') monImg(k,c);},1500);   // 던전에서 나오는 몬스터까지 미리 받아 둔다
   $('ui').hidden=false; initBattle(); layout(); drawAvatar(); updateTop(); updateDots(); openPanel('lobby'); offlineCheck(); if(AUTO&&!save.name) save.name='테스트'; if(!save.name) askName(true); tutInit(); attPopup(); } // 시작은 로비부터
 
