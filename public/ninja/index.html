@@ -969,7 +969,7 @@ const UPG=[
   {k:'aspd',n:'공격 속도',ic:'bolt',base:15,gr:1.013,max:200,val:l=>.012*l,show:v=>'+'+fmtPct(v)},
   {k:'hp',n:'최대 HP',ic:'heart',base:4,gr:1.013,max:1e6,val:l=>100+20*l+.2*l*l,show:v=>fmtFine(v)},
   {k:'regen',n:'HP 회복량',ic:'regen',base:5,gr:1.013,max:400,val:l=>.01+.0001*Math.min(l,400),show:v=>fmtPct(v)+'/초'},   // 초당 최대 HP 의 % (1% → 400레벨 5%)
-  {k:'crit',n:'크리티컬 확률',ic:'crit',base:10,gr:1.013,max:950,val:l=>.05+.0005*l,show:fmtPct},
+  {k:'crit',n:'크리티컬 확률',ic:'crit',base:10,gr:1.013,max:950,val:l=>.05+.001*Math.min(l,950),show:fmtPct},   // 5% → 950레벨 100%
   {k:'cdmg',n:'크리티컬 데미지',ic:'burst',base:10,gr:1.013,max:1e6,val:l=>1.5+.01*l,show:fmtPct},
   {k:'gold',n:'골드 획득량',ic:'coin',base:12,gr:1.013,max:1e6,val:l=>.02*l,show:v=>'+'+fmtPct(v)},
   {k:'xp',n:'경험치 획득량',ic:'exp',base:12,gr:1.013,max:1e6,val:l=>.02*l,show:v=>'+'+fmtPct(v)}
