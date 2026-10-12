@@ -179,16 +179,23 @@ svg.i{width:1em;height:1em;fill:currentColor;flex:none}
 
 /* 소환 카드 도움말 버튼 · 확률 창 */
 .shelp{display:contents}
+.sheet{overflow-x:hidden;overscroll-behavior:contain}
+.sh-x{position:sticky;top:0;align-self:flex-end;z-index:3;width:34px;height:34px;margin:-6px -6px -40px 0;flex:none;border-radius:50%;border:2px solid #f3c461;background:radial-gradient(circle at 40% 35%,#c8323a,#6a1014);color:#fff;font-size:17px;line-height:1;display:grid;place-items:center;box-shadow:0 2px 0 #2a0806;cursor:pointer}
+.sh-x:active{transform:scale(.9)}
+.dbtns .dsw{display:block;font-size:11px;opacity:.9;margin-top:1px}
 .scard .s-help{left:83.4%;top:31.2%;width:6.6cqw;height:6.6cqw;border-radius:50%;padding:0;border:.45cqw solid #f3c461;background:radial-gradient(circle at 40% 35%,#7a3a1a,#3a1206);color:#ffe6a8;font-family:var(--display);font-size:4.2cqw;line-height:1;display:grid;place-items:center;box-shadow:0 .4cqw 0 #1a0804,0 0 1.4cqw rgba(255,190,90,.45);text-shadow:0 .2cqw 0 #000;cursor:pointer;transition:transform .12s cubic-bezier(.34,1.6,.6,1)}
 .scard .s-help:active{transform:scale(.88)}
 .scard .s-help::before{content:'';position:absolute;inset:-2.4cqw;border-radius:50%}
 .shelp .sh-sub{margin:0;text-align:center;font-size:13px;color:#e8d4b0;line-height:1.5}
 .shelp .sh-note{margin:2px 0 0;font-size:11.5px;color:var(--muted);line-height:1.5}
 .shelp h5{margin:4px 0 0;font-size:14px;color:var(--gold)}
-.sh-tbl{width:100%;border-collapse:collapse;font-size:12px;background:rgba(0,0,0,.22);border-radius:8px;overflow:hidden}
-.sh-tbl th{font-family:var(--display);font-weight:400;font-size:12.5px;padding:6px 3px;background:rgba(0,0,0,.35);color:#e9d6b2}
-.sh-tbl td{padding:5px 3px;text-align:center;border-top:1px solid rgba(255,255,255,.06);white-space:nowrap}
-.sh-tbl td:first-child{text-align:left;padding-left:7px}.sh-tbl td b{font-family:var(--display);font-weight:400;font-size:12.5px}
+.sh-tbl{width:100%;table-layout:fixed;border-collapse:collapse;font-size:11px;background:rgba(0,0,0,.22);border-radius:8px;overflow:hidden}
+.sh-tbl th{font-family:var(--display);font-weight:400;font-size:12px;padding:6px 1px;line-height:1.15;background:rgba(0,0,0,.35);color:#e9d6b2}
+.sh-tbl td{padding:5px 1px;text-align:center;border-top:1px solid rgba(255,255,255,.06);white-space:nowrap;overflow:hidden}
+.sh-tbl th:first-child,.sh-tbl td:first-child{width:25%}.sh-tbl th:nth-child(2){width:17%}
+.sh-tbl td.num{font-size:min(11px,3vw)}.sh-tbl td b{font-size:min(12px,3.2vw)!important}
+.sh-tbl td:first-child{white-space:normal;line-height:1.15}
+.sh-tbl td:first-child{text-align:left;padding-left:6px}.sh-tbl td b{font-family:var(--display);font-weight:400;font-size:12px}
 .sh-tbl td.num{font-family:var(--display);font-weight:400;color:#f3e4c4}
 .sh-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .sh-it{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0}
@@ -1601,25 +1608,24 @@ function towerPopup(){ dlPre('tower');
 function dunPopup(k,L){ dlPre(k); if(k==='gold') for(const c of 'wqahd') monImg(GOLD_KIND,c); if(k==='equip'){ for(const q of Object.values(EQ_KIND)) for(const c of 'wqahd') monImg(q,c); monImg('fe','fe'); }
   if(k==='tower') return towerPopup();
   const D=DUN[k], d=dunState(), best=d.best[k]||0, n=d.n[k]||0;
-  L=Math.max(1,Math.min(best+1,L||best+1||1));
+  L=best+1; const SW=best;   // 입장 = 다음 도전 단계, 소탕 = 클리어한 가장 높은 단계
   const per=k==='gold'?dunGoldPer(L,calc()):0, rp=rushPieces(L,DUN.rush.need), rg=rushGems(L,DUN.rush.need), cat=view.dcat||'wep', [glo,ghi]=gradeRange(eqGrade(L));
   $('infoBody').innerHTML=`<h2>${D.n}</h2>
-    <div class="dsel"><button id="dlm" ${L<=1?'disabled':''}>◀</button><b>${L}단계</b><button id="dlp" ${L>best?'disabled':''}>▶</button></div>
-    <p class="dsub">${L>best?'<span style="color:#ffb04a">도전 단계</span>':'<span style="color:#8ae070">클리어한 단계 · 소탕 가능</span>'}</p>
+    <div class="dsel"><b>${L}단계</b></div>
+    <p class="dsub"><span style="color:#ffb04a">도전 단계</span> · ${SW?`<span style="color:#8ae070">소탕은 ${SW}단계 보상</span>`:'<span style="color:var(--muted)">한 번 클리어하면 소탕할 수 있어요</span>'}</p>
     <div class="kv"><span>제한 시간</span><b class="num">${D.time}초</b>${k==='gold'?`<span>클리어 조건</span><b class="num">황금 산적 ${D.need}마리</b>
-      <span>1마리당 엽전</span><b class="num">${fmtKo(per)}</b><span>소탕 보상</span><b class="num">${L>best?'-':fmtKo(per*D.need)}</b>`
+      <span>1마리당 엽전</span><b class="num">${fmtKo(per)}</b><span>소탕 보상${SW?` (${SW}단계)`:''}</span><b class="num">${SW?'엽전 '+fmtKo(dunGoldPer(SW,calc())*D.need):'-'}</b>`
       :k==='rush'?`<span>클리어 조건</span><b class="num">보스 ${D.need}마리 격파</b><span>첫 보스 강함</span><b class="num">스테이지 ${dunStage(L)}</b>
-      <span>보스 1마리당</span><b class="num">유물 조각 ${1+Math.floor(L/3)} · 보석 ${10+5*L}</b><span>소탕 보상</span><b class="num">${L>best?'-':`조각 ${rp} · 보석 ${rg}`}</b>`
+      <span>보스 1마리당</span><b class="num">유물 조각 ${1+Math.floor(L/3)} · 보석 ${10+5*L}</b><span>소탕 보상${SW?` (${SW}단계)`:''}</span><b class="num">${SW?`조각 ${rushPieces(SW,D.need)} · 보석 ${rushGems(SW,D.need)}`:'-'}</b>`
       :`<span>클리어 조건</span><b class="num">${D.waves}웨이브 + 수호자</b><span>적 강함</span><b class="num">스테이지 ${eqStage(L)}</b>
-      <span>부위마다</span><b class="num">${eqMix(L).map(([t,n])=>`${SETS[t].n} ${n}개`).join(' + ')}</b><span>구성</span><b class="num">쿠나이·방어구·장신구 각 ${eqPer(L)}개 (총 ${eqDrops(L)}개)</b><span>등급 확률</span><b class="num">${eqGrRate(L).map((p,i)=>`${GR[i]} ${p}%`).join(' · ')}</b><span>추가 보상</span><b class="num">보석 ${eqGems(L)}</b>`}
+      <span>부위마다</span><b class="num">${eqMix(L).map(([t,n])=>`${SETS[t].n} ${n}개`).join(' + ')}</b><span>구성</span><b class="num">쿠나이·방어구·장신구 각 ${eqPer(L)}개 (총 ${eqDrops(L)}개)</b><span>등급 확률</span><b class="num">${eqGrRate(L).map((p,i)=>`${GR[i]} ${p}%`).join(' · ')}</b><span>추가 보상</span><b class="num">보석 ${eqGems(L)}</b><span>소탕 보상${SW?` (${SW}단계)`:''}</span><b class="num">${SW?`장비 ${eqDrops(SW)}개 · 보석 ${eqGems(SW)}`:'-'}</b>`}
       <span>입장권</span><b class="num">${n} / ${D.tickets}</b></div>
-    <div class="dbtns"><button class="obtn big brown" id="dClose">닫기</button><button class="obtn big green" id="dSw" ${n>0&&best>=L?'':'disabled'}>소탕</button><button class="obtn big" id="dGo" ${n>0?'':'disabled'}>입장</button></div>`;
+    <div class="dbtns"><button class="obtn big brown" id="dClose">닫기</button><button class="obtn big green" id="dSw" ${n>0&&SW>0?'':'disabled'}>소탕${SW?`<small class="dsw">${SW}단계</small>`:''}</button><button class="obtn big" id="dGo" ${n>0?'':'disabled'}>입장</button></div>`;
   $('infoM').hidden=false;
   document.querySelectorAll('.dcat [data-c]').forEach(b=>b.onclick=()=>{SFX.tap();view.dcat=b.dataset.c;dunPopup(k,L);});
-  $('dlm').onclick=()=>{SFX.tap();dunPopup(k,L-1);}; $('dlp').onclick=()=>{SFX.tap();dunPopup(k,L+1);};
   $('dClose').onclick=()=>{SFX.tap();$('infoM').hidden=true;};
   $('dGo').onclick=()=>{ac();SFX.tap();$('infoM').hidden=true;dunEnter(k,L);};
-  $('dSw').onclick=()=>{ac();$('infoM').hidden=true;dunSweep(k,L);};
+  $('dSw').onclick=()=>{if(!SW) return; ac();$('infoM').hidden=true;dunSweep(k,SW);};
 }
 function dunSweep(k,L){
   const d=dunState(); if(!(d.n[k]>0)||(d.best[k]||0)<L) return; mis('dun');
@@ -2259,7 +2265,7 @@ function renderSummon(){
 // 소환 도움말: 소환 레벨별 확률표 + 얻을 수 있는 장비 (◀ ▶ 로 다른 레벨도 확인)
 const GR_P=[.62,.25,.10,.03];
 function setProbs(lv){const [lo,hi]=gradeRange(lv); let tot=0; const w=[]; for(let t=lo;t<=hi;t++){const v=Math.pow(.45,t-lo); w.push([t,v]); tot+=v;} return w.map(([t,v])=>[t,v/tot]);}
-const pctS=v=>{const p=v*100; return (p>=10?p.toFixed(1):p>=1?p.toFixed(2):p>=.01?p.toFixed(3):p.toFixed(4)).replace(/\.?0+$/,'')+'%';};
+const pctS=v=>{const p=v*100; return (p>=10?p.toFixed(1):p>=.1?p.toFixed(2):p>=.001?p.toFixed(3):p.toFixed(4)).replace(/\.?0+$/,'')+'%';};
 function sumHelp(k,L){
   const b=BANNERS.find(x=>x.k===k), S=sumOf(k); L=Math.max(1,Math.min(SUM_MAX,L||S.lv));
   let body='';
@@ -2279,9 +2285,9 @@ function sumHelp(k,L){
       <div class="sh-grid">${b.slots.map(sl=>`<div class="sh-it">${gbox(sl,hi*4,{show:true,nolv:true})}<b>${slotName(sl)}</b><span class="num">${pctS(1/b.slots.length)}</span></div>`).join('')}</div>
       <p class="sh-note">이 레벨에서 나오는 세트: <b style="color:${RC[lo]}">${SETS[lo].n}</b> ~ <b style="color:${RC[hi]}">${SETS[hi].n}</b> (그림은 가장 높은 세트)</p>`;
   }
-  $('infoBody').innerHTML=`<h2>${b.n} 정보</h2><div class="shelp">${body}</div><button class="obtn big" id="infoOk">닫기</button>`;
+  $('infoBody').innerHTML=`<button class="sh-x" id="shX" aria-label="닫기">✕</button><h2>${b.n} 정보</h2><div class="shelp">${body}</div><button class="obtn big" id="infoOk">닫기</button>`;
   $('infoM').hidden=false;
-  $('infoOk').onclick=()=>{SFX.tap(); $('infoM').hidden=true;};
+  $('infoOk').onclick=$('shX').onclick=()=>{SFX.tap(); $('infoM').hidden=true;};
   const m=$('shM'), pl=$('shP'); if(m) m.onclick=()=>{SFX.tap(); sumHelp(k,L-1);}; if(pl) pl.onclick=()=>{SFX.tap(); sumHelp(k,L+1);};
   $('infoBody').scrollTop=0;
 }
