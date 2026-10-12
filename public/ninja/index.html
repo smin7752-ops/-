@@ -2303,12 +2303,15 @@ function summon(b,count,free){
     if(S.lv<SUM_MAX){S.xp++; if(S.xp>=sumNeed(S.lv)){S.xp=0;S.lv++;}}
   }
   save.pulls+=count; mis('sum',count); persist(); SFX.buy(); refreshStats(); updateDots(); if(panel==='summon') renderSummon();
+  const freeMore=free&&(save.free[b.k]||0)>0;
   $('sumBody').innerHTML=`<h2>${b.n} 결과</h2><div class="rgrid">${res.map(r=>r.relic?`<div><div class="itile relic" style="width:100%;height:auto;aspect-ratio:1"><i style="background-image:var(--rl-${r.relic.k})"></i></div><div class="gname">${r.relic.n.replace(' 증가','')}</div></div>`
     :`<div style="position:relative">${gbox(r.s,r.t,{show:true,nolv:true})}${r.isNew?'<span class="new">NEW</span>':''}<div class="gname">${SETS[setOf(r.t)].n} ${GR[grOf(r.t)]}</div></div>`).join('')}</div>
-    <div class="gbtns" style="grid-template-columns:1fr 1fr"><button class="obtn brown big" id="sumOk">확인</button><button class="obtn big" id="sumAgain" ${save.gems<COST10?'disabled':''}>10회 더<span class="cost"><i class="gem"></i>${COST10}</span></button></div>`;
+    <div class="gbtns" style="grid-template-columns:1fr 1fr"><button class="obtn brown big" id="sumOk">확인</button>${freeMore
+      ?`<button class="obtn big green" id="sumAgain">무료 10회 더<span class="cost">남은 무료 ${save.free[b.k]}/${FREE_N}</span></button>`
+      :`<button class="obtn big" id="sumAgain" ${save.gems<COST10?'disabled':''}>10회 더<span class="cost"><i class="gem"></i>${COST10}</span></button>`}</div>`;
   $('sumM').hidden=false;
   $('sumOk').onclick=()=>{SFX.tap();$('sumM').hidden=true;};
-  $('sumAgain').onclick=()=>summon(b,10,false);
+  $('sumAgain').onclick=()=>summon(b,10,freeMore);   // 무료로 뽑았고 무료가 남아 있으면 계속 무료로
 }
 
 /* ---- 승급 ---- */
