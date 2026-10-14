@@ -13,14 +13,26 @@
    cd trading-bot
    pip install -r requirements.txt
    ```
-3. 예시로 삼성전자를 백테스트해봅니다.
-   ```
-   python main.py --market kr --symbol 005930 --start 2020-01-01 --end 2024-01-01 --plot
-   ```
-   미국 주식(애플) 예시:
-   ```
-   python main.py --market us --symbol AAPL --start 2020-01-01 --plot
-   ```
+
+### 방법 A. 화면으로 보기 (추천)
+
+```
+streamlit run app.py
+```
+실행하면 브라우저가 자동으로 열립니다. (안 열리면 `http://localhost:8501` 로 직접 접속)
+왼쪽에서 시장·종목·기간·전략 조건을 정하고 **백테스트 실행** 버튼을 누르면
+오른쪽에 수익률·그래프·매매 내역이 바로 나타납니다.
+
+### 방법 B. 명령어로 보기
+
+예시로 삼성전자를 백테스트해봅니다.
+```
+python main.py --market kr --symbol 005930 --start 2020-01-01 --end 2024-01-01 --plot
+```
+미국 주식(애플) 예시:
+```
+python main.py --market us --symbol AAPL --start 2020-01-01 --plot
+```
 
 실행하면 이런 결과가 나옵니다.
 
@@ -53,7 +65,8 @@
 | `strategies/` | 매매 전략 (지금은 이동평균 교차 하나) |
 | `backtest/` | 과거 데이터로 시뮬레이션하고 성과를 계산하는 엔진 |
 | `broker/` | (비어있음) 나중에 실전 자동매매용 증권사 API를 연결할 자리 |
-| `main.py` | 실행 진입점 |
+| `app.py` | 웹 화면 (Streamlit) |
+| `main.py` | 명령어 실행 진입점 |
 
 ## 새 전략을 추가하려면
 
